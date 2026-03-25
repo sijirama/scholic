@@ -213,15 +213,11 @@ class ScholicPdfViewer {
   private bindPopupEvents(annotationId: string) {
     const hlElements = document.querySelectorAll(`.scholic-highlight[data-annotation-id="${annotationId}"]`);
     hlElements.forEach((el) => {
-      el.addEventListener('mouseenter', (e: Event) => {
-        const mEvent = e as MouseEvent;
-        this.highlightPopup.show(annotationId, mEvent.clientX, mEvent.clientY);
+      el.addEventListener('mouseenter', () => {
+        this.highlightPopup.show(annotationId, el as HTMLElement);
       });
-      el.addEventListener('mouseleave', (e: Event) => {
-        const mEvent = e as MouseEvent;
-        const related = mEvent.relatedTarget as Node | null;
-        if (related && this.highlightPopup.element.contains(related)) return;
-        this.highlightPopup.hide();
+      el.addEventListener('mouseleave', () => {
+        this.highlightPopup.scheduleHide();
       });
     });
   }

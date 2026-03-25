@@ -11,20 +11,13 @@
       background-color: #f4f4f4;
       font-family: 'Inter', sans-serif;
       overflow: hidden;
-      display: flex;
       height: 100vh;
+      /* The sidebar.ts applies margin-right to body. 
+         By making body position:relative, absolute children with
+         right:0 will follow the body's right edge (shifted by margin). */
+      position: relative;
+      transition: margin-right 0.25s ease; 
     }
-    #viewer-container {
-      flex: 1;
-      overflow: auto;
-      position: absolute;
-      top: 40px;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background-color: #f4f4f4;
-    }
-    /* Toolbar styling */
     #toolbar {
       height: 40px;
       background-color: #333;
@@ -34,11 +27,11 @@
       padding: 0 16px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       z-index: 100;
+      gap: 12px;
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      gap: 12px;
     }
     #toolbar span { font-size: 14px; }
     #toolbar button {
@@ -62,13 +55,22 @@
     }
     /* Scholic Highlights */
     .scholic-highlight {
-      background-color: rgba(110,183,129,0.4) !important;
+      background-color: rgba(110,183,129,0.2) !important;
       cursor: pointer;
       border-radius: 3px;
     }
     .scholic-highlight-focused {
-      background-color: rgba(110,183,129,0.7) !important;
+      background-color: rgba(110,183,129,0.5) !important;
       box-shadow: 0 0 0 2px #6EB781;
+    }
+    #viewer-container {
+      position: absolute;
+      top: 40px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: auto;
+      background-color: #f4f4f4;
     }
   </style>
   <link rel="stylesheet" href="pdf_viewer.css">

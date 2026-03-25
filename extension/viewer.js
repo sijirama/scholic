@@ -32160,15 +32160,11 @@
         bindPopupEvents(annotationId) {
           const hlElements = document.querySelectorAll(`.scholic-highlight[data-annotation-id="${annotationId}"]`);
           hlElements.forEach((el) => {
-            el.addEventListener("mouseenter", (e) => {
-              const mEvent = e;
-              this.highlightPopup.show(annotationId, mEvent.clientX, mEvent.clientY);
+            el.addEventListener("mouseenter", () => {
+              this.highlightPopup.show(annotationId, el);
             });
-            el.addEventListener("mouseleave", (e) => {
-              const mEvent = e;
-              const related = mEvent.relatedTarget;
-              if (related && this.highlightPopup.element.contains(related)) return;
-              this.highlightPopup.hide();
+            el.addEventListener("mouseleave", () => {
+              this.highlightPopup.scheduleHide();
             });
           });
         }
