@@ -26,6 +26,10 @@ var (
 	ogImageRegex     = regexp.MustCompile(`(?i)<meta\s+property=["']og:image["']\s+content=["'](.*?)["']\s*/>`)
 	ogImageRegexAlt  = regexp.MustCompile(`(?i)<meta\s+content=["'](.*?)["']\s+property=["']og:image["']\s*/>`)
 	faviconRegex     = regexp.MustCompile(`(?i)<link\s+rel=["'][^"']*icon["']\s+href=["'](.*?)["']`)
+
+	githubStarRegex     = regexp.MustCompile(`(?i)id=["']repo-stars-counter-star["'][^>]*title=["']([^"']+)["']`)
+	citationAuthorRegex = regexp.MustCompile(`(?is)<meta[^>]*name=["']citation_author["'][^>]*content=["']([^"']+)["']|<meta[^>]*content=["']([^"']+)["'][^>]*name=["']citation_author["']`)
+	citationDateRegex   = regexp.MustCompile(`(?is)<meta[^>]*name=["']citation_date["'][^>]*content=["']([^"']+)["']|<meta[^>]*content=["']([^"']+)["'][^>]*name=["']citation_date["']`)
 )
 
 // ExtractMetadata fetches a URL and extracts OpenGraph and basic HTML metadata.
@@ -104,6 +108,58 @@ func ExtractMetadata(url string) (*LinkMetadata, error) {
 			}
 		}
 		meta.Favicon = favicon
+	}
+
+	// 5. Custom Domain Enhancements
+	// GitHub Stars
+	if meta.Domain == "github.com" {
+		if match := githubStarRegex.FindStringSubmatch(html); len(match) > 1 {
+			stars := match[1]
+			if meta.Description != "" {
+				meta.Description = "⭐ " + stars + " • " + meta.Description
+			} else {
+				meta.Description = "⭐ " + stars
+			}
+		}
+	}
+
+	// Academic Authors and Dates (arXiv, PubMed, etc.)
+	if meta.Domain == "arxiv.org" || meta.Domain == "pubmed.ncbi.nlm.nih.gov" || meta.Domain == "ncbi.nlm.nih.gov" {
+		var authors []string
+		matches := citationAuthorRegex.FindAllStringSubmatch(html, 10)
+		for _, m := range matches {
+			if m[1] != "" {
+				authors = append(authors, m[1])
+			} else if len(m) > 2 && m[2] != "" {
+				authors = append(authors, m[2])
+			}
+		}
+
+		if len(authors) > 0 {
+			authorStr := "Authors: " + strings.Join(authors, ", ")
+			if len(matches) == 10 {
+				authorStr += " et al."
+			}
+
+			dateStr := ""
+			// Only pull date for arxiv natively, pubmed uses different formats but sometimes matches
+			if m := citationDateRegex.FindStringSubmatch(html); len(m) > 1 {
+				if m[1] != "" {
+					dateStr = m[1]
+				} else if len(m) > 2 && m[2] != "" {
+					dateStr = m[2]
+				}
+			}
+			if dateStr != "" {
+				authorStr += " (" + dateStr + ")"
+			}
+
+			if meta.Description != "" {
+				meta.Description = authorStr + " • " + meta.Description
+			} else {
+				meta.Description = authorStr
+			}
+		}
 	}
 
 	return meta, nil
