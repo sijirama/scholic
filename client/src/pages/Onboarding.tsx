@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
-import { Loader2, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Onboarding: React.FC = () => {
@@ -354,7 +354,7 @@ const Onboarding: React.FC = () => {
               }}
             >
               {loading ? (
-                <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+                <span className="pulse">Claiming…</span>
               ) : (
                 <>
                   Continue

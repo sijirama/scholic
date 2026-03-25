@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Sparkles } from 'lucide-react';
 
 type Status = 'loading' | 'syncing' | 'success' | 'error';
 
@@ -16,7 +16,7 @@ const statusConfig: Record<Status, {
   accent: string;
 }> = {
   loading: {
-    icon: <Loader2 style={{ width: 28, height: 28, color: '#47E8C5', animation: 'spin 1s linear infinite' }} />,
+    icon: <Sparkles style={{ width: 28, height: 28, color: '#47E8C5' }} className="pulse" />,
     ringColor: 'rgba(71,232,197,0.15)',
     bgColor: 'rgba(71,232,197,0.08)',
     accent: '#47E8C5',
@@ -24,7 +24,7 @@ const statusConfig: Record<Status, {
     description: 'Verifying your session before proceeding.',
   },
   syncing: {
-    icon: <Loader2 style={{ width: 28, height: 28, color: '#6EB781', animation: 'spin 1s linear infinite' }} />,
+    icon: <Sparkles style={{ width: 28, height: 28, color: '#6EB781' }} className="pulse" />,
     ringColor: 'rgba(110,183,129,0.15)',
     bgColor: 'rgba(110,183,129,0.08)',
     accent: '#6EB781',

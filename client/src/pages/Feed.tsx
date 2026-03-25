@@ -41,6 +41,41 @@ interface Annotation {
   linkDomain?: string;
 }
 
+const FeedSkeleton: React.FC = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    {[1, 2, 3].map(i => (
+      <div key={i} style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', flexShrink: 0 }} className="pulse" />
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ width: '80px', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.04)' }} className="pulse" />
+              <div style={{ width: '40px', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+            </div>
+            <div style={{ width: '100%', height: '16px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '8px' }} className="pulse" />
+            <div style={{ width: '60%', height: '16px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '16px' }} className="pulse" />
+            <div style={{ width: '100%', height: '140px', borderRadius: '8px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const CommentSkeleton: React.FC = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+    {[1, 2].map(i => (
+      <div key={i} style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', flexShrink: 0 }} className="pulse" />
+        <div style={{ flex: 1 }}>
+          <div style={{ width: '60px', height: '12px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '6px' }} className="pulse" />
+          <div style={{ width: '100%', height: '12px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const Feed: React.FC = () => {
   const { user } = useAuth();
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -276,15 +311,7 @@ const Feed: React.FC = () => {
 
         {/* States */}
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-            <div style={{
-              width: '22px', height: '22px',
-              border: '2px solid rgba(110,183,129,0.15)',
-              borderTopColor: '#6EB781',
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
-            }} />
-          </div>
+          <FeedSkeleton />
         ) : annotations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>
             <p style={{ fontSize: '14px', marginBottom: '6px' }}>No annotations yet</p>
@@ -511,29 +538,30 @@ const Feed: React.FC = () => {
 
                             {/* Load more comments */}
                             {annotation.commentCount > (annotation.comments?.length || 0) && (
-                              <button
-                                onClick={() => fetchMoreComments(annotation.id)}
-                                disabled={fetchingComments[annotation.id]}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  color: '#6EB781',
-                                  fontSize: '12px',
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                  padding: '4px 0',
-                                  textAlign: 'left',
-                                  fontFamily: 'inherit',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px'
-                                }}
-                              >
-                                {fetchingComments[annotation.id] ? (
-                                  <div style={{ width: '12px', height: '12px', border: '1.5px solid rgba(110,183,129,0.2)', borderTopColor: '#6EB781', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                                ) : null}
-                                View {annotation.commentCount - (annotation.comments?.length || 0)} more comments
-                              </button>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <button
+                                  onClick={() => fetchMoreComments(annotation.id)}
+                                  disabled={fetchingComments[annotation.id]}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#6EB781',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    padding: '4px 0',
+                                    textAlign: 'left',
+                                    fontFamily: 'inherit',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    opacity: fetchingComments[annotation.id] ? 0.5 : 1
+                                  }}
+                                >
+                                  View {annotation.commentCount - (annotation.comments?.length || 0)} more comments
+                                </button>
+                                {fetchingComments[annotation.id] && <CommentSkeleton />}
+                              </div>
                             )}
 
                             {/* New comment input - REMOVED from here */}
@@ -547,18 +575,10 @@ const Feed: React.FC = () => {
             ))}
 
             {/* Pagination Footer */}
-            <div ref={observerTarget} style={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-              {fetchingMore && (
-                <div style={{
-                  width: '20px', height: '20px',
-                  border: '2px solid rgba(110,183,129,0.15)',
-                  borderTopColor: '#6EB781',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                }} />
-              )}
+            <div ref={observerTarget} style={{ padding: '40px 0', display: 'flex', flexDirection: 'column' }}>
+              {fetchingMore && <FeedSkeleton />}
               {!hasMore && annotations.length > 0 && (
-                <p style={{ fontSize: '12px', color: '#444' }}>You've reached the end of the feed</p>
+                <p style={{ fontSize: '12px', color: '#444', textAlign: 'center' }}>You've reached the end of the feed</p>
               )}
             </div>
           </div>
@@ -567,7 +587,30 @@ const Feed: React.FC = () => {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse {
+          0% { opacity: 0.4; }
+          50% { opacity: 0.7; }
+          100% { opacity: 0.4; }
+        }
+        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        
         input::placeholder { color: #444; }
+
+        /* Custom Scrollbar */
+        body::-webkit-scrollbar {
+          width: 8px;
+        }
+        body::-webkit-scrollbar-track {
+          background: #121212;
+        }
+        body::-webkit-scrollbar-thumb {
+          background: rgba(110,183,129,0.2);
+          border-radius: 10px;
+          border: 2px solid #121212;
+        }
+        body::-webkit-scrollbar-thumb:hover {
+          background: rgba(110,183,129,0.4);
+        }
       `}</style>
     </div>
   );

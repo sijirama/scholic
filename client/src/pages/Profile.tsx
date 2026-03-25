@@ -48,6 +48,42 @@ interface Annotation {
   linkDomain?: string;
 }
 
+const ProfileSkeleton: React.FC = () => (
+  <div style={{ maxWidth: '640px', padding: '32px 20px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', alignItems: 'start', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} className="pulse" />
+      <div style={{ flex: 1, marginTop: '8px' }}>
+        <div style={{ width: '120px', height: '20px', borderRadius: '4px', background: 'rgba(255,255,255,0.04)', marginBottom: '8px' }} className="pulse" />
+        <div style={{ width: '60px', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)', marginBottom: '12px' }} className="pulse" />
+        <div style={{ width: '100%', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+      </div>
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {[1, 2].map(i => (
+        <div key={i} style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{ width: '140px', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.04)', marginBottom: '12px' }} className="pulse" />
+          <div style={{ width: '100%', height: '16px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '8px' }} className="pulse" />
+          <div style={{ width: '40%', height: '16px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)' }} className="pulse" />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const CommentSkeleton: React.FC = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+    {[1, 2].map(i => (
+      <div key={i} style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', flexShrink: 0 }} className="pulse" />
+        <div style={{ flex: 1 }}>
+          <div style={{ width: '60px', height: '12px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '6px' }} className="pulse" />
+          <div style={{ width: '100%', height: '12px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
@@ -156,6 +192,9 @@ const Profile: React.FC = () => {
       const response = await api.get(`/users/${username}?limit=${limit}&offset=${offset}`);
       
       const total = response.data.totalActivity || 0;
+      if (isInitial) {
+        setProfileUser(response.data.user);
+      }
       setActivity(prev => {
         const next = isInitial ? (response.data.activity || []) : [...prev, ...(response.data.activity || [])];
         setHasMore(next.length < total);
@@ -221,19 +260,31 @@ const Profile: React.FC = () => {
     return (
       <div className="min-h-screen w-full" style={{ ...bodyFont, background: '#121212', color: '#fff' }}>
         <Navbar />
-        <div className="flex justify-center" style={{ padding: '60px 0' }}>
-          <div
-            style={{
-              width: '24px',
-              height: '24px',
-              border: '2px solid rgba(110,183,129,0.2)',
-              borderTopColor: '#6EB781',
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
+        <ProfileSkeleton />
+        <style>{`
+          @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 0.7; }
+            100% { opacity: 0.4; }
+          }
+          .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+          
+          /* Custom Scrollbar */
+          body::-webkit-scrollbar {
+            width: 8px;
+          }
+          body::-webkit-scrollbar-track {
+            background: #121212;
+          }
+          body::-webkit-scrollbar-thumb {
+            background: rgba(110,183,129,0.2);
+            border-radius: 10px;
+            border: 2px solid #121212;
+          }
+          body::-webkit-scrollbar-thumb:hover {
+            background: rgba(110,183,129,0.4);
+          }
+        `}</style>
       </div>
     );
   }
@@ -490,29 +541,30 @@ const Profile: React.FC = () => {
 
                             {/* Load more comments */}
                             {annotation.commentCount > (annotation.comments?.length || 0) && (
-                              <button
-                                onClick={() => fetchMoreComments(annotation.id)}
-                                disabled={fetchingComments[annotation.id]}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  color: '#6EB781',
-                                  fontSize: '12px',
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                  padding: '4px 0 12px 0',
-                                  textAlign: 'left',
-                                  fontFamily: 'inherit',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px'
-                                }}
-                              >
-                                {fetchingComments[annotation.id] ? (
-                                  <div style={{ width: '12px', height: '12px', border: '1.5px solid rgba(110,183,129,0.2)', borderTopColor: '#6EB781', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                                ) : null}
-                                View {annotation.commentCount - (annotation.comments?.length || 0)} more comments
-                              </button>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <button
+                                  onClick={() => fetchMoreComments(annotation.id)}
+                                  disabled={fetchingComments[annotation.id]}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#6EB781',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    padding: '4px 0',
+                                    textAlign: 'left',
+                                    fontFamily: 'inherit',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    opacity: fetchingComments[annotation.id] ? 0.5 : 1
+                                  }}
+                                >
+                                  View {annotation.commentCount - (annotation.comments?.length || 0)} more comments
+                                </button>
+                                {fetchingComments[annotation.id] && <CommentSkeleton />}
+                              </div>
                             )}
                             
                             {/* New Comment Input */}
@@ -557,18 +609,10 @@ const Profile: React.FC = () => {
                 ))}
 
                 {/* Pagination Footer */}
-                <div ref={observerTarget} style={{ padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-                  {fetchingMore && (
-                    <div style={{
-                      width: '20px', height: '20px',
-                      border: '2px solid rgba(110,183,129,0.15)',
-                      borderTopColor: '#6EB781',
-                      borderRadius: '50%',
-                      animation: 'spin 0.8s linear infinite',
-                    }} />
-                  )}
+                <div ref={observerTarget} style={{ padding: '40px 0', display: 'flex', flexDirection: 'column' }}>
+                  {fetchingMore && <ProfileSkeleton />}
                   {!hasMore && activity.length > 0 && (
-                    <p style={{ fontSize: '12px', color: '#444' }}>You've reached the end of the activity</p>
+                    <p style={{ fontSize: '12px', color: '#444', textAlign: 'center' }}>You've reached the end of the activity</p>
                   )}
                 </div>
               </div>
