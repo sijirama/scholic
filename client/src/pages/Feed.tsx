@@ -383,7 +383,7 @@ const Feed: React.FC = () => {
                     )}
 
                     {/* Link Card */}
-                    {(annotation.linkTitle || annotation.linkImage) && (
+                    {annotation.type !== 'image' && (
                       <a href={annotation.url} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit', margin: '0 0 16px 0' }}>
                         <div style={{
                           border: '1px solid rgba(255,255,255,0.08)',
