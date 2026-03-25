@@ -39,6 +39,8 @@ interface Annotation {
   linkImage?: string;
   linkFavicon?: string;
   linkDomain?: string;
+  type?: string;
+  imageUrl?: string;
 }
 
 const FeedSkeleton: React.FC = () => (
@@ -344,8 +346,22 @@ const Feed: React.FC = () => {
                       {renderAnnotationAction(annotation)}
                     </div>
 
-                    {/* Quote */}
-                    {annotation.quoteText && (
+                    {/* Content: Image or Quote */}
+                    {annotation.type === 'image' && annotation.imageUrl ? (
+                      <div style={{
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        marginBottom: '10px',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        background: 'rgba(255,255,255,0.02)'
+                      }}>
+                        <img 
+                          src={annotation.imageUrl} 
+                          alt="Annotation Screenshot" 
+                          style={{ width: '100%', display: 'block' }} 
+                        />
+                      </div>
+                    ) : annotation.quoteText && (
                       <div style={{
                         borderLeft: '2px solid rgba(110,183,129,0.5)',
                         paddingLeft: '12px',

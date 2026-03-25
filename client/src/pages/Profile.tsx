@@ -46,6 +46,8 @@ interface Annotation {
   linkImage?: string;
   linkFavicon?: string;
   linkDomain?: string;
+  type?: string;
+  imageUrl?: string;
 }
 
 const ProfileSkeleton: React.FC = () => (
@@ -456,7 +458,22 @@ const Profile: React.FC = () => {
                           {renderAnnotationAction(annotation)}
                         </div>
 
-                        {annotation.quoteText && (
+                        {/* Content: Image or Quote */}
+                        {annotation.type === 'image' && annotation.imageUrl ? (
+                          <div style={{
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            margin: '12px 0',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            background: 'rgba(255,255,255,0.02)'
+                          }}>
+                            <img 
+                              src={annotation.imageUrl} 
+                              alt="Annotation Screenshot" 
+                              style={{ width: '100%', display: 'block' }} 
+                            />
+                          </div>
+                        ) : annotation.quoteText && (
                           <div
                             style={{
                               borderLeft: '2px solid #6EB781',

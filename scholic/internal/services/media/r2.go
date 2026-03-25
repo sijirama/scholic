@@ -175,6 +175,48 @@ func (r *R2Service) UploadFile(ctx context.Context, file multipart.File, header 
 	}, nil
 }
 
+func (r *R2Service) UploadBytes(ctx context.Context, data []byte, filename string, contentType string, folder string) (*UploadResult, error) {
+	// Generate unique filename if not provided
+	ext := filepath.Ext(filename)
+	if ext == "" {
+		ext = ".png"
+	}
+	newFilename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+
+	// Create key with folder if provided
+	key := newFilename
+	if folder != "" {
+		key = fmt.Sprintf("%s/%s", strings.Trim(folder, "/"), newFilename)
+	}
+
+	if contentType == "" {
+		contentType = http.DetectContentType(data)
+	}
+
+	// Upload to R2
+	_, err := r.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(r.bucketName),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(data),
+		ContentType: aws.String(contentType),
+		ACL:         types.ObjectCannedACLPublicRead,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload bytes to R2: %w", err)
+	}
+
+	// Generate public URL
+	publicURL := r.getPublicURL(key)
+
+	return &UploadResult{
+		URL:      publicURL,
+		Key:      key,
+		FileName: filename,
+		FileSize: int64(len(data)),
+		MimeType: contentType,
+	}, nil
+}
+
 func (r *R2Service) DeleteFile(ctx context.Context, key string) error {
 	_, err := r.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(r.bucketName),
@@ -233,4 +275,8 @@ func DeleteFile(ctx context.Context, key string) error {
 
 func DeleteFileByURL(ctx context.Context, url string) error {
 	return GetR2Service().DeleteFileByURL(ctx, url)
+}
+
+func UploadBytes(ctx context.Context, data []byte, filename string, contentType string, folder string) (*UploadResult, error) {
+	return GetR2Service().UploadBytes(ctx, data, filename, contentType, folder)
 }

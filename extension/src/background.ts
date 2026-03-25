@@ -102,6 +102,8 @@ async function handleMessage(message: any): Promise<any> {
       return createComment(message.data.annotationId, message.data.text);
     case 'FETCH_ME':
       return apiRequest('/auth/me');
+    case 'CAPTURE_TAB':
+      return captureVisibleTab();
     default:
       return { error: `Unknown message type: ${message.type}` };
   }
@@ -164,12 +166,22 @@ async function createAnnotation(data: any): Promise<any> {
       url: data.url,
       quoteText: data.quoteText,
       text: data.text,
-      selectors: JSON.stringify(data.selectors),
+      selectors: JSON.stringify(data.selectors || []),
       isPrivate: data.isPrivate,
+      type: data.type || 'text',
+      image: data.image,
     }),
   });
 
   return { annotation };
+}
+
+/**
+ * Capture the visible tab and return as a data URL.
+ */
+async function captureVisibleTab(): Promise<any> {
+  const dataUrl = await chrome.tabs.captureVisibleTab({ format: 'png' });
+  return { dataUrl };
 }
 
 /**

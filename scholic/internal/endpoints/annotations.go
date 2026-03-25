@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"scholic/internal/database"
 	"scholic/internal/models"
 	"scholic/internal/scraper"
+	"scholic/internal/services/media"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -21,6 +23,8 @@ type CreateAnnotationRequest struct {
 	Text      string `json:"text"`
 	QuoteText string `json:"quoteText"`
 	IsPrivate bool   `json:"isPrivate"`
+	Type      string `json:"type"`      // text, image, html, etc.
+	Image     string `json:"image"`     // base64 encoded image data (for type="image")
 }
 
 // CreateAnnotation handles POST /api/annotations
@@ -60,6 +64,30 @@ func CreateAnnotation(c *gin.Context) {
 		}
 	}
 
+	// Handle image upload if type is image and image data is provided
+	var imageUrl string
+	if req.Type == "image" && req.Image != "" {
+		// Expecting data:image/png;base64,... format
+		parts := strings.Split(req.Image, ",")
+		if len(parts) == 2 {
+			base64Data := parts[1]
+			data, err := base64.StdEncoding.DecodeString(base64Data)
+			if err == nil {
+				// Upload to R2
+				r2 := media.GetR2Service()
+				// Construct a pseudo-multipart header for the name/type
+				filename := "screenshot.png"
+				res, uploadErr := r2.UploadBytes(c.Request.Context(), data, filename, "image/png", "annotations")
+				if uploadErr == nil {
+					imageUrl = res.URL
+				} else {
+					// Log the error (can't using logging package here easily without import)
+					// fmt.Printf("[Scholic] R2 upload failed: %v\n", uploadErr)
+				}
+			}
+		}
+	}
+
 	annotation := models.Annotation{
 		UserID:          userID.(uint),
 		URL:             req.URL,
@@ -67,6 +95,8 @@ func CreateAnnotation(c *gin.Context) {
 		Text:            req.Text,
 		QuoteText:       req.QuoteText,
 		IsPrivate:       req.IsPrivate,
+		Type:            req.Type,
+		ImageURL:        imageUrl,
 		LinkTitle:       linkTitle,
 		LinkDescription: linkDesc,
 		LinkImage:       linkImage,

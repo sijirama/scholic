@@ -45,6 +45,13 @@ type Annotation struct {
 	// Comments are replies to this annotation
 	Comments []Comment `gorm:"foreignKey:AnnotationID" json:"comments"`
 
+	// Type distinguishes between text, image, html, and pdf annotations.
+	// Defaults to "text" for backwards compatibility.
+	Type string `gorm:"default:'text';not null" json:"type"`
+
+	// ImageURL is the location of the screenshot in R2 (only for type="image")
+	ImageURL string `json:"imageUrl"`
+
 	// LinkMetadata stores scraped OpenGraph data for rich previews in the Feed
 	LinkTitle       string `json:"linkTitle"`
 	LinkDescription string `json:"linkDescription"`

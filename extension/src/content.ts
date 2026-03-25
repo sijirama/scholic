@@ -20,6 +20,7 @@ import { SelectionPopover } from './popover';
 import { Sidebar } from './sidebar';
 import type { AnnotationData } from './sidebar';
 import { HighlightPopup } from './highlight-popup';
+import { Snipper, Area } from './snipper';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // State
@@ -70,6 +71,14 @@ const highlightPopup = new HighlightPopup(
     return pageAnnotations.find((a) => a.id === id);
   },
   (id: string, text: string) => handleComment(id, text)
+);
+
+/**
+ * The snipper — for area selection.
+ */
+const snipper = new Snipper(
+  (area) => handleAreaSelected(area),
+  () => sidebar.open() // Re-open sidebar on cancel
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -144,6 +153,66 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   return true;
 });
+
+/**
+ * Handle screenshot request from sidebar.
+ */
+window.addEventListener('SCHOLIC_START_SCREENSHOT', () => {
+  console.log('[Scholic] Screenshot mode started.');
+  // Hide sidebar peek/open state so it's not in the screenshot
+  sidebar.hideCompletely();
+  // Start the snipping tool
+  setTimeout(() => snipper.start(), 100);
+});
+
+async function handleAreaSelected(area: Area): Promise<void> {
+  console.log('[Scholic] Area selected:', area);
+  
+  try {
+    // 1. Capture the entire visible tab
+    const response = await chrome.runtime.sendMessage({ type: 'CAPTURE_TAB' });
+    if (!response?.dataUrl) throw new Error('Failed to capture tab');
+
+    // 2. Crop the image using a canvas
+    const croppedDataUrl = await cropImage(response.dataUrl, area);
+    
+    // 3. Open sidebar with the image preview and form
+    sidebar.openWithImage(croppedDataUrl);
+  } catch (err) {
+    console.error('[Scholic] Screenshot failed:', err);
+    sidebar.open(); // Re-open on error
+  }
+}
+
+/**
+ * Crop a data URL image to a specific area using a temporary canvas.
+ */
+function cropImage(dataUrl: string, area: Area): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = area.width;
+      canvas.height = area.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      
+      // Draw the selected portion of the image onto the canvas
+      ctx.drawImage(
+        img,
+        area.x, area.y, area.width, area.height, // Source
+        0, 0, area.width, area.height            // Destination
+      );
+      
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('Failed to load image for cropping'));
+    img.src = dataUrl;
+  });
+}
 
 /**
  * Handle mouseup (selection)
@@ -510,6 +579,8 @@ async function loadAnnotations(): Promise<void> {
  */
 async function anchorAndHighlight(annotation: AnnotationData): Promise<void> {
   if (!annotation.selectors || !annotation.id) return;
+  // Skip image-based annotations (no on-page highighting for them)
+  if (annotation.type === 'image') return;
 
   try {
     // Try to resolve the stored selectors back to a DOM Range

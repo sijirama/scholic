@@ -28,6 +28,9 @@ export interface AnnotationData {
     profilePicture?: string;
   };
   comments?: any[];
+  type?: 'text' | 'image' | 'html' | 'pdf';
+  imageUrl?: string;
+  image?: string; // base64 data for creation
 }
 
 /** Callbacks the sidebar uses to communicate with the content script */
@@ -76,6 +79,7 @@ const ICONS = {
   globe: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
   pen: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
   trash: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+  camera: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
 };
 
 /**
@@ -136,6 +140,7 @@ export class Sidebar {
         <div class="sidebar-header-container" style="flex-shrink: 0;"></div>
         <div class="sidebar-tabs-container" style="flex-shrink: 0;"></div>
         <div class="sidebar-form-container" style="flex-shrink: 0;"></div>
+        <div class="sidebar-image-preview-container" style="flex-shrink: 0; display: none; padding: 0 20px 16px;"></div>
         <div class="sidebar-list-container" style="flex: 1; min-height: 0; overflow-y: auto;"></div>
       </div>
     `;
@@ -229,6 +234,9 @@ export class Sidebar {
         <span class="sidebar-title" style="text-transform: lowercase; font-weight: 700; font-size: 15px; color: #6EB781;">scholic</span>
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="screenshot-btn" title="Take a screenshot annotation" style="background:none; border:none; color:#888; cursor:pointer; padding:4px; display:flex; align-items:center;">
+          ${ICONS.camera}
+        </button>
         ${userHtml}
         <button class="sidebar-close">✕</button>
       </div>
@@ -301,6 +309,12 @@ export class Sidebar {
     });
 
     tabsContainer.appendChild(tabs);
+
+    // Screenshot button listener
+    header.querySelector('.screenshot-btn')?.addEventListener('click', () => {
+      // Dispatch custom event to content.ts
+      window.dispatchEvent(new CustomEvent('SCHOLIC_START_SCREENSHOT'));
+    });
   }
 
   /** Cache of the most recent annotations for re-rendering on auth change */
@@ -871,13 +885,20 @@ export class Sidebar {
     this.renderForm();
   }
 
+  /**
+   * Open the sidebar with an image annotation form.
+   */
+  openWithImage(imageData: string): void {
+    this.open();
+    this.renderForm('image', imageData);
+  }
+
   /** Open the sidebar (without a pending annotation) */
   open(): void {
     this.isOpen = true;
     this.panel.classList.remove('peek');
     this.panel.classList.add('open');
-    document.body.style.transition = 'margin-right 0.25s ease';
-    document.body.style.marginRight = '480px';
+    this.applyBodyShift('480px');
   }
 
   /** Show the sidebar in a collapsed "peek" state */
@@ -885,8 +906,7 @@ export class Sidebar {
     this.isOpen = false;
     this.panel.classList.remove('open');
     this.panel.classList.add('peek');
-    document.body.style.transition = 'margin-right 0.25s ease';
-    document.body.style.marginRight = '32px';
+    this.applyBodyShift('32px');
 
     // Clicking the peek tab opens the sidebar
     const peek = this.panel.querySelector('.peek-indicator');
@@ -905,8 +925,7 @@ export class Sidebar {
     this.isOpen = false;
     this.panel.classList.remove('open');
     this.panel.classList.remove('peek');
-    document.body.style.transition = 'margin-right 0.25s ease';
-    document.body.style.marginRight = '0';
+    this.applyBodyShift('0');
     this.pendingQuoteText = '';
     this.pendingSelectors = [];
   }
@@ -918,9 +937,9 @@ export class Sidebar {
 
   /**
    * Render the annotation creation form inside the sidebar.
-   * Shows the quoted text, textarea, and a public/private toggle.
+   * Shows the quoted text (for text) or image preview (for image), textarea, and a public/private toggle.
    */
-  private renderForm(): void {
+  private renderForm(type: 'text' | 'image' = 'text', imageData: string = ''): void {
     const container = this.panel.querySelector('.sidebar-form-container');
     if (!container) return;
     container.innerHTML = '';
@@ -929,9 +948,24 @@ export class Sidebar {
 
     const form = document.createElement('div');
     form.className = 'annotation-form';
+    
+    let previewHtml = '';
+    if (type === 'text') {
+      previewHtml = `
+        <div class="form-label">Selected Text</div>
+        <div class="quote-preview">${this.escapeHtml(this.pendingQuoteText)}</div>
+      `;
+    } else {
+      previewHtml = `
+        <div class="form-label">Screenshot Preview</div>
+        <div class="image-annotation-preview" style="margin-bottom: 12px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+          <img src="${imageData}" style="width: 100%; display: block;" />
+        </div>
+      `;
+    }
+
     form.innerHTML = `
-      <div class="form-label">Selected Text</div>
-      <div class="quote-preview">${this.escapeHtml(this.pendingQuoteText)}</div>
+      ${previewHtml}
       <div class="form-label">Your Note</div>
       <textarea class="note-input" placeholder="Add your thoughts..."></textarea>
       <div class="privacy-toggle">
@@ -979,11 +1013,13 @@ export class Sidebar {
       const note = textarea?.value || '';
       this.callbacks.onSave({
         url: window.location.href,
-        quoteText: this.pendingQuoteText,
+        quoteText: type === 'text' ? this.pendingQuoteText : 'Screenshot',
         text: note,
-        selectors: this.pendingSelectors,
+        selectors: type === 'text' ? this.pendingSelectors : [],
         isPrivate,
-      });
+        type: type,
+        image: type === 'image' ? imageData : undefined,
+      } as any);
       form.remove();
       this.pendingQuoteText = '';
       this.pendingSelectors = [];
@@ -1076,7 +1112,11 @@ export class Sidebar {
                 @${this.escapeHtml(authorName)}
               </a>
             </div>
-            <div class="annotation-quote">${this.escapeHtml(annotation.quoteText)}</div>
+            ${annotation.type === 'image' && annotation.imageUrl ? `
+              <div class="annotation-image" style="margin-bottom: 8px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                <img src="${annotation.imageUrl}" style="width: 100%; display: block;" />
+              </div>
+            ` : `<div class="annotation-quote">${this.escapeHtml(annotation.quoteText)}</div>`}
             ${annotation.text ? `<div class="annotation-note">${this.escapeHtml(annotation.text)}</div>` : ''}
             <div class="annotation-meta">
               ${timeStr ? `<span>${timeStr}</span>` : ''}
@@ -1214,6 +1254,14 @@ export class Sidebar {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  /**
+   * Shift the page body to make room for the sidebar.
+   */
+  private applyBodyShift(width: string): void {
+    document.body.style.transition = 'margin-right 0.25s ease';
+    document.body.style.marginRight = width;
   }
 
   /** Clean up: remove the sidebar from the DOM */
