@@ -146,6 +146,34 @@ const Profile: React.FC = () => {
 
   const bodyFont = { fontFamily: '"Inter", sans-serif' };
 
+  const fetchProfile = useCallback(async (pageNum: number, isInitial = false) => {
+    if (isInitial) setLoading(true);
+    else setFetchingMore(true);
+    setError('');
+    try {
+      const limit = 20;
+      const offset = pageNum * limit;
+      const response = await api.get(`/users/${username}?limit=${limit}&offset=${offset}`);
+      
+      const total = response.data.totalActivity || 0;
+      setActivity(prev => {
+        const next = isInitial ? (response.data.activity || []) : [...prev, ...(response.data.activity || [])];
+        setHasMore(next.length < total);
+        return next;
+      });
+    } catch (err: unknown) {
+      console.error('Failed to fetch profile:', err);
+      if (isInitial) {
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+        const axiosError = err as any; 
+        setError(axiosError.response?.data?.error || 'User not found');
+      }
+    } finally {
+      setLoading(false);
+      setFetchingMore(false);
+    }
+  }, [username]);
+
   useEffect(() => {
     setActivity([]);
     setPage(0);
@@ -168,39 +196,6 @@ const Profile: React.FC = () => {
     if (observerTarget.current) observer.observe(observerTarget.current);
     return () => observer.disconnect();
   }, [hasMore, fetchingMore, loading, page, username, activeTab, fetchProfile]);
-
-  const fetchProfile = useCallback(async (pageNum: number, isInitial = false) => {
-    if (isInitial) setLoading(true);
-    else setFetchingMore(true);
-    setError('');
-    try {
-      const limit = 20;
-      const offset = pageNum * limit;
-      const response = await api.get(`/users/${username}?limit=${limit}&offset=${offset}`);
-      
-      if (isInitial) {
-        setProfileUser(response.data.user);
-        setActivity(response.data.activity || []);
-      } else {
-        const newActivity = response.data.activity || [];
-        setActivity(prev => [...prev, ...newActivity]);
-      }
-      
-      const total = response.data.totalActivity || 0;
-      const currentLoaded = isInitial ? (response.data.activity?.length || 0) : (activity.length + (response.data.activity?.length || 0));
-      setHasMore(currentLoaded < total);
-    } catch (err: unknown) {
-      console.error('Failed to fetch profile:', err);
-      if (isInitial) {
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        const axiosError = err as any; 
-        setError(axiosError.response?.data?.error || 'User not found');
-      }
-    } finally {
-      setLoading(false);
-      setFetchingMore(false);
-    }
-  }, [username, activity.length]);
 
   const isOwnProfile = currentUser?.username === username;
   const tabs = ['Annotations'];

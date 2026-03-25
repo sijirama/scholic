@@ -135,6 +135,29 @@ const Feed: React.FC = () => {
   const bodyFont = { fontFamily: '"Inter", sans-serif' };
   const brandFont = { fontFamily: '"Outfit", sans-serif' };
 
+  const fetchFeed = useCallback(async (pageNum: number, isInitial = false) => {
+    if (isInitial) setLoading(true);
+    else setFetchingMore(true);
+
+    try {
+      const limit = 20;
+      const offset = pageNum * limit;
+      const response = await api.get(`/feed?limit=${limit}&offset=${offset}&tab=${tab}`);
+      
+      const total = response.data.total || 0;
+      setAnnotations(prev => {
+        const next = isInitial ? (response.data.annotations || []) : [...prev, ...(response.data.annotations || [])];
+        setHasMore(next.length < total);
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to fetch feed', err);
+    } finally {
+      setLoading(false);
+      setFetchingMore(false);
+    }
+  }, [tab]);
+
   // Reset when tab changes
   useEffect(() => {
     setAnnotations([]);
@@ -162,33 +185,6 @@ const Feed: React.FC = () => {
 
     return () => observer.disconnect();
   }, [hasMore, fetchingMore, loading, page, fetchFeed]);
-
-  const fetchFeed = useCallback(async (pageNum: number, isInitial = false) => {
-    if (isInitial) setLoading(true);
-    else setFetchingMore(true);
-
-    try {
-      const limit = 20;
-      const offset = pageNum * limit;
-      const response = await api.get(`/feed?limit=${limit}&offset=${offset}&tab=${tab}`);
-      
-      if (isInitial) {
-        setAnnotations(response.data.annotations || []);
-      } else {
-        const newAnnotations = response.data.annotations || [];
-        setAnnotations(prev => [...prev, ...newAnnotations]);
-      }
-      
-      const total = response.data.total || 0;
-      const currentLoaded = isInitial ? (response.data.annotations?.length || 0) : (annotations.length + (response.data.annotations?.length || 0));
-      setHasMore(currentLoaded < total);
-    } catch (err) {
-      console.error('Failed to fetch feed', err);
-    } finally {
-      setLoading(false);
-      setFetchingMore(false);
-    }
-  }, [tab, annotations.length]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
