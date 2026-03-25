@@ -31992,6 +31992,115 @@
     }
   });
 
+  // src/snipper.ts
+  var Snipper;
+  var init_snipper = __esm({
+    "src/snipper.ts"() {
+      "use strict";
+      Snipper = class {
+        overlay = null;
+        selection = null;
+        startX = 0;
+        startY = 0;
+        onSelect;
+        onCancel;
+        constructor(onSelect, onCancel) {
+          this.onSelect = onSelect;
+          this.onCancel = onCancel;
+        }
+        start() {
+          if (this.overlay) return;
+          this.overlay = document.createElement("div");
+          Object.assign(this.overlay.style, {
+            position: "fixed",
+            top: "0",
+            left: "0",
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.4)",
+            zIndex: "2147483647",
+            cursor: "crosshair"
+          });
+          this.selection = document.createElement("div");
+          Object.assign(this.selection.style, {
+            position: "absolute",
+            border: "2px solid #3b82f6",
+            backgroundColor: "rgba(59, 130, 246, 0.1)",
+            display: "none",
+            pointerEvents: "none"
+          });
+          this.overlay.appendChild(this.selection);
+          document.body.appendChild(this.overlay);
+          this.overlay.addEventListener("mousedown", this.handleMouseDown);
+          this.overlay.addEventListener("keydown", this.handleKeyDown);
+          window.addEventListener("mousemove", this.handleMouseMove);
+          window.addEventListener("mouseup", this.handleMouseUp);
+          this.overlay.tabIndex = -1;
+          this.overlay.focus();
+        }
+        handleMouseDown = (e) => {
+          if (e.button !== 0) return;
+          this.startX = e.clientX;
+          this.startY = e.clientY;
+          if (this.selection) {
+            this.selection.style.left = `${this.startX}px`;
+            this.selection.style.top = `${this.startY}px`;
+            this.selection.style.width = "0px";
+            this.selection.style.height = "0px";
+            this.selection.style.display = "block";
+          }
+        };
+        handleMouseMove = (e) => {
+          if (!this.selection || this.selection.style.display === "none") return;
+          const currentX = e.clientX;
+          const currentY = e.clientY;
+          const width = Math.abs(currentX - this.startX);
+          const height = Math.abs(currentY - this.startY);
+          const left = Math.min(currentX, this.startX);
+          const top = Math.min(currentY, this.startY);
+          this.selection.style.width = `${width}px`;
+          this.selection.style.height = `${height}px`;
+          this.selection.style.left = `${left}px`;
+          this.selection.style.top = `${top}px`;
+        };
+        handleMouseUp = (e) => {
+          if (!this.selection || this.selection.style.display === "none") return;
+          const width = parseInt(this.selection.style.width);
+          const height = parseInt(this.selection.style.height);
+          const x = parseInt(this.selection.style.left);
+          const y = parseInt(this.selection.style.top);
+          this.cleanup();
+          if (width > 5 && height > 5) {
+            const dpr = window.devicePixelRatio || 1;
+            this.onSelect({
+              x: x * dpr,
+              y: y * dpr,
+              width: width * dpr,
+              height: height * dpr
+            });
+          } else {
+            this.onCancel();
+          }
+        };
+        handleKeyDown = (e) => {
+          if (e.key === "Escape") {
+            this.cleanup();
+            this.onCancel();
+          }
+        };
+        cleanup() {
+          if (this.overlay) {
+            this.overlay.remove();
+            this.overlay = null;
+          }
+          this.selection = null;
+          window.removeEventListener("mousemove", this.handleMouseMove);
+          window.removeEventListener("mouseup", this.handleMouseUp);
+        }
+      };
+    }
+  });
+
   // src/viewer.ts
   var require_viewer = __commonJS({
     "src/viewer.ts"() {
@@ -32002,17 +32111,21 @@
       init_highlighter();
       init_popover();
       init_highlight_popup();
+      init_snipper();
       __webpack_exports__GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("pdf.worker.min.mjs");
       var ScholicPdfViewer = class {
         sidebar;
         pdfUrl = "";
         pdfHash = "";
         annotations = [];
+        myUserId = null;
+        currentTab = "mine";
         eventBus;
         pdfViewer;
         pdfLinkService;
         popover;
         highlightPopup;
+        snipper;
         pendingSelectors = null;
         pendingHighlightElements = [];
         constructor() {
@@ -32022,7 +32135,9 @@
             onFocusAnnotation: (id) => this.handleFocus(id),
             onComment: (id, text) => this.handleComment(id, text),
             onRefresh: () => this.loadAnnotations(),
-            onTabChange: () => {
+            onTabChange: (tab) => {
+              this.currentTab = tab;
+              this.filterHighlights();
             }
           });
           this.popover = new SelectionPopover({
@@ -32040,29 +32155,31 @@
             onHighlight: async (range, quoteText) => {
               this.popover.hide();
               this.pendingSelectors = describe(document.getElementById("viewer"), range);
-              const tempId = `temp-${Date.now()}`;
-              highlightRange(range, "scholic-highlight", tempId);
-              const response = await chrome.runtime.sendMessage({
-                type: "CREATE_ANNOTATION",
-                data: {
-                  url: this.pdfUrl,
-                  pdfHash: this.pdfHash,
-                  type: "pdf",
-                  quoteText,
-                  text: "",
-                  // Empty text implies pure highlight
-                  selectors: this.pendingSelectors,
-                  isPrivate: true
-                }
-              });
-              if (response?.annotation) {
-                this.loadAnnotations();
+              if (this.pendingHighlightElements.length > 0) {
+                removeHighlights(this.pendingHighlightElements);
               }
+              const tempId = `temp-${Date.now()}`;
+              this.pendingHighlightElements = highlightRange(range, "scholic-highlight scholic-private", tempId);
+              window.getSelection()?.removeAllRanges();
+              await this.handleSave({
+                url: this.pdfUrl,
+                pdfHash: this.pdfHash,
+                type: "pdf",
+                quoteText,
+                text: "",
+                // Empty text implies pure highlight
+                selectors: this.pendingSelectors,
+                isPrivate: true
+              });
             }
           });
           this.highlightPopup = new HighlightPopup(
             (id) => this.annotations.find((a) => a.id === id),
             (id, text) => this.handleComment(id, text)
+          );
+          this.snipper = new Snipper(
+            (area) => this.handleAreaSelected(area),
+            () => this.sidebar.open()
           );
           const container = document.getElementById("viewer-container");
           this.eventBus = new __webpack_exports__EventBus();
@@ -32087,6 +32204,8 @@
           this.pdfUrl = url;
           document.title = `Scholic - ${url.substring(url.lastIndexOf("/") + 1)}`;
           try {
+            const meResponse = await chrome.runtime.sendMessage({ type: "FETCH_ME" });
+            this.myUserId = meResponse?.id;
             const pdfDoc = await __webpack_exports__getDocument(url).promise;
             this.pdfHash = btoa(url).substring(0, 16);
             this.pdfViewer.setDocument(pdfDoc);
@@ -32141,6 +32260,10 @@
             this.pdfViewer.currentScaleValue = (this.pdfViewer.currentScale / 1.2).toString();
             this.updateZoomLabel();
           });
+          window.addEventListener("SCHOLIC_START_SCREENSHOT", () => {
+            this.sidebar.hideCompletely();
+            setTimeout(() => this.snipper.start(), 100);
+          });
         }
         updateZoomLabel() {
           const el = document.getElementById("zoom-level");
@@ -32176,9 +32299,25 @@
             removeHighlights(existingHighlights);
           }
           for (const ann of this.annotations) {
+            if (ann.type === "image") continue;
             try {
               const range = await anchor(document.getElementById("viewer"), ann.selectors);
-              highlightRange(range, "scholic-highlight", ann.id);
+              const cssClass = ann.isPrivate ? "scholic-private" : "scholic-annotation";
+              const highlights = highlightRange(range, `scholic-highlight ${cssClass}`, ann.id);
+              const isMine = String(ann.userId) === String(this.myUserId);
+              let shouldHide = false;
+              if (this.currentTab === "mine") {
+                shouldHide = !isMine;
+              } else if (this.currentTab === "community") {
+                shouldHide = isMine;
+              }
+              highlights.forEach((h) => {
+                if (shouldHide) {
+                  h.classList.add("scholic-hidden");
+                } else {
+                  h.classList.remove("scholic-hidden");
+                }
+              });
               this.bindPopupEvents(ann.id);
             } catch (e) {
             }
@@ -32186,27 +32325,58 @@
         }
         async handleSave(annotation) {
           annotation.url = this.pdfUrl;
-          annotation.type = "pdf";
           annotation.pdfHash = this.pdfHash;
+          annotation.pdfPage = this.pdfViewer.currentPageNumber;
+          if (annotation.type !== "image") {
+            annotation.type = "pdf";
+          }
           const response = await chrome.runtime.sendMessage({
             type: "CREATE_ANNOTATION",
             data: annotation
           });
           if (response?.annotation) {
-            if (this.pendingHighlightElements.length > 0) {
-              removeHighlights(this.pendingHighlightElements);
-              this.pendingHighlightElements = [];
-            }
-            this.annotations.push(response.annotation);
+            const savedAnnotation = response.annotation;
+            this.annotations.push(savedAnnotation);
             this.sidebar.renderAnnotationList(this.annotations);
-            try {
-              const range = await anchor(document.getElementById("viewer"), response.annotation.selectors);
-              highlightRange(range, "scholic-highlight", response.annotation.id);
-              this.bindPopupEvents(response.annotation.id);
-            } catch (e) {
+            const annotationId = String(savedAnnotation.id);
+            const cssClass = savedAnnotation.isPrivate ? "scholic-private" : "scholic-annotation";
+            if (this.pendingHighlightElements.length > 0) {
+              this.pendingHighlightElements.forEach((el) => {
+                el.className = `scholic-highlight ${cssClass}`;
+                el._scholicAnnotationId = annotationId;
+                el.dataset.annotationId = annotationId;
+              });
+              this.bindPopupEvents(annotationId);
+              this.pendingHighlightElements = [];
+            } else {
+              if (savedAnnotation.type !== "image") {
+                try {
+                  const range = await anchor(document.getElementById("viewer"), savedAnnotation.selectors);
+                  highlightRange(range, `scholic-highlight ${cssClass}`, annotationId);
+                  this.bindPopupEvents(annotationId);
+                } catch (e) {
+                }
+              }
             }
-            setTimeout(() => this.pdfViewer.update(), 100);
+            this.filterHighlights();
           }
+        }
+        filterHighlights() {
+          this.annotations.forEach((ann) => {
+            const isMine = String(ann.userId) === String(this.myUserId);
+            let shouldShow = false;
+            if (this.currentTab === "all") shouldShow = true;
+            else if (this.currentTab === "mine") shouldShow = isMine;
+            else if (this.currentTab === "community") shouldShow = !isMine;
+            const elements = document.querySelectorAll(`.scholic-highlight[data-annotation-id="${ann.id}"]`);
+            elements.forEach((el) => {
+              if (shouldShow) {
+                el.classList.remove("scholic-hidden");
+              } else {
+                el.classList.add("scholic-hidden");
+              }
+            });
+          });
         }
         async handleDelete(id) {
           await chrome.runtime.sendMessage({ type: "DELETE_ANNOTATION", data: { id } });
@@ -32221,6 +32391,17 @@
           });
         }
         handleFocus(id) {
+          const ann = this.annotations.find((a) => String(a.id) === String(id));
+          if (ann && ann.pdfPage) {
+            if (this.pdfViewer.currentPageNumber !== ann.pdfPage) {
+              this.pdfViewer.currentPageNumber = ann.pdfPage;
+              setTimeout(() => {
+                const el2 = document.querySelector(`[data-annotation-id="${id}"]`);
+                if (el2) el2.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 500);
+              return;
+            }
+          }
           const el = document.querySelector(`[data-annotation-id="${id}"]`);
           if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -32235,6 +32416,46 @@
           if (response?.comment) {
             this.loadAnnotations();
           }
+        }
+        async handleAreaSelected(area) {
+          try {
+            const response = await chrome.runtime.sendMessage({ type: "CAPTURE_TAB" });
+            if (!response?.dataUrl) throw new Error("Failed to capture tab");
+            const croppedDataUrl = await this.cropImage(response.dataUrl, area);
+            this.sidebar.openWithImage(croppedDataUrl);
+          } catch (err) {
+            console.error("[Scholic] Screenshot failed:", err);
+            this.sidebar.open();
+          }
+        }
+        cropImage(dataUrl, area) {
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              canvas.width = area.width;
+              canvas.height = area.height;
+              const ctx = canvas.getContext("2d");
+              if (!ctx) {
+                reject(new Error("Could not get canvas context"));
+                return;
+              }
+              ctx.drawImage(
+                img,
+                area.x,
+                area.y,
+                area.width,
+                area.height,
+                0,
+                0,
+                area.width,
+                area.height
+              );
+              resolve(canvas.toDataURL("image/png"));
+            };
+            img.onerror = () => reject(new Error("Failed to load image for cropping"));
+            img.src = dataUrl;
+          });
         }
       };
       new ScholicPdfViewer();
