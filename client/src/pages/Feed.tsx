@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import { MessageCircle, SendHorizonal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import AnnotationCard from '../components/AnnotationCard';
 
 interface AnnotationUser {
   id: number;
@@ -228,7 +229,7 @@ const Feed: React.FC = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const renderAnnotationAction = (annotation: Annotation) => {
+  const renderAnnotationAction = useCallback((annotation: Annotation) => {
     let domainName = annotation.linkDomain;
     if (!domainName) {
       try { domainName = new URL(annotation.url).hostname.replace('www.', ''); } catch { domainName = annotation.url; }
@@ -238,9 +239,9 @@ const Feed: React.FC = () => {
       return <span>shared a thought on <a href={annotation.url} target="_blank" rel="noreferrer" style={{ color: '#6EB781', textDecoration: 'none' }} className="hover:underline">{domainName}</a></span>;
     }
     return <span>annotated <a href={annotation.url} target="_blank" rel="noreferrer" style={{ color: '#6EB781', textDecoration: 'none' }} className="hover:underline">{domainName}</a></span>;
-  };
+  }, []);
 
-  const renderAvatar = (annotationUser: AnnotationUser, size = 36) => {
+  const renderAvatar = useCallback((annotationUser: AnnotationUser, size = 36) => {
     const initial = annotationUser.username?.[0]?.toUpperCase() || annotationUser.firstName?.[0]?.toUpperCase() || '?';
     if (annotationUser.profilePicture) {
       return (
@@ -270,7 +271,7 @@ const Feed: React.FC = () => {
         {initial}
       </div>
     );
-  };
+  }, []);
 
   return (
     <div style={{ ...bodyFont, minHeight: '100vh', background: '#121212', color: '#fff' }}>
@@ -322,272 +323,22 @@ const Feed: React.FC = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {annotations.map((annotation) => (
-              <div
+              <AnnotationCard
                 key={annotation.id}
-                style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-              >
-                {/* Author row */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  {annotation.user && renderAvatar(annotation.user, 36)}
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Name + date */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                      <a href={`/u/${annotation.user?.username}`} style={{ textDecoration: 'none' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0' }} className="hover:underline">
-                          @{annotation.user?.username || 'unknown'}
-                        </span>
-                      </a>
-                      <span style={{ fontSize: '12px', color: '#444' }}>
-                        {formatDate(annotation.createdAt)}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#555', marginBottom: '12px' }}>
-                      {renderAnnotationAction(annotation)}
-                    </div>
-
-                    {/* Content: Image or Quote */}
-                    {annotation.type === 'image' && annotation.imageUrl ? (
-                      <div style={{
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        marginBottom: '10px',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        background: 'rgba(255,255,255,0.02)'
-                      }}>
-                        <img 
-                          src={annotation.imageUrl} 
-                          alt="Annotation Screenshot" 
-                          style={{ width: '100%', display: 'block' }} 
-                        />
-                      </div>
-                    ) : annotation.quoteText && (
-                      <div style={{
-                        borderLeft: '2px solid rgba(110,183,129,0.5)',
-                        paddingLeft: '12px',
-                        margin: '0 0 10px 0',
-                        fontSize: '13px',
-                        color: '#888',
-                        lineHeight: 1.65,
-                        fontStyle: 'italic',
-                      }}>
-                        {annotation.quoteText}
-                      </div>
-                    )}
-
-                    {/* Note */}
-                    {annotation.text && (
-                      <p style={{ fontSize: '14px', color: '#ccc', lineHeight: 1.65, margin: '0 0 12px 0' }}>
-                        {annotation.text}
-                      </p>
-                    )}
-
-                    {/* Link Card */}
-                    {annotation.type !== 'image' && (
-                      <a href={annotation.url} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit', margin: '0 0 16px 0' }}>
-                        <div style={{
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: '8px',
-                          overflow: 'hidden',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          background: 'rgba(255,255,255,0.02)',
-                          transition: 'background 0.2s',
-                        }} className="hover:bg-white/5">
-                          {annotation.linkImage && (
-                            <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
-                          )}
-                          <div style={{ padding: '12px 14px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                              {annotation.linkFavicon && <img src={annotation.linkFavicon} style={{ width: '14px', height: '14px', borderRadius: '2px' }} alt="" />}
-                              <span style={{ fontSize: '12px', color: '#888', fontWeight: 500 }}>{annotation.linkDomain || new URL(annotation.url).hostname.replace('www.', '')}</span>
-                            </div>
-                            <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 4px 0', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{annotation.linkTitle || annotation.url}</h3>
-                            {annotation.linkDescription && (
-                              <p style={{ fontSize: '12px', color: '#888', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{annotation.linkDescription}</p>
-                            )}
-                          </div>
-                        </div>
-                      </a>
-                    )}
-
-                    {/* Comment toggle */}
-                    <button
-                      onClick={() => toggleComments(annotation.id)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: openComments[annotation.id] ? '#6EB781' : '#555',
-                        fontSize: '13px',
-                        padding: '0',
-                        transition: 'color 0.15s',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      <MessageCircle style={{ width: 15, height: 15 }} />
-                      <span>{annotation.commentCount || 0}</span>
-                    </button>
-
-                    {/* Comments section — animated */}
-                    <AnimatePresence initial={false}>
-                      {openComments[annotation.id] && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                          style={{ overflow: 'hidden' }}
-                        >
-                          <div style={{
-                            marginTop: '16px',
-                            paddingTop: '16px',
-                            borderTop: '1px solid rgba(255,255,255,0.05)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '16px',
-                          }}>
-                            {/* New comment input - Moved ABOVE list */}
-                            {user && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                                {renderAvatar({
-                                  id: user.id,
-                                  username: user.username,
-                                  firstName: user.firstName,
-                                  lastName: user.lastName,
-                                  profilePicture: user.profilePicture,
-                                }, 28)}
-                                <div style={{
-                                  flex: 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  background: 'rgba(255,255,255,0.04)',
-                                  border: '1px solid rgba(255,255,255,0.07)',
-                                  borderRadius: '20px',
-                                  padding: '0 6px 0 14px',
-                                  transition: 'border-color 0.15s',
-                                }}>
-                                  <input
-                                    ref={el => { inputRefs.current[annotation.id] = el; }}
-                                    type="text"
-                                    placeholder="Add a comment…"
-                                    value={commentInputs[annotation.id] || ''}
-                                    onChange={(e) => handleCommentChange(annotation.id, e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') submitComment(annotation.id); }}
-                                    onFocus={(e) => {
-                                      (e.target.parentElement as HTMLElement).style.borderColor = 'rgba(110,183,129,0.35)';
-                                    }}
-                                    onBlur={(e) => {
-                                      (e.target.parentElement as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
-                                    }}
-                                    style={{
-                                      flex: 1,
-                                      background: 'none',
-                                      border: 'none',
-                                      outline: 'none',
-                                      fontSize: '13px',
-                                      color: '#ccc',
-                                      padding: '10px 0',
-                                      fontFamily: 'inherit',
-                                    }}
-                                  />
-                                  <button
-                                    onClick={() => submitComment(annotation.id)}
-                                    disabled={!commentInputs[annotation.id]?.trim() || submitting[annotation.id]}
-                                    style={{
-                                      width: '30px',
-                                      height: '30px',
-                                      borderRadius: '50%',
-                                      border: 'none',
-                                      background: commentInputs[annotation.id]?.trim() ? '#6EB781' : 'transparent',
-                                      color: commentInputs[annotation.id]?.trim() ? '#0a0a0a' : '#444',
-                                      cursor: commentInputs[annotation.id]?.trim() ? 'pointer' : 'default',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      flexShrink: 0,
-                                      transition: 'all 0.15s',
-                                      fontFamily: 'inherit',
-                                    }}
-                                  >
-                                    <SendHorizonal style={{ width: 13, height: 13 }} />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Existing comments */}
-                            <AnimatePresence>
-                              {(annotation.comments || []).map((comment, i) => (
-                                <motion.div
-                                  key={comment.id}
-                                  initial={{ opacity: 0, y: 6 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: i * 0.04, duration: 0.2 }}
-                                  style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}
-                                >
-                                  <a href={`/u/${comment.user?.username}`} style={{ textDecoration: 'none' }}>
-                                    {comment.user && renderAvatar(comment.user, 28)}
-                                  </a>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px' }}>
-                                      <a href={`/u/${comment.user?.username}`} style={{ textDecoration: 'none' }}>
-                                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#d0d0d0' }} className="hover:underline">
-                                          @{comment.user?.username}
-                                        </span>
-                                      </a>
-                                      <span style={{ fontSize: '11px', color: '#444' }}>
-                                        {formatDate(comment.createdAt)}
-                                      </span>
-                                    </div>
-                                    <p style={{ fontSize: '13px', color: '#aaa', lineHeight: 1.6, margin: 0 }}>
-                                      {comment.text}
-                                    </p>
-                                  </div>
-                                </motion.div>
-                              ))}
-                            </AnimatePresence>
-
-                            {/* Load more comments */}
-                            {annotation.commentCount > (annotation.comments?.length || 0) && (
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <button
-                                  onClick={() => fetchMoreComments(annotation.id)}
-                                  disabled={fetchingComments[annotation.id]}
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#6EB781',
-                                    fontSize: '12px',
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                    padding: '4px 0',
-                                    textAlign: 'left',
-                                    fontFamily: 'inherit',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    opacity: fetchingComments[annotation.id] ? 0.5 : 1
-                                  }}
-                                >
-                                  View {annotation.commentCount - (annotation.comments?.length || 0)} more comments
-                                </button>
-                                {fetchingComments[annotation.id] && <CommentSkeleton />}
-                              </div>
-                            )}
-
-                            {/* New comment input - REMOVED from here */}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              </div>
+                annotation={annotation as any}
+                openComments={openComments}
+                toggleComments={toggleComments}
+                renderAvatar={renderAvatar as any}
+                renderAnnotationAction={renderAnnotationAction as any}
+                formatDate={formatDate}
+                handleComment={(id, text) => {
+                  setCommentInputs(prev => ({ ...prev, [id]: text }));
+                  submitComment(id);
+                }}
+                fetchMoreComments={fetchMoreComments}
+                fetchingComments={fetchingComments}
+                currentUser={user as any}
+              />
             ))}
 
             {/* Pagination Footer */}

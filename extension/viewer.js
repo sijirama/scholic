@@ -29788,6 +29788,12 @@
         transform: scale(1.05);
       }
 
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: #555; }
+
       .user-menu {
         position: absolute;
         top: 50px;
@@ -30418,6 +30424,8 @@
                 list.appendChild(item);
               });
             }
+            const contentLayer = this.panel.querySelector(".sidebar-content");
+            if (contentLayer) contentLayer.scrollTop = 0;
           } finally {
             this.isRendering = false;
           }
@@ -32260,6 +32268,18 @@
             this.pdfViewer.currentScaleValue = (this.pdfViewer.currentScale / 1.2).toString();
             this.updateZoomLabel();
           });
+          document.getElementById("btn-download")?.addEventListener("click", () => {
+            const a = document.createElement("a");
+            a.href = this.pdfUrl;
+            const filename = this.pdfUrl.split("/").pop()?.split("?")[0] || "document.pdf";
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          });
+          document.getElementById("btn-print")?.addEventListener("click", () => {
+            window.print();
+          });
           window.addEventListener("SCHOLIC_START_SCREENSHOT", () => {
             this.sidebar.hideCompletely();
             setTimeout(() => this.snipper.start(), 100);
@@ -32336,7 +32356,7 @@
           });
           if (response?.annotation) {
             const savedAnnotation = response.annotation;
-            this.annotations.push(savedAnnotation);
+            this.annotations.unshift(savedAnnotation);
             this.sidebar.renderAnnotationList(this.annotations);
             const annotationId = String(savedAnnotation.id);
             const cssClass = savedAnnotation.isPrivate ? "scholic-private" : "scholic-annotation";

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import { ArrowLeft, Settings, MessageCircle } from 'lucide-react';
+import AnnotationCard from '../components/AnnotationCard';
 
 interface ProfileUser {
   id: number;
@@ -246,7 +247,7 @@ const Profile: React.FC = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const renderAnnotationAction = (annotation: Annotation) => {
+  const renderAnnotationAction = useCallback((annotation: Annotation) => {
     let domainName = annotation.linkDomain;
     if (!domainName) {
       try { domainName = new URL(annotation.url).hostname.replace('www.', ''); } catch { domainName = annotation.url; }
@@ -256,7 +257,39 @@ const Profile: React.FC = () => {
       return <span>shared a thought on <a href={annotation.url} target="_blank" rel="noreferrer" style={{color: '#6EB781', textDecoration: 'none'}} className="hover:underline">{domainName}</a></span>;
     }
     return <span>annotated <a href={annotation.url} target="_blank" rel="noreferrer" style={{color: '#6EB781', textDecoration: 'none'}} className="hover:underline">{domainName}</a></span>;
-  };
+  }, []);
+
+  const renderAvatar = useCallback((annotationUser: ProfileUser, size = 36) => {
+    const initial = annotationUser.username?.[0]?.toUpperCase() || annotationUser.firstName?.[0]?.toUpperCase() || '?';
+    if (annotationUser.profilePicture) {
+      return (
+        <img
+          src={annotationUser.profilePicture}
+          alt={annotationUser.username}
+          style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+        />
+      );
+    }
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, rgba(110,183,129,0.5), rgba(71,163,232,0.5))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: size * 0.38,
+          fontWeight: 700,
+          color: '#fff',
+          flexShrink: 0,
+        }}
+      >
+        {initial}
+      </div>
+    );
+  }, []);
 
   if (loading) {
     return (
@@ -437,192 +470,25 @@ const Profile: React.FC = () => {
             ) : (
               <div className="flex flex-col" style={{ gap: '8px' }}>
                 {activity.map((annotation) => (
-                  <div
+                  <AnnotationCard
                     key={annotation.id}
-                    style={{
-                      padding: '16px 0',
-                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    annotation={annotation as any}
+                    openComments={openComments}
+                    toggleComments={toggleComments}
+                    renderAvatar={renderAvatar as any}
+                    renderAnnotationAction={renderAnnotationAction as any}
+                    formatDate={formatDate}
+                    handleComment={(id, text) => {
+                      // Adapt to profile's comment submission logic
+                      api.post(`/api/annotations/${id}/comments`, { text }).then(() => {
+                        fetchActivity(); // Refresh
+                      });
                     }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="flex items-center gap-2" style={{ marginBottom: '2px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0' }}>
-                            @{profileUser.username}
-                          </span>
-                          <span style={{ fontSize: '12px', color: '#555' }}>
-                            {formatDate(annotation.createdAt)}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
-                          {renderAnnotationAction(annotation)}
-                        </div>
-
-                        {/* Content: Image or Quote */}
-                        {annotation.type === 'image' && annotation.imageUrl ? (
-                          <div style={{
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            margin: '12px 0',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            background: 'rgba(255,255,255,0.02)'
-                          }}>
-                            <img 
-                              src={annotation.imageUrl} 
-                              alt="Annotation Screenshot" 
-                              style={{ width: '100%', display: 'block' }} 
-                            />
-                          </div>
-                        ) : annotation.quoteText && (
-                          <div
-                            style={{
-                              borderLeft: '2px solid #6EB781',
-                              paddingLeft: '12px',
-                              margin: '8px 0',
-                              fontSize: '13px',
-                              color: '#bbb',
-                              lineHeight: '1.6',
-                              fontStyle: 'italic',
-                            }}
-                          >
-                            {annotation.quoteText}
-                          </div>
-                        )}
-
-                        {annotation.text && (
-                          <p style={{ fontSize: '14px', color: '#ccc', lineHeight: '1.6', marginTop: '8px' }}>
-                            {annotation.text}
-                          </p>
-                        )}
-
-                        {/* Link Card Component */}
-                        {annotation.type !== 'image' && (
-                          <a href={annotation.url} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit', margin: '12px 0 16px 0' }}>
-                            <div style={{
-                              border: '1px solid rgba(255,255,255,0.08)',
-                              borderRadius: '8px',
-                              overflow: 'hidden',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              background: 'rgba(255,255,255,0.02)',
-                              transition: 'background 0.2s',
-                            }} className="hover:bg-white/5">
-                              {annotation.linkImage && (
-                                <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
-                              )}
-                              <div style={{ padding: '12px 14px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                                  {annotation.linkFavicon && <img src={annotation.linkFavicon} style={{ width: '14px', height: '14px', borderRadius: '2px' }} alt="" />}
-                                  <span style={{ fontSize: '12px', color: '#888', fontWeight: 500 }}>{annotation.linkDomain || new URL(annotation.url).hostname.replace('www.', '')}</span>
-                                </div>
-                                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 4px 0', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{annotation.linkTitle || annotation.url}</h3>
-                                {annotation.linkDescription && (
-                                  <p style={{ fontSize: '12px', color: '#888', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{annotation.linkDescription}</p>
-                                )}
-                              </div>
-                            </div>
-                          </a>
-                        )}
-
-                        <div className="flex items-center gap-5" style={{ marginTop: '12px' }}>
-                          <button
-                            onClick={() => toggleComments(annotation.id)}
-                            className="flex items-center gap-1.5 transition-colors cursor-pointer hover:text-white"
-                            style={{ color: '#555', fontSize: '13px', background: 'none', border: 'none' }}
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                            <span>{annotation.commentCount || 0}</span>
-                          </button>
-                        </div>
-
-                        {openComments[annotation.id] && (
-                          <div className="mt-3 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                            {(annotation.comments || []).map(comment => (
-                              <div key={comment.id} className="flex items-start gap-3 mb-5">
-                                <div className="flex items-center justify-center shrink-0 w-7 h-7 rounded-full overflow-hidden border border-white/10" style={{ background: 'linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3))' }}>
-                                  {comment.user?.profilePicture ? (
-                                    <img src={comment.user.profilePicture} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                  ) : (
-                                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#fff' }}>{comment.user?.username?.[0]?.toUpperCase()}</span>
-                                  )}
-                                </div>
-                                <div className="flex-1" style={{ fontSize: '13px', paddingTop: '2px' }}>
-                                  <div className="flex items-center gap-2" style={{ marginBottom: '4px' }}>
-                                    <span className="font-semibold" style={{ color: '#e0e0e0', fontSize: '14px' }}>@{comment.user?.username}</span>
-                                    <span style={{ fontSize: '12px', color: '#666' }}>{formatDate(comment.createdAt)}</span>
-                                  </div>
-                                  <p style={{ color: '#ccc', lineHeight: '1.5' }}>{comment.text}</p>
-                                </div>
-                              </div>
-                            ))}
-
-                            {/* Load more comments */}
-                            {annotation.commentCount > (annotation.comments?.length || 0) && (
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <button
-                                  onClick={() => fetchMoreComments(annotation.id)}
-                                  disabled={fetchingComments[annotation.id]}
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#6EB781',
-                                    fontSize: '12px',
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                    padding: '4px 0',
-                                    textAlign: 'left',
-                                    fontFamily: 'inherit',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    opacity: fetchingComments[annotation.id] ? 0.5 : 1
-                                  }}
-                                >
-                                  View {annotation.commentCount - (annotation.comments?.length || 0)} more comments
-                                </button>
-                                {fetchingComments[annotation.id] && <CommentSkeleton />}
-                              </div>
-                            )}
-                            
-                            {/* New Comment Input */}
-                            <div className="flex gap-3 mt-4 items-center">
-                              {currentUser && (
-                                <div className="flex items-center justify-center shrink-0 w-7 h-7 rounded-full overflow-hidden border border-white/10" style={{ background: 'linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3))' }}>
-                                  {currentUser.profilePicture ? (
-                                    <img src={currentUser.profilePicture} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                  ) : (
-                                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#fff' }}>{currentUser.username?.[0]?.toUpperCase()}</span>
-                                  )}
-                                </div>
-                              )}
-                              <input
-                                type="text"
-                                placeholder="Write a comment..."
-                                value={commentInputs[annotation.id] || ''}
-                                onChange={(e) => handleCommentChange(annotation.id, e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    submitComment(annotation.id);
-                                  }
-                                }}
-                                style={{
-                                  flex: 1,
-                                  background: '#1a1a1a', 
-                                  border: '1px solid rgba(255,255,255,0.08)',
-                                  borderRadius: '20px',
-                                  padding: '8px 14px',
-                                  fontSize: '13px',
-                                  color: '#ccc',
-                                  outline: 'none',
-                                }}
-                                className="focus:border-green-500/50 transition-colors"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                    fetchMoreComments={fetchMoreComments}
+                    fetchingComments={fetchingComments}
+                    currentUser={currentUser as any}
+                    isProfile={true}
+                  />
                 ))}
 
                 {/* Pagination Footer */}

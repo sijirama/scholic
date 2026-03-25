@@ -344,8 +344,8 @@ async function handleSaveAnnotation(annotation: AnnotationData): Promise<void> {
     console.log('[Scholic] Save response:', response);
 
     if (response?.annotation) {
-      // Add to local state and re-render
-      pageAnnotations.push(response.annotation);
+      // Add to local state at the beginning (optimistic update to top)
+      pageAnnotations.unshift(response.annotation);
       await sidebar.renderAnnotationList(pageAnnotations);
 
       const savedAnnotation = response.annotation;

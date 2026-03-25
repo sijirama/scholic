@@ -202,6 +202,20 @@ class ScholicPdfViewer {
       this.updateZoomLabel();
     });
 
+    document.getElementById('btn-download')?.addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = this.pdfUrl;
+      const filename = this.pdfUrl.split('/').pop()?.split('?')[0] || 'document.pdf';
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    document.getElementById('btn-print')?.addEventListener('click', () => {
+      window.print();
+    });
+
     // Snipping tool listener (triggered from Sidebar camera button)
     window.addEventListener('SCHOLIC_START_SCREENSHOT', () => {
       this.sidebar.hideCompletely();
@@ -302,7 +316,8 @@ class ScholicPdfViewer {
     
     if (response?.annotation) {
       const savedAnnotation = response.annotation;
-      this.annotations.push(savedAnnotation);
+      // Unshift to put it at the top of the UI list
+      this.annotations.unshift(savedAnnotation);
       this.sidebar.renderAnnotationList(this.annotations);
       
       const annotationId = String(savedAnnotation.id);

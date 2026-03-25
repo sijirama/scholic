@@ -516,6 +516,12 @@ export class Sidebar {
         transform: scale(1.05);
       }
 
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: #555; }
+
       .user-menu {
         position: absolute;
         top: 50px;
@@ -1217,6 +1223,11 @@ export class Sidebar {
       }
 
       // The list is already appended to listContainer
+      
+      // Automatically scroll to the top to see new/optimistic updates
+      const contentLayer = this.panel.querySelector('.sidebar-content');
+      if (contentLayer) contentLayer.scrollTop = 0;
+      
     } finally {
       this.isRendering = false;
     }
