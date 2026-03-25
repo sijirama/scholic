@@ -25,6 +25,8 @@ type CreateAnnotationRequest struct {
 	IsPrivate bool   `json:"isPrivate"`
 	Type      string `json:"type"`      // text, image, html, etc.
 	Image     string `json:"image"`     // base64 encoded image data (for type="image")
+	PDFHash   string `json:"pdfHash"`   // Digital fingerprint of the PDF
+	PDFPage   int    `json:"pdfPage"`   // Page number within the PDF
 }
 
 // CreateAnnotation handles POST /api/annotations
@@ -97,6 +99,8 @@ func CreateAnnotation(c *gin.Context) {
 		IsPrivate:       req.IsPrivate,
 		Type:            req.Type,
 		ImageURL:        imageUrl,
+		PDFHash:         req.PDFHash,
+		PDFPage:         req.PDFPage,
 		LinkTitle:       linkTitle,
 		LinkDescription: linkDesc,
 		LinkImage:       linkImage,

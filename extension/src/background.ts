@@ -18,8 +18,44 @@ import { CONFIG } from './config';
 const API_BASE = CONFIG.API_BASE;
 
 /**
- * When the user clicks the Scholic extension icon in the toolbar,
- * toggle the "enabled" state for the current domain.
+ * PDF Interception via HTTP Headers
+ * This catches all PDF files, regardless of URL format,
+ * by inspecting the actual Content-Type returned by the server.
+ */
+chrome.webRequest.onHeadersReceived.addListener(
+  (details) => {
+    // Only intercept main frame navigation (full page loads)
+    if (details.type !== 'main_frame') return;
+
+    const url = details.url;
+    // Avoid redirect loop
+    if (url.includes('viewer.html?url=')) return;
+
+    // Check if response is a PDF
+    const contentTypeHeader = details.responseHeaders?.find(
+      (h) => h.name.toLowerCase() === 'content-type'
+    );
+    const contentType = contentTypeHeader?.value?.toLowerCase() || '';
+
+    // True PDF content type, or octet-stream fallback for .pdf URLs
+    const isPdf = contentType.includes('application/pdf') || 
+                  (contentType.includes('application/octet-stream') && url.toLowerCase().endsWith('.pdf'));
+
+    if (isPdf) {
+      console.log(`[Scholic] PDF detected via headers: ${url}. Redirecting to viewer...`);
+      const viewerUrl = chrome.runtime.getURL(`viewer.html?url=${encodeURIComponent(url)}`);
+      
+      // We asynchronously update the tab. This cancels the ongoing PDF load
+      // in the native viewer and navigates to our custom viewer.
+      chrome.tabs.update(details.tabId, { url: viewerUrl });
+    }
+  },
+  { urls: ['<all_urls>'] },
+  ['responseHeaders']
+);
+
+/**
+ * Handle messages from content scripts or the PDF viewer.
  */
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.id || !tab.url) return;
@@ -170,6 +206,8 @@ async function createAnnotation(data: any): Promise<any> {
       isPrivate: data.isPrivate,
       type: data.type || 'text',
       image: data.image,
+      pdfHash: data.pdfHash,
+      pdfPage: data.pdfPage,
     }),
   });
 

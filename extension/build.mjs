@@ -46,31 +46,44 @@ const backgroundScript = {
   outfile: 'background.js',
 };
 
+/**
+ * PDF Viewer — custom page for annotating PDFs.
+ */
+const viewerScript = {
+  ...commonOptions,
+  entryPoints: ['src/viewer.ts'],
+  outfile: 'viewer.js',
+};
+
 if (isWatch) {
   // Watch mode: rebuild on file changes
   const ctxContent = await esbuild.context(contentScript);
   const ctxBackground = await esbuild.context(backgroundScript);
+  const ctxViewer = await esbuild.context(viewerScript);
   await ctxContent.watch();
   await ctxBackground.watch();
+  await ctxViewer.watch();
 
-  // Also watch for CSS changes and copy to root
+  // Also watch for CSS changes and copy assets to root
   const fs = await import('fs');
-  const copyCss = () => {
+  const copyAssets = () => {
     try {
       fs.copyFileSync('src/content.css', 'content.css');
-      console.log('⚡ CSS updated');
+      fs.copyFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'pdf.worker.min.mjs');
+      fs.copyFileSync('node_modules/pdfjs-dist/web/pdf_viewer.css', 'pdf_viewer.css');
+      console.log('⚡ Assets updated');
     } catch (err) {
-      console.error('❌ Failed to copy CSS:', err);
+      console.error('❌ Failed to copy assets:', err);
     }
   };
 
   // Initial copy
-  copyCss();
+  copyAssets();
 
   // Simple watch logic for CSS
   fs.watch('src/content.css', (eventType) => {
     if (eventType === 'change') {
-      copyCss();
+      copyAssets();
     }
   });
 
@@ -79,10 +92,13 @@ if (isWatch) {
   // One-shot build
   await esbuild.build(contentScript);
   await esbuild.build(backgroundScript);
+  await esbuild.build(viewerScript);
 
-  // Copy content.css to root (manifest.json references it from root)
+  // Copy content.css and pdf worker to root
   const fs = await import('fs');
   fs.copyFileSync('src/content.css', 'content.css');
+  fs.copyFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'pdf.worker.min.mjs');
+  fs.copyFileSync('node_modules/pdfjs-dist/web/pdf_viewer.css', 'pdf_viewer.css');
 
   console.log('✅ Build complete.');
 }

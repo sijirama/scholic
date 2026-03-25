@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scholic PDF Viewer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      display: flex;
+      height: 100vh;
+    }
+    #viewer-container {
+      flex: 1;
+      overflow: auto;
+      position: absolute;
+      top: 40px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: #f4f4f4;
+    }
+    /* Toolbar styling */
+    #toolbar {
+      height: 40px;
+      background-color: #333;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 100;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      gap: 12px;
+    }
+    #toolbar span { font-size: 14px; }
+    #toolbar button {
+      background: #555;
+      border: 1px solid #666;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #toolbar button:hover { background: #666; }
+    /* Fix for highlights: text layer must be opaque, text transparent */
+    .textLayer {
+      opacity: 1 !important;
+    }
+    .textLayer > span {
+      color: transparent !important;
+    }
+    ::selection {
+      background: rgba(110,183,129,0.3);
+    }
+    /* Scholic Highlights */
+    .scholic-highlight {
+      background-color: rgba(110,183,129,0.4) !important;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+    .scholic-highlight-focused {
+      background-color: rgba(110,183,129,0.7) !important;
+      box-shadow: 0 0 0 2px #6EB781;
+    }
+  </style>
+  <link rel="stylesheet" href="pdf_viewer.css">
+  <link rel="stylesheet" href="content.css">
+</head>
+<body>
+  <div id="toolbar">
+    <button id="zoom-out">-</button>
+    <span id="zoom-level">100%</span>
+    <button id="zoom-in">+</button>
+    <span id="page-count" style="margin-left: 16px; color: #ccc;">Loading...</span>
+  </div>
+  <div id="viewer-container">
+    <div id="viewer" class="pdfViewer"></div>
+  </div>
+  <script src="viewer.js"></script>
+</body>
+</html>

@@ -47,10 +47,12 @@ type Annotation struct {
 
 	// Type distinguishes between text, image, html, and pdf annotations.
 	// Defaults to "text" for backwards compatibility.
-	Type string `gorm:"default:'text';not null" json:"type"`
+	Type      string `gorm:"default:text" json:"type"`
 
 	// ImageURL is the location of the screenshot in R2 (only for type="image")
-	ImageURL string `json:"imageUrl"`
+	ImageURL  string `json:"imageUrl"`
+	PDFHash   string `gorm:"index" json:"pdfHash"` // Digital fingerprint of the PDF
+	PDFPage   int    `json:"pdfPage"`               // Page number within the PDF
 
 	// LinkMetadata stores scraped OpenGraph data for rich previews in the Feed
 	LinkTitle       string `json:"linkTitle"`
