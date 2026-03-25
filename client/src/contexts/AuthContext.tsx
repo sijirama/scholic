@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Auth routes are now outside /api to match Turva's Google callback
       const response = await api.get('../auth/me');
       setUser(response.data);
-    } catch (error) {
+    } catch {
       setUser(null);
     } finally {
       setLoading(false);
@@ -64,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+/* eslint-disable-next-line react-refresh/only-export-components */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -70,9 +70,12 @@ const ExtensionLogin: React.FC = () => {
         const response = await api.get('/auth/token');
         const token = response.data.token;
 
-        if ((window as any).chrome?.runtime?.sendMessage) {
-          (window as any).chrome.runtime.sendMessage(extensionId, { type: 'SCHOLIC_EXT_AUTH', token }, () => {
-            if ((window as any).chrome.runtime.lastError) {
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+        const chrome = (window as any).chrome;
+        if (chrome?.runtime?.sendMessage) {
+          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+          chrome.runtime.sendMessage(extensionId, { type: 'SCHOLIC_EXT_AUTH', token }, (response: any) => {
+            if (chrome.runtime.lastError || response?.error) {
               setStatus('error');
             } else {
               setStatus('success');

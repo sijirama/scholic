@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
@@ -88,7 +88,7 @@ const Profile: React.FC = () => {
       setActivity(prev => prev.map(ann => {
         if (ann.id === annotationId) {
           const existingIds = new Set(ann.comments.map(c => c.id));
-          const filteredNew = newComments.filter((c: any) => !existingIds.has(c.id));
+          const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
           return { ...ann, comments: [...ann.comments, ...filteredNew] };
         }
         return ann;
@@ -151,7 +151,7 @@ const Profile: React.FC = () => {
     setPage(0);
     setHasMore(true);
     fetchProfile(0, true);
-  }, [username]);
+  }, [username, fetchProfile]);
 
   // Infinite scroll for activity
   useEffect(() => {
@@ -167,9 +167,9 @@ const Profile: React.FC = () => {
     );
     if (observerTarget.current) observer.observe(observerTarget.current);
     return () => observer.disconnect();
-  }, [hasMore, fetchingMore, loading, page, username, activeTab]);
+  }, [hasMore, fetchingMore, loading, page, username, activeTab, fetchProfile]);
 
-  const fetchProfile = async (pageNum: number, isInitial = false) => {
+  const fetchProfile = useCallback(async (pageNum: number, isInitial = false) => {
     if (isInitial) setLoading(true);
     else setFetchingMore(true);
     setError('');
@@ -189,14 +189,18 @@ const Profile: React.FC = () => {
       const total = response.data.totalActivity || 0;
       const currentLoaded = isInitial ? (response.data.activity?.length || 0) : (activity.length + (response.data.activity?.length || 0));
       setHasMore(currentLoaded < total);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch profile:', err);
-      if (isInitial) setError(err.response?.data?.error || 'User not found');
+      if (isInitial) {
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+        const axiosError = err as any; 
+        setError(axiosError.response?.data?.error || 'User not found');
+      }
     } finally {
       setLoading(false);
       setFetchingMore(false);
     }
-  };
+  }, [username, activity.length]);
 
   const isOwnProfile = currentUser?.username === username;
   const tabs = ['Annotations'];

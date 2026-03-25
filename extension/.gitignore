@@ -10,7 +10,7 @@ background.js
 background.js.map
 content.js
 content.js.map
-content.css
+/content.css
 !build.mjs
 
 # Env files

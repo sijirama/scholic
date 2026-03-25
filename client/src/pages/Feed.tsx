@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
@@ -88,7 +88,7 @@ const Feed: React.FC = () => {
         if (ann.id === annotationId) {
           // Merge and avoid duplicates
           const existingIds = new Set(ann.comments.map(c => c.id));
-          const filteredNew = newComments.filter((c: any) => !existingIds.has(c.id));
+          const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
           return { ...ann, comments: [...ann.comments, ...filteredNew] };
         }
         return ann;
@@ -141,7 +141,7 @@ const Feed: React.FC = () => {
     setPage(0);
     setHasMore(true);
     fetchFeed(0, true);
-  }, [tab]);
+  }, [tab, fetchFeed]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -161,9 +161,9 @@ const Feed: React.FC = () => {
     }
 
     return () => observer.disconnect();
-  }, [hasMore, fetchingMore, loading, page, tab]);
+  }, [hasMore, fetchingMore, loading, page, fetchFeed]);
 
-  const fetchFeed = async (pageNum: number, isInitial = false) => {
+  const fetchFeed = useCallback(async (pageNum: number, isInitial = false) => {
     if (isInitial) setLoading(true);
     else setFetchingMore(true);
 
@@ -171,17 +171,24 @@ const Feed: React.FC = () => {
       const limit = 20;
       const offset = pageNum * limit;
       const response = await api.get(`/feed?limit=${limit}&offset=${offset}&tab=${tab}`);
-      const newAnns = response.data.annotations || [];
       
-      setAnnotations(prev => isInitial ? newAnns : [...prev, ...newAnns]);
-      setHasMore(newAnns.length === limit);
+      if (isInitial) {
+        setAnnotations(response.data.annotations || []);
+      } else {
+        const newAnnotations = response.data.annotations || [];
+        setAnnotations(prev => [...prev, ...newAnnotations]);
+      }
+      
+      const total = response.data.total || 0;
+      const currentLoaded = isInitial ? (response.data.annotations?.length || 0) : (annotations.length + (response.data.annotations?.length || 0));
+      setHasMore(currentLoaded < total);
     } catch (err) {
-      console.error('Failed to fetch feed:', err);
+      console.error('Failed to fetch feed', err);
     } finally {
       setLoading(false);
       setFetchingMore(false);
     }
-  };
+  }, [tab, annotations.length]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);

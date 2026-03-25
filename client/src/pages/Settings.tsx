@@ -98,8 +98,10 @@ const Settings: React.FC = () => {
       await refreshUser();
       setSaveMessage('Saved!');
       setTimeout(() => setSaveMessage(''), 2000);
-    } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to save';
+    } catch (err: unknown) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      const axiosError = err as any;
+      const msg = axiosError.response?.data?.error || 'Failed to save';
       setSaveMessage(msg);
     } finally {
       setSaving(false);

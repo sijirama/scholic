@@ -24,8 +24,10 @@ const Onboarding: React.FC = () => {
       await api.post('/auth/onboard', { username });
       await refreshUser();
       navigate('/feed');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'That username might already be taken.');
+    } catch (err: unknown) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.error || 'That username might already be taken.');
     } finally {
       setLoading(false);
     }
