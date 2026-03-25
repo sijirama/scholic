@@ -362,22 +362,6 @@ const Feed: React.FC = () => {
         .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         
         input::placeholder { color: #444; }
-
-        /* Custom Scrollbar */
-        body::-webkit-scrollbar {
-          width: 8px;
-        }
-        body::-webkit-scrollbar-track {
-          background: #121212;
-        }
-        body::-webkit-scrollbar-thumb {
-          background: rgba(110,183,129,0.2);
-          border-radius: 10px;
-          border: 2px solid #121212;
-        }
-        body::-webkit-scrollbar-thumb:hover {
-          background: rgba(110,183,129,0.4);
-        }
       `}</style>
     </div>
   );

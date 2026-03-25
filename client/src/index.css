@@ -29,3 +29,14 @@ body {
   width: 100%;
   min-height: 100vh;
 }
+
+/* Custom Scrollbar Global - Removed as per user request */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

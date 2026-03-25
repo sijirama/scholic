@@ -141,7 +141,7 @@ export class Sidebar {
         <div class="sidebar-tabs-container" style="flex-shrink: 0;"></div>
         <div class="sidebar-form-container" style="flex-shrink: 0;"></div>
         <div class="sidebar-image-preview-container" style="flex-shrink: 0; display: none; padding: 0 20px 16px;"></div>
-        <div class="sidebar-list-container" style="flex: 1; min-height: 0; overflow-y: auto;"></div>
+        <div class="sidebar-list-container"></div>
       </div>
     `;
 
@@ -343,19 +343,30 @@ export class Sidebar {
         box-shadow: -4px 0 20px rgba(0,0,0,0.3);
       }
 
-      /* Custom scrollbar for the sidebar */
-      .scholic-sidebar::-webkit-scrollbar {
-        width: 4px;
+      /* Hide scrollbars for everything inside the sidebar's shadow DOM */
+      * {
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
       }
-      .scholic-sidebar::-webkit-scrollbar-track {
-        background: transparent;
+
+      *::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
       }
-      .scholic-sidebar::-webkit-scrollbar-thumb {
-        background: rgba(110,183,129,0.3);
-        border-radius: 4px;
+
+      /* Explicitly target the list container to be sure */
+      .sidebar-list-container {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
       }
-      .scholic-sidebar::-webkit-scrollbar-thumb:hover {
-        background: rgba(110,183,129,0.6);
+      .sidebar-list-container::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
       }
 
       .scholic-sidebar.open {
