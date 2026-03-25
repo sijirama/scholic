@@ -3,44 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import AnnotationCard from '../components/AnnotationCard';
+import type { Annotation, User as AnnotationUser, Comment } from '../components/AnnotationCard';
 
-interface AnnotationUser {
-  id: number;
-  username: string;
-  firstName: string;
-  lastName: string;
-  profilePicture: string;
-}
 
-interface Comment {
-  id: number;
-  annotationId: number;
-  userId: number;
-  text: string;
-  createdAt: string;
-  user: AnnotationUser;
-}
-
-interface Annotation {
-  id: number;
-  userId: number;
-  url: string;
-  text: string;
-  quoteText: string;
-  isPrivate: boolean;
-  createdAt: string;
-  user: AnnotationUser;
-  comments: Comment[];
-  commentCount: number;
-  
-  linkTitle?: string;
-  linkDescription?: string;
-  linkImage?: string;
-  linkFavicon?: string;
-  linkDomain?: string;
-  type?: string;
-  imageUrl?: string;
-}
 
 const FeedSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -110,9 +75,9 @@ const Feed: React.FC = () => {
       setAnnotations(prev => prev.map(ann => {
         if (ann.id === annotationId) {
           // Merge and avoid duplicates
-          const existingIds = new Set(ann.comments.map(c => c.id));
+          const existingIds = new Set((ann.comments || []).map(c => c.id));
           const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
-          return { ...ann, comments: [...ann.comments, ...filteredNew] };
+          return { ...ann, comments: [...(ann.comments || []), ...filteredNew] };
         }
         return ann;
       }));
@@ -137,7 +102,7 @@ const Feed: React.FC = () => {
           return { 
             ...ann, 
             comments: [...(ann.comments || []), response.data],
-            commentCount: ann.commentCount + 1
+            commentCount: (ann.commentCount || 0) + 1
           };
         }
         return ann;
@@ -308,11 +273,11 @@ const Feed: React.FC = () => {
             {annotations.map((annotation) => (
               <AnnotationCard
                 key={annotation.id}
-                annotation={annotation as any}
+                annotation={annotation}
                 openComments={openComments}
                 toggleComments={toggleComments}
-                renderAvatar={renderAvatar as (user: any, size: number) => React.ReactNode}
-                renderAnnotationAction={renderAnnotationAction as (a: any) => React.ReactNode}
+                renderAvatar={renderAvatar as (u: AnnotationUser, s: number) => React.ReactNode}
+                renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
                 formatDate={formatDate}
                 handleComment={(id, text) => {
                   setCommentInputs(prev => ({ ...prev, [id]: text }));
@@ -320,7 +285,7 @@ const Feed: React.FC = () => {
                 }}
                 fetchMoreComments={fetchMoreComments}
                 fetchingComments={fetchingComments}
-                currentUser={user as any}
+                currentUser={user as AnnotationUser | null}
               />
             ))}
 

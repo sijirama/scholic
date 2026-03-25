@@ -2,7 +2,7 @@ import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface User {
+export interface User {
   id: number;
   username: string;
   firstName?: string;
@@ -10,14 +10,14 @@ interface User {
   profilePicture?: string;
 }
 
-interface Comment {
+export interface Comment {
   id: number;
   text: string;
   user: User;
   createdAt: string;
 }
 
-interface Annotation {
+export interface Annotation {
   id: number;
   url: string;
   quoteText?: string;
