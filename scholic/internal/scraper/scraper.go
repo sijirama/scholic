@@ -34,6 +34,14 @@ var (
 
 // ExtractMetadata fetches a URL and extracts OpenGraph and basic HTML metadata.
 func ExtractMetadata(url string) (*LinkMetadata, error) {
+	// Attempt to resolve PDF URLs to their HTML abstract equivalents
+	if strings.Contains(url, "arxiv.org/pdf/") {
+		url = strings.Replace(url, "/pdf/", "/abs/", 1)
+		url = strings.TrimSuffix(url, ".pdf")
+	} else if strings.Contains(url, "pubmed.ncbi.nlm.nih.gov") && strings.HasSuffix(url, ".pdf") {
+		url = strings.TrimSuffix(url, ".pdf") // Very naive fallback
+	}
+
 	// Create an HTTP client that ignores SSL errors and timeouts quickly
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
 	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -62,6 +70,16 @@ func ExtractMetadata(url string) (*LinkMetadata, error) {
 	bodyBytes, err := io.ReadAll(limitReader)
 	if err != nil && err != io.EOF {
 		return nil, err
+	}
+
+	// Fast fail if this is actually a PDF binary (starts with %PDF)
+	if len(bodyBytes) > 4 && string(bodyBytes[:4]) == "%PDF" {
+		domain := extractDomain(url)
+		return &LinkMetadata{
+			Domain: domain,
+			Title:  "PDF Document",
+			Description: "View PDF document hosted on " + domain,
+		}, nil
 	}
 
 	html := string(bodyBytes)
