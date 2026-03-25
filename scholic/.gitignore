@@ -1,0 +1,25 @@
+# Generated binaries
+scholic_api
+scholia_api
+api
+tmp/
+
+# Environment variables
+.env
+.env.local
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Dependency directories
+vendor/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

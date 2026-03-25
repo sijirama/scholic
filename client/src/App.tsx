@@ -1,0 +1,46 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+import AuthRedirect from './components/AuthRedirect';
+import Landing from './pages/Landing';
+import Onboarding from './pages/Onboarding';
+import ExtensionLogin from './pages/ExtensionLogin';
+import Feed from './pages/Feed';
+import Settings from './pages/Settings';
+import Profile from './pages/Profile';
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+         <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route element={<AuthRedirect />}>
+              <Route index element={<Landing />} />
+            </Route>
+            <Route path="auth/extension-login" element={<ExtensionLogin />} />
+            <Route path="u/:username" element={<Profile />} />
+            <Route path="onboarding" element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            } />
+            <Route path="feed" element={
+              <ProtectedRoute>
+                <Feed />
+              </ProtectedRoute>
+            } />
+            <Route path="settings" element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
+
+export default App;

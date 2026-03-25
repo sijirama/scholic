@@ -1,0 +1,29 @@
+services:
+  redis:
+    image: "redis:latest"
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: postgres:16
+    container_name: scholic-postgres
+    environment:
+      POSTGRES_USER: scholic_user
+      POSTGRES_PASSWORD: scholic_password
+      POSTGRES_DB: scholic_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: scholic-dev-network
+
+volumes:
+  redis_data:
+  postgres_data:

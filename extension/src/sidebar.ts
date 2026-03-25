@@ -1,0 +1,1226 @@
+/**
+ * sidebar.ts — Right-side panel for viewing and creating annotations.
+ *
+ * The sidebar is injected into every page as a Shadow DOM element (style isolation).
+ * It provides:
+ *   - An annotation creation form (quoted text + note input + public/private toggle)
+ *   - A list of all annotations on the current page
+ *   - Click-to-focus: clicking a sidebar item scrolls to its highlight
+ *
+ * The sidebar is toggleable via the extension icon or when "Annotate" is clicked.
+ */
+
+import type { Selector } from './anchoring/types';
+import { CONFIG } from './config';
+
+export interface AnnotationData {
+  id?: string | number;
+  url: string;
+  quoteText: string;
+  text: string;
+  selectors: Selector[];
+  isPrivate: boolean;
+  userId?: number | string;
+  createdAt?: string;
+  user?: {
+    username?: string;
+    email?: string;
+    profilePicture?: string;
+  };
+  comments?: any[];
+}
+
+/** Callbacks the sidebar uses to communicate with the content script */
+export interface SidebarCallbacks {
+  /** Save a new annotation to the backend */
+  onSave: (annotation: AnnotationData) => void;
+  /** Delete an annotation */
+  onDelete: (annotationId: string) => void;
+  /** Focus a highlight in the page (scroll to it) */
+  onFocusAnnotation: (annotationId: string) => void;
+  /** Post a comment on an annotation */
+  onComment: (annotationId: string, text: string) => Promise<void>;
+  /** Trigger a full refresh of annotations for the page */
+  onRefresh: () => void;
+  /** Active tab changed */
+  onTabChange: (tab: 'mine' | 'community') => void;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Human-readable relative time strings.
+ */
+function timeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay === 1) return 'yesterday';
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/** SVG icons used in the sidebar */
+const ICONS = {
+  lock: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  globe: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  pen: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+  trash: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+};
+
+/**
+ * The sidebar UI manager.
+ * Injects a right-side panel into the page using Shadow DOM.
+ */
+export class Sidebar {
+  /** Shadow host element */
+  private host: HTMLElement;
+  /** Shadow root for style isolation */
+  private shadow: ShadowRoot;
+  /** The sidebar container */
+  private panel: HTMLElement;
+  /** Current annotation form state */
+  private pendingQuoteText: string = '';
+  private pendingSelectors: Selector[] = [];
+  /** Callbacks */
+  private callbacks: SidebarCallbacks;
+  /** Whether the sidebar is currently visible */
+  private isOpen: boolean = false;
+  /** Current user data */
+  private userData: any = null;
+  private isRendering: boolean = false;
+  /** Active tab: 'mine' | 'community' | 'all' */
+  private activeTab: 'mine' | 'community' | 'all' = 'mine';
+
+  constructor(callbacks: SidebarCallbacks) {
+    this.callbacks = callbacks;
+    this.fetchUserData();
+
+    // Create shadow host — lives at the edge of <body>
+    this.host = document.createElement('scholic-sidebar-host');
+    this.host.style.cssText = `
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 0;
+      height: 100vh;
+      z-index: 2147483646;
+      pointer-events: none;
+    `;
+    this.shadow = this.host.attachShadow({ mode: 'closed' });
+
+    // Inject styles
+    const style = document.createElement('style');
+    style.textContent = this.getStyles();
+    this.shadow.appendChild(style);
+
+    // Create panel
+    this.panel = document.createElement('div');
+    this.panel.className = 'scholic-sidebar';
+    this.shadow.appendChild(this.panel);
+
+    // Initial structure: Two-column layout
+    this.panel.innerHTML = `
+      <div class="peek-indicator">${ICONS.globe}</div>
+      <div class="sidebar-main-content" style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+        <div class="sidebar-header-container" style="flex-shrink: 0;"></div>
+        <div class="sidebar-tabs-container" style="flex-shrink: 0;"></div>
+        <div class="sidebar-form-container" style="flex-shrink: 0;"></div>
+        <div class="sidebar-list-container" style="flex: 1; min-height: 0; overflow-y: auto;"></div>
+      </div>
+    `;
+
+    // Ensure flex layout on the panel itself (Row)
+    this.panel.style.display = 'flex';
+    this.panel.style.flexDirection = 'row';
+    this.panel.style.position = 'fixed';
+    this.panel.style.alignItems = 'stretch';
+
+    document.body.appendChild(this.host);
+
+    // Listen for storage changes (e.g., login sync) to re-render the sidebar
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.scholicToken) {
+        console.log('[Scholic] Token changed, refreshing sidebar data...');
+        this.fetchUserData();
+      }
+    });
+  }
+
+  /** Fetch current user data from the backend */
+  private async fetchUserData(): Promise<void> {
+    const result = await chrome.storage.local.get('scholicToken');
+    const token = result.scholicToken;
+    if (!token) {
+      this.userData = null;
+      // Don't call renderAnnotationList here — content.ts handles it
+      return;
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'FETCH_ME'
+      });
+      if (response && !response.error) {
+        this.userData = response;
+        // Only re-render if we have cached annotations (avoid double render on initial load)
+        if (this.lastAnnotations.length > 0) {
+          this.renderAnnotationList(this.lastAnnotations);
+        }
+      }
+    } catch (err) {
+      console.error('[Scholic] Failed to fetch user data:', err);
+    }
+  }
+
+  /** Render the sidebar header with title and user menu */
+  private renderHeader(): void {
+    const container = this.panel.querySelector('.sidebar-header-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.className = 'sidebar-header';
+
+    let userHtml = '';
+    if (this.userData) {
+      const initial = (this.userData.username || this.userData.email || '?')[0].toUpperCase();
+      const avatarHtml = this.userData.profilePicture
+        ? `<img src="${this.userData.profilePicture}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" />`
+        : initial;
+
+      userHtml = `
+        <div class="user-profile">
+          <div class="user-avatar" id="user-avatar-trigger">${avatarHtml}</div>
+          <div class="user-menu" id="user-side-menu">
+            <div class="user-email">${this.userData.email}</div>
+            <button class="menu-item" id="logout-trigger">Log out</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const logoSvg = `
+      <svg width="24" height="24" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="28" cy="10" r="5" fill="#E8C547" />
+        <circle cx="42" cy="18" r="5" fill="#E87347" />
+        <circle cx="44" cy="34" r="5" fill="#6EB781" />
+        <circle cx="34" cy="46" r="5" fill="#47A3E8" />
+        <circle cx="18" cy="44" r="5" fill="#9B6EB7" />
+        <circle cx="12" cy="28" r="5" fill="#E8477A" />
+        <circle cx="18" cy="16" r="5" fill="#47E8C5" />
+        <circle cx="30" cy="28" r="3.5" fill="#6EB781" />
+      </svg>
+    `;
+
+    header.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        ${logoSvg}
+        <span class="sidebar-title" style="text-transform: lowercase; font-weight: 700; font-size: 15px; color: #6EB781;">scholic</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        ${userHtml}
+        <button class="sidebar-close">✕</button>
+      </div>
+    `;
+
+    // Close button
+    header.querySelector('.sidebar-close')?.addEventListener('click', () => {
+      this.close();
+    });
+
+    // User menu toggle
+    const avatar = header.querySelector('#user-avatar-trigger');
+    const menu = header.querySelector('#user-side-menu');
+    avatar?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu?.classList.toggle('show');
+    });
+
+    // Logout
+    header.querySelector('#logout-trigger')?.addEventListener('click', async () => {
+      await chrome.storage.local.remove('scholicToken');
+      this.userData = null;
+      this.renderAnnotationList([]);
+      window.postMessage({ type: 'SCHOLIC_LOGOUT_SUCCESS' }, '*');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', () => {
+      menu?.classList.remove('show');
+    });
+
+    container.appendChild(header);
+
+    // ── Tabs Header ──
+    const tabsContainer = this.panel.querySelector('.sidebar-tabs-container');
+    if (!tabsContainer) return;
+    tabsContainer.innerHTML = '';
+
+    const tabs = document.createElement('div');
+    tabs.className = 'sidebar-tabs';
+    tabs.innerHTML = `
+      <button class="tab-btn ${this.activeTab === 'mine' ? 'active' : ''}" data-tab="mine">Mine</button>
+      <button class="tab-btn ${this.activeTab === 'community' ? 'active' : ''}" data-tab="community">Community</button>
+      <button class="tab-btn ${this.activeTab === 'all' ? 'active' : ''}" data-tab="all">All</button>
+      <button class="refresh-btn" title="Refresh annotations">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+    `;
+
+    tabs.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const tab = target.dataset.tab as 'mine' | 'community' | 'all';
+        if (this.activeTab !== tab) {
+          this.activeTab = tab;
+          this.isRendering = false;
+          this.renderAnnotationList(this.lastAnnotations);
+          this.callbacks.onTabChange(tab);
+        }
+      });
+    });
+
+    tabs.querySelector('.refresh-btn')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget as HTMLElement;
+      btn.classList.add('spinning');
+      setTimeout(() => btn.classList.remove('spinning'), 500);
+      this.callbacks.onRefresh();
+    });
+
+    tabsContainer.appendChild(tabs);
+  }
+
+  /** Cache of the most recent annotations for re-rendering on auth change */
+  private lastAnnotations: AnnotationData[] = [];
+  /** Open/close state of comment sections by annotation ID */
+  private openComments: Record<string, boolean> = {};
+
+  /** CSS for the sidebar — lives inside Shadow DOM, zero conflicts */
+  private getStyles(): string {
+    return `
+      .scholic-sidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 480px;
+        height: 100vh;
+        background: #141414;
+        border-left: 1px solid rgba(255,255,255,0.08);
+        color: #e0e0e0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 13px;
+        overflow: hidden;
+        transform: translateX(100%);
+        transition: transform 0.25s ease;
+        pointer-events: auto;
+        box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+      }
+
+      /* Custom scrollbar for the sidebar */
+      .scholic-sidebar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .scholic-sidebar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .scholic-sidebar::-webkit-scrollbar-thumb {
+        background: rgba(110,183,129,0.3);
+        border-radius: 4px;
+      }
+      .scholic-sidebar::-webkit-scrollbar-thumb:hover {
+        background: rgba(110,183,129,0.6);
+      }
+
+      .scholic-sidebar.open {
+        transform: translateX(0);
+      }
+
+      .scholic-sidebar.peek {
+        transform: translateX(calc(100% - 32px));
+        cursor: pointer;
+      }
+      .scholic-sidebar.peek:hover {
+        transform: translateX(calc(100% - 38px));
+      }
+      .scholic-sidebar.peek .sidebar-main-content {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .peek-indicator {
+        position: relative;
+        width: 32px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #1a1a1a;
+        border-right: 1px solid rgba(110,183,129,0.2);
+        z-index: 10;
+        cursor: pointer;
+      }
+      .scholic-sidebar.open .peek-indicator {
+        display: flex;
+        cursor: pointer;
+        opacity: 0.2;
+        transition: opacity 0.2s;
+      }
+      .scholic-sidebar.open .peek-indicator:hover {
+        opacity: 1;
+        background: rgba(110,183,129,0.1);
+      }
+      .scholic-sidebar.open .peek-indicator svg {
+        transform: rotate(0deg);
+      }
+      .peek-indicator svg {
+        transform: rotate(180deg);
+        color: #6EB781;
+        opacity: 0.6;
+      }
+
+      /* Header */
+      .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+
+      .sidebar-title {
+        font-weight: 700;
+        font-size: 15px;
+        color: #6EB781;
+        text-transform: lowercase;
+      }
+
+      .sidebar-close {
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 4px;
+        line-height: 1;
+      }
+      .sidebar-close:hover { color: #fff; }
+
+      /* Tabs */
+      .sidebar-tabs {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        background: rgba(255,255,255,0.015);
+      }
+      .tab-btn {
+        background: transparent;
+        border: none;
+        color: #888;
+        font-size: 13px;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 5px 12px;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+      .tab-btn:hover {
+        background: rgba(255,255,255,0.05);
+        color: #ddd;
+      }
+      .tab-btn.active {
+        background: rgba(110,183,129,0.15);
+        color: #6EB781;
+        font-weight: 600;
+        box-shadow: inset 0 0 0 1px rgba(110,183,129,0.3);
+      }
+      .refresh-btn {
+        margin-left: auto;
+        background: transparent;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s, background 0.2s;
+      }
+      .refresh-btn svg {
+        width: 15px;
+        height: 15px;
+        transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .refresh-btn:hover {
+        color: #fff;
+        background: rgba(255,255,255,0.05);
+      }
+      .refresh-btn.spinning svg {
+        transform: rotate(360deg);
+      }
+
+      /* User Profile */
+      .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .user-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3));
+        border: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s;
+        overflow: hidden;
+      }
+      .user-avatar:hover {
+        transform: scale(1.05);
+      }
+
+      .user-menu {
+        position: absolute;
+        top: 50px;
+        right: 20px;
+        background: #1a1a1a;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        padding: 6px;
+        display: none;
+        flex-direction: column;
+        z-index: 100;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        min-width: 120px;
+      }
+      .user-menu.show {
+        display: flex;
+      }
+
+      .menu-item {
+        padding: 8px 12px;
+        font-size: 12px;
+        color: #888;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.15s;
+        text-align: left;
+        background: none;
+        border: none;
+        width: 100%;
+        font-family: inherit;
+      }
+      .menu-item:hover {
+        background: rgba(255,95,87,0.1);
+        color: #ff5f57;
+      }
+
+      .user-email {
+        padding: 8px 12px;
+        font-size: 11px;
+        color: #555;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        margin-bottom: 4px;
+        word-break: break-all;
+      }
+
+      /* Annotation form */
+      .annotation-form {
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+
+      .form-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #666;
+        margin-bottom: 8px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+
+      .quote-preview {
+        background: rgba(110,183,129,0.08);
+        border-left: 3px solid #6EB781;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: #ccc;
+        line-height: 1.5;
+        margin-bottom: 12px;
+        border-radius: 0 6px 6px 0;
+        max-height: 100px;
+        overflow-y: auto;
+      }
+
+      .note-input {
+        width: 100%;
+        min-height: 80px;
+        background: #1a1a1a;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 10px 14px;
+        color: #e0e0e0;
+        font-size: 13px;
+        font-family: inherit;
+        resize: vertical;
+        margin-bottom: 12px;
+        box-sizing: border-box;
+      }
+      .note-input:focus {
+        outline: none;
+        border-color: #6EB781;
+      }
+      .note-input::placeholder { color: #555; }
+
+      /* Privacy toggle */
+      .privacy-toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding: 8px 12px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 8px;
+      }
+      .privacy-toggle-label {
+        font-size: 12px;
+        color: #999;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .privacy-toggle-label svg {
+        opacity: 0.7;
+      }
+      .toggle-switch {
+        position: relative;
+        width: 36px;
+        height: 20px;
+        background: rgba(110,183,129,0.3);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.2s;
+        flex-shrink: 0;
+      }
+      .toggle-switch.private {
+        background: rgba(232,197,71,0.3);
+      }
+      .toggle-knob {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        background: #6EB781;
+        border-radius: 50%;
+        transition: all 0.2s;
+      }
+      .toggle-switch.private .toggle-knob {
+        left: 18px;
+        background: #e8c547;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        padding: 6px 16px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        font-family: inherit;
+        transition: all 0.15s;
+      }
+      .btn-primary {
+        background: #6EB781;
+        color: #fff;
+      }
+      .btn-primary:hover { background: #5da870; }
+      .btn-secondary {
+        background: transparent;
+        color: #999;
+        border: 1px solid rgba(255,255,255,0.1);
+      }
+      .btn-secondary:hover { background: rgba(255,255,255,0.04); }
+
+      /* Annotation list */
+      .annotation-list {
+        padding: 12px 0;
+      }
+
+      .annotation-item {
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .annotation-item:hover {
+        background: rgba(255,255,255,0.03);
+      }
+
+      .annotation-item-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .annotation-author-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .annotation-author-avatar {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3));
+        font-size: 9px;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .annotation-author-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #ccc;
+        text-decoration: none;
+      }
+      .annotation-author-name:hover {
+        color: #6EB781;
+        text-decoration: underline;
+      }
+
+      .annotation-quote {
+        font-size: 12px;
+        color: #888;
+        line-height: 1.5;
+        margin-bottom: 6px;
+        border-left: 2px solid #6EB781;
+        padding-left: 10px;
+      }
+
+      .annotation-note {
+        font-size: 13px;
+        color: #ccc;
+        line-height: 1.5;
+        margin-top: 6px;
+        word-break: break-word;
+      }
+
+      .annotation-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: #555;
+        margin-top: 8px;
+      }
+
+      .annotation-meta svg {
+        opacity: 0.6;
+      }
+
+      .meta-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+      .meta-badge.public {
+        background: rgba(110,183,129,0.1);
+        color: #6EB781;
+      }
+      .meta-badge.private {
+        background: rgba(232,197,71,0.1);
+        color: #e8c547;
+      }
+
+      .annotation-delete {
+        background: none;
+        border: none;
+        color: #444;
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        transition: all 0.15s;
+      }
+      .annotation-delete:hover {
+        color: #ff5f57;
+        background: rgba(255,95,87,0.1);
+      }
+
+      .annotation-comments {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255,255,255,0.04);
+      }
+
+      .annotation-comments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .comment-item {
+        background: rgba(255,255,255,0.03);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .comment-item strong {
+        color: #ccc;
+        margin-right: 6px;
+      }
+      .comment-item span {
+        color: #999;
+      }
+
+      .sidebar-reply-input {
+        width: 100%;
+        padding: 6px 10px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 6px;
+        color: #ccc;
+        font-size: 11px;
+        font-family: inherit;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .sidebar-reply-input:focus {
+        border-color: rgba(110,183,129,0.4);
+      }
+      .sidebar-reply-input::placeholder {
+        color: #555;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #555;
+      }
+      .empty-state svg {
+        margin-bottom: 12px;
+        opacity: 0.3;
+      }
+      .annotation-list-inner {
+        padding-bottom: 40px;
+      }
+      .annotation-author-name {
+        display: inline-block;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+      }
+    `;
+  }
+
+  /**
+   * Open the sidebar with an annotation form pre-filled with the selected quote.
+   */
+  openWithQuote(quoteText: string, selectors: Selector[]): void {
+    this.pendingQuoteText = quoteText;
+    this.pendingSelectors = selectors;
+    this.open();
+    this.renderForm();
+  }
+
+  /** Open the sidebar (without a pending annotation) */
+  open(): void {
+    this.isOpen = true;
+    this.panel.classList.remove('peek');
+    this.panel.classList.add('open');
+    document.body.style.transition = 'margin-right 0.25s ease';
+    document.body.style.marginRight = '480px';
+  }
+
+  /** Show the sidebar in a collapsed "peek" state */
+  showPeek(): void {
+    this.isOpen = false;
+    this.panel.classList.remove('open');
+    this.panel.classList.add('peek');
+    document.body.style.transition = 'margin-right 0.25s ease';
+    document.body.style.marginRight = '32px';
+
+    // Clicking the peek tab opens the sidebar
+    const peek = this.panel.querySelector('.peek-indicator');
+    if (peek) {
+      peek.onclick = () => this.isOpen ? this.showPeek() : this.open();
+    }
+  }
+
+  /** Close the sidebar (goes back to peek if active) */
+  close(): void {
+    this.showPeek();
+  }
+
+  /** Completely hide the sidebar (inactive state) */
+  hideCompletely(): void {
+    this.isOpen = false;
+    this.panel.classList.remove('open');
+    this.panel.classList.remove('peek');
+    document.body.style.transition = 'margin-right 0.25s ease';
+    document.body.style.marginRight = '0';
+    this.pendingQuoteText = '';
+    this.pendingSelectors = [];
+  }
+
+  /** Toggle sidebar open/close */
+  toggle(): void {
+    this.isOpen ? this.close() : this.open();
+  }
+
+  /**
+   * Render the annotation creation form inside the sidebar.
+   * Shows the quoted text, textarea, and a public/private toggle.
+   */
+  private renderForm(): void {
+    const container = this.panel.querySelector('.sidebar-form-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let isPrivate = false;
+
+    const form = document.createElement('div');
+    form.className = 'annotation-form';
+    form.innerHTML = `
+      <div class="form-label">Selected Text</div>
+      <div class="quote-preview">${this.escapeHtml(this.pendingQuoteText)}</div>
+      <div class="form-label">Your Note</div>
+      <textarea class="note-input" placeholder="Add your thoughts..."></textarea>
+      <div class="privacy-toggle">
+        <div class="toggle-switch" id="privacy-switch">
+          <div class="toggle-knob"></div>
+        </div>
+        <div class="privacy-toggle-label" id="privacy-label">
+          ${ICONS.globe}
+          <span>Public</span>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary cancel-btn">Cancel</button>
+        <button class="btn btn-primary save-btn">Save</button>
+      </div>
+    `;
+
+    // Insert form into container
+    container.appendChild(form);
+
+    // Focus the textarea
+    const textarea = form.querySelector('.note-input') as HTMLTextAreaElement;
+    setTimeout(() => textarea?.focus(), 100);
+
+    // Privacy toggle
+    const toggle = form.querySelector('#privacy-switch') as HTMLElement;
+    const label = form.querySelector('#privacy-label') as HTMLElement;
+    toggle?.addEventListener('click', () => {
+      isPrivate = !isPrivate;
+      toggle.classList.toggle('private', isPrivate);
+      label.innerHTML = isPrivate
+        ? `${ICONS.lock}<span>Private</span>`
+        : `${ICONS.globe}<span>Public</span>`;
+    });
+
+    // Cancel button
+    form.querySelector('.cancel-btn')?.addEventListener('click', () => {
+      form.remove();
+      this.pendingQuoteText = '';
+      this.pendingSelectors = [];
+    });
+
+    // Save button
+    form.querySelector('.save-btn')?.addEventListener('click', () => {
+      const note = textarea?.value || '';
+      this.callbacks.onSave({
+        url: window.location.href,
+        quoteText: this.pendingQuoteText,
+        text: note,
+        selectors: this.pendingSelectors,
+        isPrivate,
+      });
+      form.remove();
+      this.pendingQuoteText = '';
+      this.pendingSelectors = [];
+    });
+  }
+
+  /**
+   * Render the list of existing annotations in the sidebar.
+   * Guarded against concurrent/duplicate renders.
+   */
+  async renderAnnotationList(annotations: AnnotationData[]): Promise<void> {
+    // Guard against duplicate renders
+    if (this.isRendering) return;
+    this.isRendering = true;
+
+    try {
+      this.lastAnnotations = annotations;
+
+      // Ensure header/tabs are rendered
+      this.renderHeader();
+
+      const listContainer = this.panel.querySelector('.sidebar-list-container');
+      if (!listContainer) return;
+      listContainer.innerHTML = '';
+
+
+
+      // Check for token
+      const result = await chrome.storage.local.get('scholicToken');
+      const token = result.scholicToken;
+
+      if (!token) {
+        this.renderSignInState();
+        return;
+      }
+
+      // Annotation list container
+      const list = document.createElement('div');
+      list.className = 'annotation-list-inner';
+      listContainer.appendChild(list);
+
+      // Ensure header/tabs don't get overwritten
+      // The header already appended to this.panel, we just append list to this.panel later
+
+      // Filter based on tabs
+      const myUserId = this.userData?.id;
+
+      let displayAnnotations = annotations; // Use the passed annotations parameter
+      if (this.activeTab === 'mine') {
+        displayAnnotations = displayAnnotations.filter((a) => String(a.userId) === String(myUserId));
+      } else if (this.activeTab === 'community') {
+        displayAnnotations = displayAnnotations.filter((a) => String(a.userId) !== String(myUserId));
+      }
+      // 'all' tab uses all annotations (no filter)
+
+      if (displayAnnotations.length === 0) {
+        let msg = this.activeTab === 'mine' ? "You haven't made any highlights here yet." : "No one else has annotated this page yet.";
+        list.innerHTML = `
+          <div class="empty-state">
+            ${ICONS.pen}
+            <div style="font-weight:600; margin-bottom:8px; color:#ddd;">Nothing to see</div>
+            <div style="font-size:12px; line-height:1.5;">${msg}<br/>Select some text to get started.</div>
+          </div>
+        `;
+      } else {
+        displayAnnotations.forEach((annotation) => {
+          const item = document.createElement('div');
+          item.className = 'annotation-item';
+
+          const privacyBadge = annotation.isPrivate
+            ? `<span class="meta-badge private">${ICONS.lock} Only you</span>`
+            : `<span class="meta-badge public">${ICONS.globe} Public</span>`;
+
+          const timeStr = annotation.createdAt ? timeAgo(annotation.createdAt) : '';
+
+          const authorName = annotation.user?.username || annotation.user?.email?.split('@')[0] || 'Unknown';
+          const authorInitial = authorName[0].toUpperCase();
+          const avatarHtml = annotation.user?.profilePicture
+            ? `<img src="${annotation.user.profilePicture}" style="width:100%; height:100%; object-fit:cover;" />`
+            : authorInitial;
+
+          item.innerHTML = `
+            <div class="annotation-item-header">
+              ${privacyBadge}
+              ${annotation.id && String(annotation.userId) === String(myUserId) ? `<button class="annotation-delete" data-id="${annotation.id}">${ICONS.trash}</button>` : ''}
+            </div>
+            <div class="annotation-author-row">
+              <div class="annotation-author-avatar">${avatarHtml}</div>
+              <a href="${CONFIG.WEB_URL}/u/${this.escapeHtml(authorName)}" target="_blank" class="annotation-author-name">
+                @${this.escapeHtml(authorName)}
+              </a>
+            </div>
+            <div class="annotation-quote">${this.escapeHtml(annotation.quoteText)}</div>
+            ${annotation.text ? `<div class="annotation-note">${this.escapeHtml(annotation.text)}</div>` : ''}
+            <div class="annotation-meta">
+              ${timeStr ? `<span>${timeStr}</span>` : ''}
+              ${annotation.id ? `
+                <button class="toggle-comments-btn" data-id="${annotation.id}" style="background:none; border:none; color:#555; cursor:pointer; font-size:12px; margin-left:12px; display:flex; align-items:center; gap:4px; padding:0;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <span>${annotation.comments?.length || 0}</span>
+                </button>
+              ` : ''}
+            </div>
+            ${annotation.id && this.openComments[annotation.id] ? `
+              <div class="annotation-comments">
+                <input type="text" class="sidebar-reply-input" data-id="${annotation.id}" placeholder="Add a comment..." style="margin-bottom: 12px;" />
+                ${annotation.comments && annotation.comments.length > 0 ? `
+                  <div class="annotation-comments-list">
+                    ${annotation.comments.map((c: any) => {
+            const cname = c.user?.username || c.user?.email?.split('@')[0] || 'User';
+            const cinit = cname[0].toUpperCase();
+            const cavatar = c.user?.profilePicture
+              ? `<img src="${c.user.profilePicture}" style="width:100%; height:100%; object-fit:cover;" />`
+              : cinit;
+            return `
+                        <div class="comment-item" style="display:flex; gap:8px; align-items:flex-start; margin-bottom:6px; background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px;">
+                          <div style="width:20px; height:20px; border-radius:50%; background:linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3)); font-size:9px; font-weight:700; color:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                            ${cavatar}
+                          </div>
+                          <div style="flex:1; font-size:12px; line-height:1.4; padding-top:2px;">
+                            <a href="${CONFIG.WEB_URL}/u/${this.escapeHtml(cname)}" target="_blank" style="text-decoration:none; color:inherit;">
+                              <strong style="color:#d0d0d0; display:block; margin-bottom:2px;">@${this.escapeHtml(cname)}</strong>
+                            </a>
+                            <span style="color:#aaa;">${this.escapeHtml(c.text)}</span>
+                          </div>
+                        </div>
+                      `;
+          }).join('')}
+                  </div>
+                ` : ''}
+              </div>
+              ` : ''
+            }
+          `;
+
+          // Click to focus the highlight in the page
+          item.addEventListener('click', (e) => {
+            if ((e.target as HTMLElement).closest('.annotation-delete')) {
+              return;
+            }
+            if (annotation.id) {
+              this.callbacks.onFocusAnnotation(annotation.id);
+            }
+          });
+
+          // Toggle comments button
+          const toggleBtn = item.querySelector('.toggle-comments-btn');
+          toggleBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (annotation.id) {
+              this.openComments[annotation.id] = !this.openComments[annotation.id];
+              // Ensure we are not setting isRendering guard prematurely. Or just wrap in setTimeout 0.
+              setTimeout(() => {
+                this.isRendering = false;
+                this.renderAnnotationList(this.lastAnnotations);
+              }, 0);
+            }
+          });
+
+          // Delete button
+          const deleteBtn = item.querySelector('.annotation-delete');
+          deleteBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = (e.currentTarget as HTMLElement).dataset.id;
+            if (id) {
+              this.callbacks.onDelete(id);
+            }
+          });
+
+          // Reply input enter handling
+          const replyInput = item.querySelector('.sidebar-reply-input') as HTMLInputElement;
+          replyInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              const text = replyInput.value.trim();
+              if (text && annotation.id) {
+                replyInput.disabled = true;
+                this.callbacks.onComment(annotation.id, text).finally(() => {
+                  replyInput.disabled = false;
+                  replyInput.value = '';
+                });
+              }
+            }
+          });
+          // Prevent click-to-focus when clicking the input
+          replyInput?.addEventListener('click', (e) => e.stopPropagation());
+
+          list.appendChild(item);
+        });
+      }
+
+      // The list is already appended to listContainer
+    } finally {
+      this.isRendering = false;
+    }
+  }
+
+  /** Render a sign-in prompt when the user is not authenticated */
+  private renderSignInState(): void {
+    const container = document.createElement('div');
+    container.className = 'empty-state';
+    container.style.paddingTop = '80px';
+    container.innerHTML = `
+      <div style="font-size: 40px; margin-bottom: 20px;">👋</div>
+      <div style="font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 10px;">Welcome to Scholic</div>
+      <div style="font-size: 13px; color: #888; margin-bottom: 30px; line-height: 1.6;">Sign in to start annotating the web and save your highlights.</div>
+      <button class="btn btn-primary login-btn" style="padding: 12px 32px; font-size: 14px;">Sign in with Scholic</button>
+    `;
+
+    container.querySelector('.login-btn')?.addEventListener('click', () => {
+      const extId = chrome.runtime.id;
+      const loginUrl = `${CONFIG.WEB_URL}/auth/extension-login?extId=${extId}`;
+      window.open(loginUrl, '_blank');
+    });
+
+    const listContainer = this.panel.querySelector('.sidebar-list-container');
+    if (listContainer) {
+      listContainer.innerHTML = '';
+      listContainer.appendChild(container);
+    } else {
+      this.panel.appendChild(container); // Fallback
+    }
+  }
+
+  /** Simple HTML escaping to prevent XSS in displayed text */
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  /** Clean up: remove the sidebar from the DOM */
+  destroy(): void {
+    this.hideCompletely();
+    if (this.host.parentNode) {
+      this.host.parentNode.removeChild(this.host);
+    }
+  }
+}

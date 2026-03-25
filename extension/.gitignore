@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+build/
+
+# Compiled files (extension root has these)
+background.js
+background.js.map
+content.js
+content.js.map
+content.css
+!build.mjs
+
+# Env files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db

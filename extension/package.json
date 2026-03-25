@@ -1,0 +1,19 @@
+{
+  "name": "scholic-extension",
+  "version": "0.1.0",
+  "description": "Scholic — Social Annotation Browser Extension",
+  "type": "commonjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.38",
+    "esbuild": "^0.25.0",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "approx-string-match": "^2.0.0"
+  }
+}
