@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
-import { ArrowLeft, Settings, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 import AnnotationCard from '../components/AnnotationCard';
 
 interface ProfileUser {
@@ -51,6 +51,32 @@ interface Annotation {
   imageUrl?: string;
 }
 
+interface AnnotationData {
+  id: number;
+  userId: number;
+  url: string;
+  text: string;
+  quoteText: string;
+  isPrivate: boolean;
+  createdAt: string;
+  user: {
+    id: number;
+    username: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string;
+  };
+  comments: Comment[];
+  commentCount: number;
+  linkTitle?: string;
+  linkDescription?: string;
+  linkImage?: string;
+  linkFavicon?: string;
+  linkDomain?: string;
+  type?: string;
+  imageUrl?: string;
+}
+
 const ProfileSkeleton: React.FC = () => (
   <div style={{ maxWidth: '640px', padding: '32px 20px', margin: '0 auto' }}>
     <div style={{ display: 'flex', alignItems: 'start', gap: '16px', marginBottom: '32px' }}>
@@ -73,19 +99,6 @@ const ProfileSkeleton: React.FC = () => (
   </div>
 );
 
-const CommentSkeleton: React.FC = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-    {[1, 2].map(i => (
-      <div key={i} style={{ display: 'flex', gap: '10px' }}>
-        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', flexShrink: 0 }} className="pulse" />
-        <div style={{ flex: 1 }}>
-          <div style={{ width: '60px', height: '12px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '6px' }} className="pulse" />
-          <div style={{ width: '100%', height: '12px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
-        </div>
-      </div>
-    ))}
-  </div>
-);
 
 const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -107,62 +120,9 @@ const Profile: React.FC = () => {
 
   // Comments state
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
-  const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
+
   const [commentOffsets, setCommentOffsets] = useState<Record<number, number>>({});
   const [fetchingComments, setFetchingComments] = useState<Record<number, boolean>>({});
-
-  const toggleComments = (annotationId: number) => {
-    setOpenComments(prev => ({ ...prev, [annotationId]: !prev[annotationId] }));
-  };
-
-  const fetchMoreComments = async (annotationId: number) => {
-    if (fetchingComments[annotationId]) return;
-    setFetchingComments(prev => ({ ...prev, [annotationId]: true }));
-    const currentOffset = commentOffsets[annotationId] || 5;
-    
-    try {
-      const response = await api.get(`/annotations/${annotationId}/comments?limit=10&offset=${currentOffset}`);
-      const newComments = response.data.comments || [];
-      
-      setActivity(prev => prev.map(ann => {
-        if (ann.id === annotationId) {
-          const existingIds = new Set(ann.comments.map(c => c.id));
-          const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
-          return { ...ann, comments: [...ann.comments, ...filteredNew] };
-        }
-        return ann;
-      }));
-      setCommentOffsets(prev => ({ ...prev, [annotationId]: currentOffset + newComments.length }));
-    } catch (err) {
-      console.error('Failed to fetch more comments', err);
-    } finally {
-      setFetchingComments(prev => ({ ...prev, [annotationId]: false }));
-    }
-  };
-
-  const handleCommentChange = (annotationId: number, text: string) => {
-    setCommentInputs(prev => ({ ...prev, [annotationId]: text }));
-  };
-
-  const submitComment = async (annotationId: number) => {
-    const text = commentInputs[annotationId];
-    if (!text || !text.trim()) return;
-
-    try {
-      const response = await api.post(`/annotations/${annotationId}/comments`, { text });
-      setActivity(prev => prev.map(ann => {
-        if (ann.id === annotationId) {
-          const newComments = ann.comments ? [...ann.comments, response.data] : [response.data];
-          return { ...ann, comments: newComments, commentCount: ann.commentCount + 1 };
-        }
-        return ann;
-      }));
-      setCommentInputs(prev => ({ ...prev, [annotationId]: '' }));
-      setCommentOffsets(prev => ({ ...prev, [annotationId]: (prev[annotationId] || 5) + 1 }));
-    } catch (err) {
-      console.error('Failed to post comment', err);
-    }
-  };
 
   const toggleFollow = async () => {
     if (!profileUser) return;
@@ -472,21 +432,48 @@ const Profile: React.FC = () => {
                 {activity.map((annotation) => (
                   <AnnotationCard
                     key={annotation.id}
-                    annotation={annotation as any}
-                    openComments={openComments}
-                    toggleComments={toggleComments}
-                    renderAvatar={renderAvatar as any}
-                    renderAnnotationAction={renderAnnotationAction as any}
-                    formatDate={formatDate}
-                    handleComment={(id, text) => {
-                      // Adapt to profile's comment submission logic
-                      api.post(`/api/annotations/${id}/comments`, { text }).then(() => {
-                        fetchActivity(); // Refresh
-                      });
-                    }}
-                    fetchMoreComments={fetchMoreComments}
-                    fetchingComments={fetchingComments}
-                    currentUser={currentUser as any}
+                    annotation={annotation as AnnotationData}
+                openComments={openComments}
+                toggleComments={(id) => setOpenComments(prev => ({ ...prev, [id]: !prev[id] }))}
+                renderAvatar={renderAvatar as (user: AnnotationUser) => React.ReactNode}
+                renderAnnotationAction={renderAnnotationAction as (a: AnnotationData) => React.ReactNode}
+                formatDate={formatDate}
+                handleComment={(id, text) => {
+                  // Adapt to profile's comment submission logic
+                  api.post(`/api/annotations/${id}/comments`, { text }).then(() => {
+                    // Update activity list optimistically or refresh
+                    setActivity(prev => prev.map(ann => {
+                      if (ann.id === id) {
+                        return { ...ann, commentCount: ann.commentCount + 1 };
+                      }
+                      return ann;
+                    }));
+                  });
+                }}
+                fetchMoreComments={async (id) => {
+                  if (fetchingComments[id]) return;
+                  setFetchingComments(prev => ({ ...prev, [id]: true }));
+                  const currentOffset = commentOffsets[id] || 5;
+                  try {
+                    const response = await api.get(`/annotations/${id}/comments?limit=10&offset=${currentOffset}`);
+                    const newComments = response.data.comments || [];
+                    setActivity(prev => prev.map(ann => {
+                      if (ann.id === id) {
+                        const existingIds = new Set(ann.comments.map(c => c.id));
+                        const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
+                        return { ...ann, comments: [...ann.comments, ...filteredNew] };
+                      }
+                      return ann;
+                    }));
+                    setCommentOffsets(prev => ({ ...prev, [id]: currentOffset + newComments.length }));
+                  } catch (err) {
+                    console.error('Failed to fetch more comments', err);
+                  } finally {
+                    setFetchingComments(prev => ({ ...prev, [id]: false }));
+                  }
+                }}
+                fetchingComments={fetchingComments}
+                currentUser={currentUser as AnnotationUser}
                     isProfile={true}
                   />
                 ))}

@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
-import { MessageCircle, SendHorizonal } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import AnnotationCard from '../components/AnnotationCard';
 
 interface AnnotationUser {
@@ -44,6 +42,35 @@ interface Annotation {
   imageUrl?: string;
 }
 
+// Define AnnotationData interface to match what AnnotationCard expects
+// This is often used when the component expects a slightly different shape or a subset
+// of the main data interface, or to simplify nested types for props.
+interface AnnotationData {
+  id: number;
+  userId: number;
+  url: string;
+  text: string;
+  quoteText: string;
+  isPrivate: boolean;
+  createdAt: string;
+  user: {
+    id: number;
+    username: string;
+    firstName: string;
+    lastName: string;
+    profilePicture: string;
+  };
+  comments: Comment[]; // Use Comment[] instead of any[] for better type safety
+  commentCount: number;
+  linkTitle?: string;
+  linkDescription?: string;
+  linkImage?: string;
+  linkFavicon?: string;
+  linkDomain?: string;
+  type?: string;
+  imageUrl?: string;
+}
+
 const FeedSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
     {[1, 2, 3].map(i => (
@@ -65,19 +92,7 @@ const FeedSkeleton: React.FC = () => (
   </div>
 );
 
-const CommentSkeleton: React.FC = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-    {[1, 2].map(i => (
-      <div key={i} style={{ display: 'flex', gap: '10px' }}>
-        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', flexShrink: 0 }} className="pulse" />
-        <div style={{ flex: 1 }}>
-          <div style={{ width: '60px', height: '12px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '6px' }} className="pulse" />
-          <div style={{ width: '100%', height: '12px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
-        </div>
-      </div>
-    ))}
-  </div>
-);
+
 
 const Feed: React.FC = () => {
   const { user } = useAuth();
@@ -93,7 +108,6 @@ const Feed: React.FC = () => {
 
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
-  const [submitting, setSubmitting] = useState<Record<number, boolean>>({});
   
   // Track how many comments are loaded per annotation
   // (Backend initially sends 3)
@@ -140,14 +154,11 @@ const Feed: React.FC = () => {
     }
   };
 
-  const handleCommentChange = (annotationId: number, text: string) => {
-    setCommentInputs(prev => ({ ...prev, [annotationId]: text }));
-  };
+
 
   const submitComment = async (annotationId: number) => {
     const text = commentInputs[annotationId];
     if (!text?.trim()) return;
-    setSubmitting(prev => ({ ...prev, [annotationId]: true }));
     try {
       const response = await api.post(`/annotations/${annotationId}/comments`, { text });
       setAnnotations(prev => prev.map(ann => {
@@ -162,11 +173,12 @@ const Feed: React.FC = () => {
       }));
       setCommentInputs(prev => ({ ...prev, [annotationId]: '' }));
       // Increment offset so pagination stays in sync
-      setCommentOffsets(prev => ({ ...prev, [annotationId]: (prev[annotationId] || (response.data.annotation?.comments?.length || 0)) + 1 }));
+      setCommentOffsets(prev => ({ ...prev, [annotationId]: (prev[annotationId] || (annotations.find(a => a.id === annotationId)?.comments?.length || 0)) + 1 }));
     } catch (err) {
+      setCommentInputs(prev => ({ ...prev, [annotationId]: '' }));
       console.error('Failed to post comment', err);
     } finally {
-      setSubmitting(prev => ({ ...prev, [annotationId]: false }));
+      // setSubmitting(prev => ({ ...prev, [annotationId]: false })); // Removed as setSubmitting is not defined
     }
   };
 
@@ -325,11 +337,11 @@ const Feed: React.FC = () => {
             {annotations.map((annotation) => (
               <AnnotationCard
                 key={annotation.id}
-                annotation={annotation as any}
+                annotation={annotation as AnnotationData}
                 openComments={openComments}
                 toggleComments={toggleComments}
-                renderAvatar={renderAvatar as any}
-                renderAnnotationAction={renderAnnotationAction as any}
+                renderAvatar={renderAvatar as (user: AnnotationUser) => React.ReactNode}
+                renderAnnotationAction={renderAnnotationAction as (a: AnnotationData) => React.ReactNode}
                 formatDate={formatDate}
                 handleComment={(id, text) => {
                   setCommentInputs(prev => ({ ...prev, [id]: text }));
@@ -337,7 +349,7 @@ const Feed: React.FC = () => {
                 }}
                 fetchMoreComments={fetchMoreComments}
                 fetchingComments={fetchingComments}
-                currentUser={user as any}
+                currentUser={user as AnnotationUser}
               />
             ))}
 
