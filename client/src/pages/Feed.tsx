@@ -42,35 +42,6 @@ interface Annotation {
   imageUrl?: string;
 }
 
-// Define AnnotationData interface to match what AnnotationCard expects
-// This is often used when the component expects a slightly different shape or a subset
-// of the main data interface, or to simplify nested types for props.
-interface AnnotationData {
-  id: number;
-  userId: number;
-  url: string;
-  text: string;
-  quoteText: string;
-  isPrivate: boolean;
-  createdAt: string;
-  user: {
-    id: number;
-    username: string;
-    firstName: string;
-    lastName: string;
-    profilePicture: string;
-  };
-  comments: Comment[]; // Use Comment[] instead of any[] for better type safety
-  commentCount: number;
-  linkTitle?: string;
-  linkDescription?: string;
-  linkImage?: string;
-  linkFavicon?: string;
-  linkDomain?: string;
-  type?: string;
-  imageUrl?: string;
-}
-
 const FeedSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
     {[1, 2, 3].map(i => (
@@ -337,11 +308,11 @@ const Feed: React.FC = () => {
             {annotations.map((annotation) => (
               <AnnotationCard
                 key={annotation.id}
-                annotation={annotation as AnnotationData}
+                annotation={annotation as any}
                 openComments={openComments}
                 toggleComments={toggleComments}
-                renderAvatar={renderAvatar as (user: AnnotationUser) => React.ReactNode}
-                renderAnnotationAction={renderAnnotationAction as (a: AnnotationData) => React.ReactNode}
+                renderAvatar={renderAvatar as (user: any, size: number) => React.ReactNode}
+                renderAnnotationAction={renderAnnotationAction as (a: any) => React.ReactNode}
                 formatDate={formatDate}
                 handleComment={(id, text) => {
                   setCommentInputs(prev => ({ ...prev, [id]: text }));
@@ -349,7 +320,7 @@ const Feed: React.FC = () => {
                 }}
                 fetchMoreComments={fetchMoreComments}
                 fetchingComments={fetchingComments}
-                currentUser={user as AnnotationUser}
+                currentUser={user as any}
               />
             ))}
 

@@ -41,33 +41,6 @@ interface Annotation {
   user: ProfileUser;
   comments: Comment[];
   commentCount: number;
-  
-  linkTitle?: string;
-  linkDescription?: string;
-  linkImage?: string;
-  linkFavicon?: string;
-  linkDomain?: string;
-  type?: string;
-  imageUrl?: string;
-}
-
-interface AnnotationData {
-  id: number;
-  userId: number;
-  url: string;
-  text: string;
-  quoteText: string;
-  isPrivate: boolean;
-  createdAt: string;
-  user: {
-    id: number;
-    username: string;
-    firstName: string;
-    lastName: string;
-    profilePicture: string;
-  };
-  comments: Comment[];
-  commentCount: number;
   linkTitle?: string;
   linkDescription?: string;
   linkImage?: string;
@@ -432,11 +405,11 @@ const Profile: React.FC = () => {
                 {activity.map((annotation) => (
                   <AnnotationCard
                     key={annotation.id}
-                    annotation={annotation as AnnotationData}
+                    annotation={annotation as any}
                 openComments={openComments}
                 toggleComments={(id) => setOpenComments(prev => ({ ...prev, [id]: !prev[id] }))}
-                renderAvatar={renderAvatar as (user: AnnotationUser) => React.ReactNode}
-                renderAnnotationAction={renderAnnotationAction as (a: AnnotationData) => React.ReactNode}
+                renderAvatar={renderAvatar as (user: any, size: number) => React.ReactNode}
+                renderAnnotationAction={renderAnnotationAction as (a: any) => React.ReactNode}
                 formatDate={formatDate}
                 handleComment={(id, text) => {
                   // Adapt to profile's comment submission logic
@@ -473,7 +446,7 @@ const Profile: React.FC = () => {
                   }
                 }}
                 fetchingComments={fetchingComments}
-                currentUser={currentUser as AnnotationUser}
+                currentUser={currentUser as any}
                     isProfile={true}
                   />
                 ))}
