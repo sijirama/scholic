@@ -30834,33 +30834,31 @@
     const bestMatch = scoredMatches[0];
     if (bestMatch.score < 0.5) return null;
     return {
-      start: findNearestOffset(text, normQuote, bestMatch.start),
-      end: findNearestOffset(text, normQuote, bestMatch.end, true),
+      start: findNearestOffset(text, bestMatch.start),
+      end: findNearestOffset(text, bestMatch.end, true),
       score: bestMatch.score
     };
   }
   function findNearestOffset(text, normIndex, isEnd = false) {
-    if (normIndex <= 0) return 0;
     let normPos = 0;
-    let inWhitespace = false;
-    let lastNonWhitespace = 0;
+    let started = false;
+    let inWhitespace = true;
     for (let i = 0; i < text.length; i++) {
-      const isWhitespace = /\s/.test(text[i]);
-      if (!isWhitespace) {
-        if (inWhitespace) {
+      const isWs = /\s/.test(text[i]);
+      if (isWs) {
+        if (started && !inWhitespace) {
+          if (normPos === normIndex) return i;
           normPos++;
-          inWhitespace = false;
-        }
-        if (normPos === normIndex) return i;
-        normPos++;
-        lastNonWhitespace = i;
-      } else {
-        if (!inWhitespace) {
           inWhitespace = true;
         }
+      } else {
+        if (!started) started = true;
+        inWhitespace = false;
+        if (normPos === normIndex) return i;
+        normPos++;
       }
     }
-    return isEnd ? lastNonWhitespace + 1 : lastNonWhitespace;
+    return text.length;
   }
   var init_match_quote = __esm({
     "src/anchoring/match-quote.ts"() {

@@ -205,6 +205,216 @@ func GetUserProfile(c *gin.Context) {
 	})
 }
 
+// SearchUsers handles GET /api/users/search?q=...&limit=...&offset=...
+func SearchUsers(c *gin.Context) {
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusOK, gin.H{"users": []interface{}{}, "total": 0})
+		return
+	}
+
+	limitStr := c.DefaultQuery("limit", "20")
+	offsetStr := c.DefaultQuery("offset", "0")
+	limit, _ := strconv.Atoi(limitStr)
+	offset, _ := strconv.Atoi(offsetStr)
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	pattern := "%" + query + "%"
+
+	var total int64
+	database.DB.Model(&models.User{}).
+		Where("onboarded = ?", true).
+		Where("username ILIKE ? OR first_name ILIKE ? OR last_name ILIKE ?", pattern, pattern, pattern).
+		Count(&total)
+
+	var users []models.User
+	database.DB.Where("onboarded = ?", true).
+		Where("username ILIKE ? OR first_name ILIKE ? OR last_name ILIKE ?", pattern, pattern, pattern).
+		Order("username ASC").
+		Limit(limit).Offset(offset).
+		Find(&users)
+
+	// Check follow status for current user
+	currentUserID, hasAuth := c.Get("userID")
+
+	type userResult struct {
+		ID               uint   `json:"id"`
+		Username         string `json:"username"`
+		FirstName        string `json:"firstName"`
+		LastName         string `json:"lastName"`
+		ProfilePicture   string `json:"profilePicture"`
+		MemberNumber     uint   `json:"memberNumber"`
+		ShowMemberNumber bool   `json:"showMemberNumber"`
+		FollowersCount   int64  `json:"followersCount"`
+		FollowingCount   int64  `json:"followingCount"`
+		IsFollowing      bool   `json:"isFollowing"`
+	}
+
+	results := make([]userResult, 0, len(users))
+	for _, u := range users {
+		var followersCount, followingCount int64
+		database.DB.Model(&models.Follow{}).Where("following_id = ?", u.ID).Count(&followersCount)
+		database.DB.Model(&models.Follow{}).Where("follower_id = ?", u.ID).Count(&followingCount)
+
+		isFollowing := false
+		if hasAuth && currentUserID.(uint) != u.ID {
+			var f models.Follow
+			if err := database.DB.Where("follower_id = ? AND following_id = ?", currentUserID, u.ID).First(&f).Error; err == nil {
+				isFollowing = true
+			}
+		}
+
+		results = append(results, userResult{
+			ID:               u.ID,
+			Username:         u.Username,
+			FirstName:        u.FirstName,
+			LastName:         u.LastName,
+			ProfilePicture:   u.ProfilePicture,
+			MemberNumber:     u.MemberNumber,
+			ShowMemberNumber: u.ShowMemberNumber,
+			FollowersCount:   followersCount,
+			FollowingCount:   followingCount,
+			IsFollowing:      isFollowing,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": results, "total": total})
+}
+
+// GetFollowers handles GET /api/users/:username/followers?limit=...&offset=...
+func GetFollowers(c *gin.Context) {
+	username := c.Param("username")
+	var user models.User
+	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	limitStr := c.DefaultQuery("limit", "20")
+	offsetStr := c.DefaultQuery("offset", "0")
+	limit, _ := strconv.Atoi(limitStr)
+	offset, _ := strconv.Atoi(offsetStr)
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	var total int64
+	database.DB.Model(&models.Follow{}).Where("following_id = ?", user.ID).Count(&total)
+
+	var follows []models.Follow
+	database.DB.Preload("Follower").
+		Where("following_id = ?", user.ID).
+		Order("created_at DESC").
+		Limit(limit).Offset(offset).
+		Find(&follows)
+
+	currentUserID, hasAuth := c.Get("userID")
+
+	type userResult struct {
+		ID               uint   `json:"id"`
+		Username         string `json:"username"`
+		FirstName        string `json:"firstName"`
+		LastName         string `json:"lastName"`
+		ProfilePicture   string `json:"profilePicture"`
+		MemberNumber     uint   `json:"memberNumber"`
+		ShowMemberNumber bool   `json:"showMemberNumber"`
+		IsFollowing      bool   `json:"isFollowing"`
+	}
+
+	results := make([]userResult, 0, len(follows))
+	for _, f := range follows {
+		isFollowing := false
+		if hasAuth && currentUserID.(uint) != f.Follower.ID {
+			var existing models.Follow
+			if err := database.DB.Where("follower_id = ? AND following_id = ?", currentUserID, f.Follower.ID).First(&existing).Error; err == nil {
+				isFollowing = true
+			}
+		}
+		results = append(results, userResult{
+			ID:               f.Follower.ID,
+			Username:         f.Follower.Username,
+			FirstName:        f.Follower.FirstName,
+			LastName:         f.Follower.LastName,
+			ProfilePicture:   f.Follower.ProfilePicture,
+			MemberNumber:     f.Follower.MemberNumber,
+			ShowMemberNumber: f.Follower.ShowMemberNumber,
+			IsFollowing:      isFollowing,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": results, "total": total})
+}
+
+// GetFollowing handles GET /api/users/:username/following?limit=...&offset=...
+func GetFollowing(c *gin.Context) {
+	username := c.Param("username")
+	var user models.User
+	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	limitStr := c.DefaultQuery("limit", "20")
+	offsetStr := c.DefaultQuery("offset", "0")
+	limit, _ := strconv.Atoi(limitStr)
+	offset, _ := strconv.Atoi(offsetStr)
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	var total int64
+	database.DB.Model(&models.Follow{}).Where("follower_id = ?", user.ID).Count(&total)
+
+	var follows []models.Follow
+	database.DB.Preload("Following").
+		Where("follower_id = ?", user.ID).
+		Order("created_at DESC").
+		Limit(limit).Offset(offset).
+		Find(&follows)
+
+	currentUserID, hasAuth := c.Get("userID")
+
+	type userResult struct {
+		ID               uint   `json:"id"`
+		Username         string `json:"username"`
+		FirstName        string `json:"firstName"`
+		LastName         string `json:"lastName"`
+		ProfilePicture   string `json:"profilePicture"`
+		MemberNumber     uint   `json:"memberNumber"`
+		ShowMemberNumber bool   `json:"showMemberNumber"`
+		IsFollowing      bool   `json:"isFollowing"`
+	}
+
+	results := make([]userResult, 0, len(follows))
+	for _, f := range follows {
+		isFollowing := false
+		if hasAuth && currentUserID.(uint) != f.Following.ID {
+			var existing models.Follow
+			if err := database.DB.Where("follower_id = ? AND following_id = ?", currentUserID, f.Following.ID).First(&existing).Error; err == nil {
+				isFollowing = true
+			}
+		}
+		// If this is the current user's following list, they're following everyone on it
+		if hasAuth && currentUserID.(uint) == user.ID {
+			isFollowing = true
+		}
+		results = append(results, userResult{
+			ID:               f.Following.ID,
+			Username:         f.Following.Username,
+			FirstName:        f.Following.FirstName,
+			LastName:         f.Following.LastName,
+			ProfilePicture:   f.Following.ProfilePicture,
+			MemberNumber:     f.Following.MemberNumber,
+			ShowMemberNumber: f.Following.ShowMemberNumber,
+			IsFollowing:      isFollowing,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": results, "total": total})
+}
+
 // ToggleFollow handles POST /api/users/:username/follow
 func ToggleFollow(c *gin.Context) {
 	followerID, exists := c.Get("userID")

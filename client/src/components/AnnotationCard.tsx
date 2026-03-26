@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle, Lock } from 'lucide-react';
+import { MessageCircle, Lock, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface User {
@@ -250,31 +250,69 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                   gap: '12px'
                 }}>
                    {handleComment && currentUser && (
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '8px', alignItems: 'center' }}>
                       {renderAvatar(currentUser, 24)}
-                      <div style={{ flex: 1 }}>
-                        <input
-                          type="text"
+                      <div
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '12px',
+                          padding: '4px 4px 4px 14px',
+                          gap: '6px',
+                        }}
+                      >
+                        <textarea
                           placeholder="Reply..."
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' && commentText.trim()) {
+                            if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
+                              e.preventDefault();
+                              handleComment(annotation.id, commentText);
+                              setCommentText('');
+                            }
+                          }}
+                          rows={1}
+                          style={{
+                            flex: 1,
+                            background: 'none',
+                            border: 'none',
+                            outline: 'none',
+                            fontSize: '13px',
+                            color: '#fff',
+                            resize: 'none',
+                            fontFamily: 'inherit',
+                            lineHeight: 1.5,
+                            padding: '4px 0',
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (commentText.trim()) {
                               handleComment(annotation.id, commentText);
                               setCommentText('');
                             }
                           }}
                           style={{
-                            width: '100%',
-                            background: 'rgba(255,255,255,0.03)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '20px',
-                            padding: '6px 14px',
-                            fontSize: '13px',
-                            color: '#fff',
-                            outline: 'none',
+                            background: commentText.trim() ? '#6EB781' : 'rgba(255,255,255,0.06)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            width: '28px',
+                            height: '28px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: commentText.trim() ? 'pointer' : 'default',
+                            transition: 'background 0.15s',
+                            padding: 0,
+                            flexShrink: 0,
                           }}
-                        />
+                        >
+                          <Send style={{ width: 14, height: 14, color: commentText.trim() ? '#fff' : '#555' }} />
+                        </button>
                       </div>
                     </div>
                   )}

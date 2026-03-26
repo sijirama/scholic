@@ -215,47 +215,49 @@ export function matchQuote(
   // This is approximate but usually exact enough for highlighting.
   // For a truly perfect mapping, we'd need a source-map, but that's expensive.
   return {
-    start: findNearestOffset(text, normQuote, bestMatch.start),
-    end: findNearestOffset(text, normQuote, bestMatch.end, true),
+    start: findNearestOffset(text, bestMatch.start),
+    end: findNearestOffset(text, bestMatch.end, true),
     score: bestMatch.score,
   };
 }
 
 /**
- * Finds the nearest actual offset in the original string for a normalized index.
- * Normalization collapses all whitespace into single spaces and trims.
+ * Map an offset in normalized text back to the corresponding offset in the
+ * original text. Normalization is: collapse all whitespace runs into a single
+ * space, then trim leading/trailing whitespace.
  *
- * @param text - Original raw text
- * @param normIndex - Index in the normalized version
- * @param isEnd - Whether we are finding the end boundary (offset after last char)
+ * The mapping works by walking the original text and tracking which normalized
+ * position each character corresponds to:
+ *   - Leading whitespace → skipped (trim removes it)
+ *   - Non-whitespace char → maps 1:1 to a normalized position
+ *   - First whitespace after non-whitespace → maps to the single collapsed space
+ *   - Additional whitespace in a run → skipped (collapsed away)
+ *   - Trailing whitespace → skipped (trim removes it)
  */
 function findNearestOffset(text: string, normIndex: number, isEnd = false): number {
-  if (normIndex <= 0) return 0;
-
   let normPos = 0;
-  let inWhitespace = false;
-  let lastNonWhitespace = 0;
+  let started = false;   // Have we seen any non-whitespace yet?
+  let inWhitespace = true; // Treat start as whitespace for leading-trim handling
 
   for (let i = 0; i < text.length; i++) {
-    const isWhitespace = /\s/.test(text[i]);
+    const isWs = /\s/.test(text[i]);
 
-    if (!isWhitespace) {
-      if (inWhitespace) {
-        // We just transitioned from whitespace to a character.
-        // In the normalized version, all preceding spaces became one space.
+    if (isWs) {
+      if (started && !inWhitespace) {
+        // First whitespace after a word — maps to one space in normalized text
+        if (normPos === normIndex) return i;
         normPos++;
-        inWhitespace = false;
-      }
-      if (normPos === normIndex) return i;
-      normPos++;
-      lastNonWhitespace = i;
-    } else {
-      if (!inWhitespace) {
         inWhitespace = true;
       }
+      // Additional whitespace in a run or leading whitespace: skip
+    } else {
+      if (!started) started = true;
+      inWhitespace = false;
+      if (normPos === normIndex) return i;
+      normPos++;
     }
   }
 
-  // If we reached the end and still haven't matched
-  return isEnd ? lastNonWhitespace + 1 : lastNonWhitespace;
+  // normIndex is at or beyond the end of the normalized text
+  return text.length;
 }

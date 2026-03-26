@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { ArrowLeft, Settings } from 'lucide-react';
 import AnnotationCard from '../components/AnnotationCard';
 import type { Annotation, User as BaseUser, Comment } from '../components/AnnotationCard';
+import FollowersModal from '../components/FollowersModal';
 
 interface ProfileUser extends BaseUser {
   bio: string;
@@ -59,6 +60,10 @@ const Profile: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Followers modal state
+  const [followersModalOpen, setFollowersModalOpen] = useState(false);
+  const [followersModalTab, setFollowersModalTab] = useState<'followers' | 'following'>('followers');
 
   // Comments state
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
@@ -332,8 +337,20 @@ const Profile: React.FC = () => {
             )}
             <div className="flex items-center gap-4" style={{ fontSize: '12px', color: '#888' }}>
               <span><strong style={{ color: '#fff' }}>{activity.length}</strong> notes</span>
-              <span><strong style={{ color: '#fff' }}>{profileUser.followersCount || 0}</strong> followers</span>
-              <span><strong style={{ color: '#fff' }}>{profileUser.followingCount || 0}</strong> following</span>
+              <span
+                onClick={() => { setFollowersModalTab('followers'); setFollowersModalOpen(true); }}
+                style={{ cursor: 'pointer', transition: 'color 0.15s' }}
+                className="hover:text-white"
+              >
+                <strong style={{ color: '#fff' }}>{profileUser.followersCount || 0}</strong> followers
+              </span>
+              <span
+                onClick={() => { setFollowersModalTab('following'); setFollowersModalOpen(true); }}
+                style={{ cursor: 'pointer', transition: 'color 0.15s' }}
+                className="hover:text-white"
+              >
+                <strong style={{ color: '#fff' }}>{profileUser.followingCount || 0}</strong> following
+              </span>
             </div>
           </div>
         </div>
@@ -381,12 +398,15 @@ const Profile: React.FC = () => {
                 renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
                 formatDate={formatDate}
                 handleComment={(id, text) => {
-                  // Adapt to profile's comment submission logic
-                  api.post(`/api/annotations/${id}/comments`, { text }).then(() => {
-                    // Update activity list optimistically or refresh
+                  if (!text?.trim()) return;
+                  api.post(`/annotations/${id}/comments`, { text }).then((response) => {
                     setActivity(prev => prev.map(ann => {
                       if (ann.id === id) {
-                        return { ...ann, commentCount: (ann.commentCount || 0) + 1 };
+                        return {
+                          ...ann,
+                          comments: [...(ann.comments || []), response.data],
+                          commentCount: (ann.commentCount || 0) + 1
+                        };
                       }
                       return ann;
                     }));
@@ -439,6 +459,18 @@ const Profile: React.FC = () => {
           </div>
         )}
       </div>
+
+      {profileUser && (
+        <FollowersModal
+          open={followersModalOpen}
+          onClose={() => setFollowersModalOpen(false)}
+          username={profileUser.username}
+          initialTab={followersModalTab}
+          currentUserId={currentUser?.id}
+          followersCount={profileUser.followersCount || 0}
+          followingCount={profileUser.followingCount || 0}
+        />
+      )}
     </div>
   );
 };

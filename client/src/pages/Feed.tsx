@@ -43,7 +43,6 @@ const Feed: React.FC = () => {
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
-  const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
   
   // Track how many comments are loaded per annotation
   // (Backend initially sends 3)
@@ -92,29 +91,23 @@ const Feed: React.FC = () => {
 
 
 
-  const submitComment = async (annotationId: number) => {
-    const text = commentInputs[annotationId];
+  const submitComment = async (annotationId: number, text: string) => {
     if (!text?.trim()) return;
     try {
       const response = await api.post(`/annotations/${annotationId}/comments`, { text });
       setAnnotations(prev => prev.map(ann => {
         if (ann.id === annotationId) {
-          return { 
-            ...ann, 
+          return {
+            ...ann,
             comments: [...(ann.comments || []), response.data],
             commentCount: (ann.commentCount || 0) + 1
           };
         }
         return ann;
       }));
-      setCommentInputs(prev => ({ ...prev, [annotationId]: '' }));
-      // Increment offset so pagination stays in sync
       setCommentOffsets(prev => ({ ...prev, [annotationId]: (prev[annotationId] || (annotations.find(a => a.id === annotationId)?.comments?.length || 0)) + 1 }));
     } catch (err) {
-      setCommentInputs(prev => ({ ...prev, [annotationId]: '' }));
       console.error('Failed to post comment', err);
-    } finally {
-      // setSubmitting(prev => ({ ...prev, [annotationId]: false })); // Removed as setSubmitting is not defined
     }
   };
 
@@ -280,8 +273,7 @@ const Feed: React.FC = () => {
                 renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
                 formatDate={formatDate}
                 handleComment={(id, text) => {
-                  setCommentInputs(prev => ({ ...prev, [id]: text }));
-                  submitComment(id);
+                  submitComment(id, text);
                 }}
                 fetchMoreComments={fetchMoreComments}
                 fetchingComments={fetchingComments}
