@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
@@ -20,11 +20,6 @@ const Settings: React.FC = () => {
   const [bio, setBio] = useState('');
   const [showMemberNumber, setShowMemberNumber] = useState(true);
   const [memberNumber, setMemberNumber] = useState(0);
-
-  // Username check
-  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
-  const [checkingUsername, setCheckingUsername] = useState(false);
-  const usernameTimerRef = useRef<number | null>(null);
 
   // Avatar upload
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,36 +49,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Debounced username check
-  const checkUsername = useCallback((value: string) => {
-    if (usernameTimerRef.current) {
-      clearTimeout(usernameTimerRef.current);
-    }
-
-    if (!value || value === user?.username) {
-      setUsernameAvailable(null);
-      setCheckingUsername(false);
-      return;
-    }
-
-    setCheckingUsername(true);
-    usernameTimerRef.current = window.setTimeout(async () => {
-      try {
-        const response = await api.get(`/auth/check-username?username=${encodeURIComponent(value)}`);
-        setUsernameAvailable(response.data.available);
-      } catch {
-        setUsernameAvailable(null);
-      } finally {
-        setCheckingUsername(false);
-      }
-    }, 500);
-  }, [user?.username]);
-
-  const handleUsernameChange = (value: string) => {
-    setUsername(value);
-    checkUsername(value);
-  };
-
   const handleSave = async () => {
     setSaving(true);
     setSaveMessage('');
@@ -91,7 +56,6 @@ const Settings: React.FC = () => {
       await api.put('/auth/profile', {
         firstName,
         lastName,
-        username,
         bio,
         showMemberNumber,
       });
@@ -280,37 +244,56 @@ const Settings: React.FC = () => {
                 <div style={{ position: 'relative' }}>
                   <input
                     type="text"
+                    readOnly
                     value={username}
-                    onChange={(e) => handleUsernameChange(e.target.value)}
                     placeholder="username"
                     style={{
                       width: '100%',
                       padding: '10px 12px',
                       fontSize: '13px',
-                      color: '#e0e0e0',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${usernameAvailable === false ? 'rgba(232,115,71,0.5)' : usernameAvailable === true ? 'rgba(110,183,129,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                      color: '#666',
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.05)',
                       borderRadius: '8px',
                       outline: 'none',
                       boxSizing: 'border-box',
+                      cursor: 'not-allowed',
                     }}
                   />
-                  {checkingUsername && (
-                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#666' }}>
-                      Checking...
-                    </span>
-                  )}
-                  {!checkingUsername && usernameAvailable === false && (
-                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#e87347' }}>
-                      Taken
-                    </span>
-                  )}
-                  {!checkingUsername && usernameAvailable === true && (
-                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#6EB781' }}>
-                      Available
-                    </span>
-                  )}
+                  <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#444' }}>
+                    Locked
+                  </span>
                 </div>
+              </div>
+            </div>
+
+            {/* Locked Email Address */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '6px' }}>
+                Email Address
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={user?.email || ''}
+                  placeholder="email@example.com"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '13px',
+                    color: '#666',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    cursor: 'not-allowed',
+                  }}
+                />
+                <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#444' }}>
+                  Locked
+                </span>
               </div>
             </div>
 

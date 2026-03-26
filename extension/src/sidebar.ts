@@ -105,6 +105,7 @@ export class Sidebar {
   private isRendering: boolean = false;
   /** Active tab: 'mine' | 'community' | 'all' */
   private activeTab: 'mine' | 'community' | 'all' = 'mine';
+  private isAuthenticated: boolean = false;
 
   constructor(callbacks: SidebarCallbacks) {
     this.callbacks = callbacks;
@@ -153,10 +154,22 @@ export class Sidebar {
 
     document.body.appendChild(this.host);
 
+    // Initial check for authentication to set default tab
+    chrome.storage.local.get('scholicToken').then((result) => {
+      this.isAuthenticated = !!result.scholicToken;
+      if (!this.isAuthenticated) {
+        this.activeTab = 'all';
+      }
+    });
+
     // Listen for storage changes (e.g., login sync) to re-render the sidebar
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === 'local' && changes.scholicToken) {
         console.log('[Scholic] Token changed, refreshing sidebar data...');
+        this.isAuthenticated = !!changes.scholicToken.newValue;
+        if (!this.isAuthenticated) {
+          this.activeTab = 'all';
+        }
         this.fetchUserData();
       }
     });
@@ -277,10 +290,19 @@ export class Sidebar {
 
     const tabs = document.createElement('div');
     tabs.className = 'sidebar-tabs';
+    let tabsHtml = '';
+    
+    if (this.isAuthenticated) {
+      tabsHtml = `
+        <button class="tab-btn ${this.activeTab === 'mine' ? 'active' : ''}" data-tab="mine">Mine</button>
+        <button class="tab-btn ${this.activeTab === 'community' ? 'active' : ''}" data-tab="community">Community</button>
+      `;
+    }
+    
+    tabsHtml += `<button class="tab-btn ${this.activeTab === 'all' ? 'active' : ''}" data-tab="all">All</button>`;
+    
     tabs.innerHTML = `
-      <button class="tab-btn ${this.activeTab === 'mine' ? 'active' : ''}" data-tab="mine">Mine</button>
-      <button class="tab-btn ${this.activeTab === 'community' ? 'active' : ''}" data-tab="community">Community</button>
-      <button class="tab-btn ${this.activeTab === 'all' ? 'active' : ''}" data-tab="all">All</button>
+      ${tabsHtml}
       <button class="refresh-btn" title="Refresh annotations">
         <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -896,6 +918,26 @@ export class Sidebar {
    * Open the sidebar with an annotation form pre-filled with the selected quote.
    */
   openWithQuote(quoteText: string, selectors: Selector[]): void {
+    if (!this.isAuthenticated) {
+      this.open();
+      // Show login prompt instead of form
+      const formContainer = this.panel.querySelector('.sidebar-form-container');
+      if (formContainer) {
+        formContainer.innerHTML = `
+          <div style="padding: 20px; background: rgba(110,183,129,0.1); border-radius: 8px; margin: 16px 20px; border: 1px solid rgba(110,183,129,0.2);">
+            <div style="font-weight: 700; color: #fff; margin-bottom: 8px;">Want to save this?</div>
+            <div style="font-size: 12px; color: #888; margin-bottom: 12px;">Sign in to save your highlights and join the conversation.</div>
+            <button class="btn btn-primary login-btn-inline" style="width: 100%;">Sign in to Scholic</button>
+          </div>
+        `;
+        formContainer.querySelector('.login-btn-inline')?.addEventListener('click', () => {
+          const extId = chrome.runtime.id;
+          const loginUrl = `${CONFIG.WEB_URL}/auth/extension-login?extId=${extId}`;
+          window.open(loginUrl, '_blank');
+        });
+      }
+      return;
+    }
     this.pendingQuoteText = quoteText;
     this.pendingSelectors = selectors;
     this.open();
@@ -1062,15 +1104,33 @@ export class Sidebar {
       if (!listContainer) return;
       listContainer.innerHTML = '';
 
-
-
-      // Check for token
-      const result = await chrome.storage.local.get('scholicToken');
-      const token = result.scholicToken;
-
-      if (!token) {
-        this.renderSignInState();
-        return;
+      // If guest, show a sticky login banner at the top of the list
+      if (!this.isAuthenticated) {
+        const banner = document.createElement('div');
+        banner.style.cssText = `
+          padding: 12px 20px;
+          background: #6EB781;
+          color: #0a0a0a;
+          font-size: 12px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        `;
+        banner.innerHTML = `
+          <span>Sign in to save highlights and comment</span>
+          <button class="banner-login-btn" style="background:rgba(0,0,0,0.1); border:1px solid rgba(0,0,0,0.2); border-radius:4px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer;">Sign In</button>
+        `;
+        banner.querySelector('.banner-login-btn')?.addEventListener('click', () => {
+          const extId = chrome.runtime.id;
+          const loginUrl = `${CONFIG.WEB_URL}/auth/extension-login?extId=${extId}`;
+          window.open(loginUrl, '_blank');
+        });
+        listContainer.appendChild(banner);
       }
 
       // Annotation list container
@@ -1134,7 +1194,19 @@ export class Sidebar {
                 <img src="${annotation.imageUrl}" style="width: 100%; display: block;" />
               </div>
             ` : `<div class="annotation-quote">${this.escapeHtml(annotation.quoteText)}</div>`}
-            ${annotation.text ? `<div class="annotation-note">${this.escapeHtml(annotation.text)}</div>` : ''}
+            ${annotation.id ? `
+              <div class="annotation-note" data-id="${annotation.id}">
+                ${(() => {
+            const text = annotation.text || '';
+            const words = text.split(/\s+/);
+            if (words.length <= 60) return this.escapeHtml(text);
+            return `
+                    <span class="note-text">${this.escapeHtml(words.slice(0, 60).join(' '))}...</span>
+                    <button class="read-more-btn" style="background:none; border:none; color:#6EB781; font-size:11px; font-weight:600; cursor:pointer; padding:0; margin-left:4px; font-family:inherit;">Read more</button>
+                  `;
+          })()}
+              </div>
+            ` : ''}
             <div class="annotation-meta">
               ${timeStr ? `<span>${timeStr}</span>` : ''}
               ${annotation.id ? `
@@ -1148,11 +1220,17 @@ export class Sidebar {
             </div>
             ${annotation.id && this.openComments[annotation.id] ? `
               <div class="annotation-comments">
-                <input type="text" class="sidebar-reply-input" data-id="${annotation.id}" placeholder="Add a comment..." style="margin-bottom: 12px;" />
+                ${this.isAuthenticated ? `
+                  <input type="text" class="sidebar-reply-input" data-id="${annotation.id}" placeholder="Add a comment..." style="margin-bottom: 12px;" />
+                ` : `
+                  <div style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1); border-radius: 6px; padding: 10px; font-size: 11px; color: #666; text-align: center; margin-bottom: 12px;">
+                    Sign in to join the conversation
+                  </div>
+                `}
                 ${annotation.comments && annotation.comments.length > 0 ? `
                   <div class="annotation-comments-list">
                     ${annotation.comments.map((c: any) => {
-            const cname = c.user?.username || c.user?.email?.split('@')[0] || 'User';
+            const cname = c.user?.username || c.user?.emailSlice || 'User';
             const cinit = cname[0].toUpperCase();
             const cavatar = c.user?.profilePicture
               ? `<img src="${c.user.profilePicture}" style="width:100%; height:100%; object-fit:cover;" />`
@@ -1177,6 +1255,28 @@ export class Sidebar {
               ` : ''
             }
           `;
+
+          // Read More logic
+          const readMoreBtn = item.querySelector('.read-more-btn');
+          if (readMoreBtn) {
+            let currentLimit = 60;
+            readMoreBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const noteTextEl = item.querySelector('.note-text');
+              if (!noteTextEl) return;
+              
+              const fullText = annotation.text || '';
+              const words = fullText.split(/\s+/);
+              currentLimit += 120;
+              
+              if (currentLimit >= words.length) {
+                noteTextEl.textContent = fullText;
+                readMoreBtn.remove();
+              } else {
+                noteTextEl.textContent = words.slice(0, currentLimit).join(' ') + '...';
+              }
+            });
+          }
 
           // Click to focus the highlight in the page
           item.addEventListener('click', (e) => {

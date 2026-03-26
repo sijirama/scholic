@@ -3,6 +3,7 @@ package scraper
 import (
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -34,16 +35,34 @@ func ExtractMetadata(url string) (*LinkMetadata, error) {
 	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	client := &http.Client{
-		Timeout:   8 * time.Second,
+		Timeout:   12 * time.Second,
 		Transport: customTransport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 20 {
+				return fmt.Errorf("stopped after 20 redirects")
+			}
+			return nil
+		},
 	}
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ScholicLinkPreviewBot/1.0")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Referer", "https://www.google.com/")
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Pragma", "no-cache")
+	req.Header.Set("Sec-Ch-Ua", `"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"`)
+	req.Header.Set("Sec-Ch-Ua-Mobile", "?0")
+	req.Header.Set("Sec-Ch-Ua-Platform", `"Windows"`)
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("Sec-Fetch-Site", "none")
+	req.Header.Set("Sec-Fetch-User", "?1")
+	req.Header.Set("Upgrade-Insecure-Requests", "1")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -172,6 +191,21 @@ func ExtractMetadata(url string) (*LinkMetadata, error) {
 	// Cleanup whitespace
 	meta.Title = strings.TrimSpace(meta.Title)
 	meta.Description = strings.TrimSpace(meta.Description)
+
+	// Suppress bot-protection titles/descriptions
+	lowerTitle := strings.ToLower(meta.Title)
+	if strings.Contains(lowerTitle, "just a moment") || 
+	   strings.Contains(lowerTitle, "checking your browser") ||
+	   strings.Contains(lowerTitle, "access denied") ||
+	   strings.Contains(lowerTitle, "attention required") ||
+	   resp.StatusCode == 403 {
+		meta.Title = meta.Domain
+		meta.Description = "Metadata extraction restricted by " + meta.Domain
+	}
+
+	if meta.Title == "" {
+		meta.Title = meta.Domain
+	}
 
 	return meta, nil
 }

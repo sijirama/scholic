@@ -97,7 +97,18 @@ export class HighlightPopup {
         </div>
       </div>
 
-      ${noteText ? `<div class="popup-note">${this.escapeHtml(noteText)}</div>` : ''}
+      ${noteText ? `
+        <div class="popup-note">
+          ${(() => {
+            const words = noteText.split(/\s+/);
+            if (words.length <= 60) return this.escapeHtml(noteText);
+            return `
+              <span class="note-text">${this.escapeHtml(words.slice(0, 60).join(' '))}...</span>
+              <button class="read-more-btn" style="background:none; border:none; color:#6EB781; font-size:11px; font-weight:600; cursor:pointer; padding:0; margin-left:4px; font-family:inherit;">Read more</button>
+            `;
+          })()}
+        </div>
+      ` : ''}
 
       <div class="popup-actions">
         <button class="popup-toggle-comments">
@@ -122,6 +133,37 @@ export class HighlightPopup {
     const drawer = popup.querySelector('.popup-comments-drawer') as HTMLElement;
     const replyInput = popup.querySelector('.popup-reply-input') as HTMLInputElement;
     const sendBtn = popup.querySelector('.popup-send-btn') as HTMLButtonElement;
+
+    // ── Read More logic ───────────────────────────────────────────
+    const readMoreBtn = popup.querySelector('.read-more-btn');
+    if (readMoreBtn) {
+      let currentLimit = 60;
+      readMoreBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const noteTextEl = popup.querySelector('.note-text');
+        if (!noteTextEl) return;
+        
+        const words = noteText.split(/\s+/);
+        currentLimit += 120;
+        
+        if (currentLimit >= words.length) {
+          noteTextEl.textContent = noteText;
+          readMoreBtn.remove();
+        } else {
+          noteTextEl.textContent = words.slice(0, currentLimit).join(' ') + '...';
+        }
+        
+        // Reposition after expansion
+        this.host!.style.top = '-10000px'; 
+        setTimeout(() => {
+          const rect = highlightEl.getBoundingClientRect();
+          const pHeight = popup.offsetHeight;
+          this.host!.style.top = rect.top < pHeight + 16
+            ? `${rect.bottom + window.scrollY + 8}px`
+            : `${rect.top + window.scrollY - pHeight - 8}px`;
+        }, 0);
+      });
+    }
 
     // ── Mouse events ──────────────────────────────────────────────
     this.host.addEventListener('mouseenter', () => this.cancelHide());

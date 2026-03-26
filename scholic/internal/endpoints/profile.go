@@ -51,15 +51,18 @@ func UpdateProfile(c *gin.Context) {
 		updates["show_member_number"] = *req.ShowMemberNumber
 	}
 
-	// Username change requires uniqueness check
-	if req.Username != nil && *req.Username != "" {
-		var existingUser models.User
-		err := database.DB.Where("username = ? AND id != ?", *req.Username, userID).First(&existingUser).Error
-		if err == nil {
-			c.JSON(http.StatusConflict, gin.H{"error": "Username is already taken"})
-			return
-		}
-		updates["username"] = *req.Username
+	// Fetch current user to check against
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Username change is no longer allowed after onboarding
+	if req.Username != nil && *req.Username != "" && *req.Username != user.Username {
+		log.Printf("[Profile] User %v attempted to change username up from %s to %s (Blocked)", userID, user.Username, *req.Username)
+		// We ignore the username update or could return an error. 
+		// Since frontend will hide this, we'll just ignore it to avoid breaking other updates.
 	}
 
 	if len(updates) == 0 {
@@ -74,7 +77,6 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	// Return updated user
-	var user models.User
 	database.DB.First(&user, userID)
 	c.JSON(http.StatusOK, user)
 }

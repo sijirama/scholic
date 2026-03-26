@@ -96,6 +96,11 @@ async function bootstrap(): Promise<void> {
   const result = await chrome.storage.local.get('enabledDomains');
   const enabledDomains = result.enabledDomains || {};
   
+  const authResult = await chrome.storage.local.get('scholicToken');
+  if (!authResult.scholicToken) {
+    currentActiveTab = 'all';
+  }
+
   isEnabled = !!enabledDomains[domain];
   console.log(`[Scholic] Bootstrap: enabled=${isEnabled} for ${domain}`);
 
@@ -476,7 +481,16 @@ async function filterHighlights(): Promise<void> {
   const result = await chrome.storage.local.get('scholicToken');
   const token = result.scholicToken;
   
-  if (!token) return;
+  // If Guest, we show everything in 'all' tab (since other tabs are hidden anyway)
+  if (!token) {
+    for (const annotation of pageAnnotations) {
+      const highlights = highlightMap.get(String(annotation.id));
+      if (highlights) {
+        highlights.forEach(h => h.classList.remove('scholic-hidden'));
+      }
+    }
+    return;
+  }
 
   const meResponse = await chrome.runtime.sendMessage({ type: 'FETCH_ME' });
   const myUserId = meResponse?.id;

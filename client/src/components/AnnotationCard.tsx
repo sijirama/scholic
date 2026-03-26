@@ -49,6 +49,45 @@ interface AnnotationCardProps {
   isProfile?: boolean;
 }
 
+const TruncatedText: React.FC<{ text: string }> = ({ text }) => {
+  const [limit, setLimit] = React.useState(60);
+  const words = text.split(/\s+/);
+  const isTruncated = words.length > limit;
+
+  const displayText = isTruncated ? words.slice(0, limit).join(' ') + '...' : text;
+
+  return (
+    <div>
+      <p style={{ fontSize: '14px', color: '#ccc', lineHeight: 1.65, margin: '0 0 12px 0' }}>
+        {displayText}
+      </p>
+      {isTruncated && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setLimit(prev => prev + 120);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#6EB781',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            padding: '0',
+            marginTop: '-8px',
+            marginBottom: '12px',
+            fontFamily: 'inherit',
+          }}
+          className="hover:underline"
+        >
+          Read more
+        </button>
+      )}
+    </div>
+  );
+};
+
 const AnnotationCard: React.FC<AnnotationCardProps> = ({
   annotation,
   openComments,
@@ -75,7 +114,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-        {!isProfile && annotation.user && renderAvatar(annotation.user, 36)}
+        {annotation.user && renderAvatar(annotation.user, 36)}
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
@@ -123,14 +162,11 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
           )}
 
           {annotation.text && (
-            <p style={{ fontSize: '14px', color: '#ccc', lineHeight: 1.65, margin: '0 0 12px 0' }}>
-              {annotation.text}
-            </p>
+            <TruncatedText text={annotation.text} />
           )}
 
           {/* Link Card */}
-          {annotation.type !== 'image' && (
-            <a href={annotation.url} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit', margin: '0 0 16px 0' }}>
+          <a href={annotation.url} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit', margin: '0 0 16px 0' }}>
               <div style={{
                 border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: '8px',
@@ -155,7 +191,6 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 </div>
               </div>
             </a>
-          )}
 
           {/* Comment toggle */}
           <button
@@ -196,9 +231,9 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                   flexDirection: 'column',
                   gap: '12px'
                 }}>
-                  {handleComment && (
+                   {handleComment && currentUser && (
                     <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
-                      {currentUser && renderAvatar(currentUser, 24)}
+                      {renderAvatar(currentUser, 24)}
                       <div style={{ flex: 1 }}>
                         <input
                           type="text"

@@ -11,12 +11,56 @@ const Onboarding: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [checking, setChecking] = useState(false);
+  const checkTimerRef = React.useRef<number | null>(null);
 
-  const isValid = username.length >= 3;
+  const isValid = username.length >= 3 && username.length <= 20;
+
+  const checkUsername = React.useCallback(async (value: string) => {
+    if (value.length < 3) {
+      setIsAvailable(null);
+      setChecking(false);
+      return;
+    }
+
+    setChecking(true);
+    setIsAvailable(null);
+    setError('');
+
+    try {
+      const response = await api.get(`/auth/check-username?username=${encodeURIComponent(value)}`);
+      setIsAvailable(response.data.available);
+      if (!response.data.available) {
+        setError('That username is already taken.');
+      }
+    } catch (err) {
+      console.error('Failed to check username:', err);
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+    
+    if (username.length >= 3) {
+      checkTimerRef.current = window.setTimeout(() => {
+        checkUsername(username);
+      }, 500);
+    } else {
+      setIsAvailable(null);
+      setChecking(false);
+    }
+
+    return () => {
+      if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+    };
+  }, [username, checkUsername]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid) return;
+    if (!isValid || !isAvailable || checking) return;
     setLoading(true);
     setError('');
 
@@ -227,7 +271,7 @@ const Onboarding: React.FC = () => {
                   style={{
                     width: '100%',
                     background: 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${error ? 'rgba(248,113,113,0.4)' : isValid ? 'rgba(110,183,129,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                    border: `1px solid ${error ? 'rgba(248,113,113,0.4)' : (isValid && isAvailable) ? 'rgba(110,183,129,0.35)' : 'rgba(255,255,255,0.08)'}`,
                     borderRadius: '14px',
                     padding: '15px 16px 15px 64px',
                     color: '#fff',
@@ -271,7 +315,13 @@ const Onboarding: React.FC = () => {
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
-                      {username.length}/20
+                      {checking ? (
+                        <span className="pulse" style={{ color: '#6EB781' }}>Checking…</span>
+                      ) : isAvailable === true ? (
+                        <span style={{ color: '#6EB781' }}>Available</span>
+                      ) : (
+                        `${username.length}/20`
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -314,18 +364,18 @@ const Onboarding: React.FC = () => {
             {/* Submit button */}
             <button
               type="submit"
-              disabled={loading || !isValid}
+              disabled={loading || !isValid || !isAvailable || checking}
               style={{
                 width: '100%',
                 padding: '15px 20px',
-                background: isValid && !loading ? '#6EB781' : 'rgba(110,183,129,0.15)',
-                border: `1px solid ${isValid && !loading ? 'transparent' : 'rgba(110,183,129,0.15)'}`,
+                background: (isValid && isAvailable && !loading && !checking) ? '#6EB781' : 'rgba(110,183,129,0.15)',
+                border: `1px solid ${(isValid && isAvailable && !loading && !checking) ? 'transparent' : 'rgba(110,183,129,0.15)'}`,
                 borderRadius: '14px',
-                color: isValid && !loading ? '#0a0a0a' : '#3a3a3a',
+                color: (isValid && isAvailable && !loading && !checking) ? '#0a0a0a' : '#3a3a3a',
                 fontSize: '14px',
                 fontWeight: 700,
                 letterSpacing: '-0.1px',
-                cursor: isValid && !loading ? 'pointer' : 'not-allowed',
+                cursor: (isValid && isAvailable && !loading && !checking) ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
