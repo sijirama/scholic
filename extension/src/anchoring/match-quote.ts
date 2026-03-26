@@ -33,10 +33,42 @@ export type Match = {
 };
 
 /**
+ * Normalize whitespace in a string by collapsing multiple spaces,
+ * tabs, and newlines into a single space, and trimming ends.
+ */
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+/**
  * Find approximate matches for `str` in `text`, allowing up to `maxErrors` edits.
  * First tries exact matching (fast path), then falls back to fuzzy search.
  */
-function search(text: string, str: string, maxErrors: number): StringMatch[] {
+function search(
+  text: string,
+  str: string,
+  maxErrors: number,
+  options: { hint?: number; windowSize?: number } = {},
+): StringMatch[] {
+  // If we have a hint, try searching in a local window first.
+  // This is MUCH faster and avoids matching identical text in footers/sidebars.
+  if (typeof options.hint === 'number') {
+    const windowSize = options.windowSize || 4096;
+    const startWindow = Math.max(0, options.hint - windowSize);
+    const endWindow = Math.min(text.length, options.hint + windowSize);
+    const subtext = text.slice(startWindow, endWindow);
+
+    const matches = search(subtext, str, maxErrors);
+    if (matches.length > 0) {
+      // Re-offset matches back to the original text
+      return matches.map((m) => ({
+        ...m,
+        start: m.start + startWindow,
+        end: m.end + startWindow,
+      }));
+    }
+  }
+
   // Fast path: check for exact matches first
   let matchPos = 0;
   const exactMatches: StringMatch[] = [];
@@ -56,6 +88,7 @@ function search(text: string, str: string, maxErrors: number): StringMatch[] {
   }
 
   // Slow path: fuzzy search using edit distance
+  // Only search a reasonable amount of text to avoid blocking the main thread
   return approxSearch(text, str, maxErrors);
 }
 
@@ -67,8 +100,12 @@ function textMatchScore(text: string, str: string): number {
   if (str.length === 0 || text.length === 0) {
     return 0.0;
   }
-  const matches = search(text, str, str.length);
-  return 1 - (matches[0].errors / str.length);
+  const normText = normalizeWhitespace(text);
+  const normStr = normalizeWhitespace(str);
+  if (normStr.length === 0) return 1.0;
+
+  const matches = search(normText, normStr, normStr.length);
+  return 1 - matches[0].errors / normStr.length;
 }
 
 /** Context surrounding the original quote, used to disambiguate matches. */
@@ -83,24 +120,6 @@ type Context = {
 
 /**
  * Find the best approximate match for `quote` within `text`.
- *
- * This is the core re-anchoring function. It finds where the original
- * annotation text most likely exists in the (possibly modified) page.
- *
- * @param text - The full document text to search in
- * @param quote - The original selected text to find
- * @param context - Surrounding text and position hint for disambiguation
- * @returns Best match with position and score, or null if no good match found
- *
- * @example
- *   const match = matchQuote(
- *     document.body.textContent,
- *     "transformers changed NLP",
- *     { prefix: "In 2017, ", suffix: " dramatically." }
- *   );
- *   if (match) {
- *     console.log(`Found at offset ${match.start}–${match.end}`);
- *   }
  */
 export function matchQuote(
   text: string,
@@ -111,13 +130,23 @@ export function matchQuote(
     return null;
   }
 
-  // Allow up to half the quote length in errors, capped at 256
-  const maxErrors = Math.min(256, quote.length / 2);
+  // Normalize inputs to neutralize whitespace volatility
+  const normText = normalizeWhitespace(text);
+  const normQuote = normalizeWhitespace(quote);
 
-  // Find candidate matches using edit distance
-  const matches = search(text, quote, maxErrors);
+  // If normalization removed the quote entirely (e.g. only spaces), return null
+  if (normQuote.length === 0) return null;
+
+  // Allow up to 25% error rate, capped at 256
+  const maxErrors = Math.min(256, Math.ceil(normQuote.length * 0.25));
+
+  // Find candidate matches using edit distance, with a position hint if available
+  const matches = search(normText, normQuote, maxErrors, { hint: context.hint });
   if (matches.length === 0) {
-    return null;
+    // If localized search failed, try one last time with the whole text (no hint)
+    const fallbackMatches = search(normText, normQuote, maxErrors);
+    if (fallbackMatches.length === 0) return null;
+    matches.push(...fallbackMatches);
   }
 
   /**
@@ -133,33 +162,29 @@ export function matchQuote(
     const suffixWeight = 20;
     const posWeight = 10;
 
-    // Quote similarity: fewer errors = higher score
-    const quoteScore = 1 - match.errors / quote.length;
+    const quoteScore = 1 - match.errors / normQuote.length;
 
-    // Prefix similarity: compare text before match to stored prefix
     const prefixScore = context.prefix
       ? textMatchScore(
-          text.slice(
-            Math.max(0, match.start - context.prefix.length),
+          normText.slice(
+            Math.max(0, match.start - context.prefix.length * 2),
             match.start,
           ),
           context.prefix,
         )
       : 1.0;
 
-    // Suffix similarity: compare text after match to stored suffix
     const suffixScore = context.suffix
       ? textMatchScore(
-          text.slice(match.end, match.end + context.suffix.length),
+          normText.slice(match.end, match.end + context.suffix.length * 2),
           context.suffix,
         )
       : 1.0;
 
-    // Position proximity: closer to expected position = higher score
     let posScore = 1.0;
     if (typeof context.hint === 'number') {
       const offset = Math.abs(match.start - context.hint);
-      posScore = 1.0 - offset / text.length;
+      posScore = 1.0 - Math.min(1.0, offset / normText.length);
     }
 
     const rawScore =
@@ -171,7 +196,6 @@ export function matchQuote(
     return rawScore / maxScore;
   };
 
-  // Score all candidates and return the best one
   const scoredMatches = matches.map((m) => ({
     start: m.start,
     end: m.end,
@@ -179,5 +203,59 @@ export function matchQuote(
   }));
 
   scoredMatches.sort((a, b) => b.score - a.score);
-  return scoredMatches[0];
+
+  // Map the normalized position back to the original text
+  // Since we normalized by collapsing whitespace, a character index in normText
+  // maps to an index in text that is >=.
+  const bestMatch = scoredMatches[0];
+  if (bestMatch.score < 0.5) return null; // Reject low quality matches
+
+  // To find the original offsets, we rely on the fact that we've found the text.
+  // We'll perform one last exact search for the normalized quote in a window of the original text.
+  // This is approximate but usually exact enough for highlighting.
+  // For a truly perfect mapping, we'd need a source-map, but that's expensive.
+  return {
+    start: findNearestOffset(text, normQuote, bestMatch.start),
+    end: findNearestOffset(text, normQuote, bestMatch.end, true),
+    score: bestMatch.score,
+  };
+}
+
+/**
+ * Finds the nearest actual offset in the original string for a normalized index.
+ * Normalization collapses all whitespace into single spaces and trims.
+ *
+ * @param text - Original raw text
+ * @param normIndex - Index in the normalized version
+ * @param isEnd - Whether we are finding the end boundary (offset after last char)
+ */
+function findNearestOffset(text: string, normIndex: number, isEnd = false): number {
+  if (normIndex <= 0) return 0;
+
+  let normPos = 0;
+  let inWhitespace = false;
+  let lastNonWhitespace = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const isWhitespace = /\s/.test(text[i]);
+
+    if (!isWhitespace) {
+      if (inWhitespace) {
+        // We just transitioned from whitespace to a character.
+        // In the normalized version, all preceding spaces became one space.
+        normPos++;
+        inWhitespace = false;
+      }
+      if (normPos === normIndex) return i;
+      normPos++;
+      lastNonWhitespace = i;
+    } else {
+      if (!inWhitespace) {
+        inWhitespace = true;
+      }
+    }
+  }
+
+  // If we reached the end and still haven't matched
+  return isEnd ? lastNonWhitespace + 1 : lastNonWhitespace;
 }

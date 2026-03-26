@@ -181,6 +181,12 @@ async function apiRequest(path: string, options: RequestInit = {}): Promise<any>
     headers: { ...headers, ...options.headers },
   });
 
+  if (response.status === 401) {
+    console.warn('[Scholic] Session expired or invalid (401). Clearing token.');
+    await chrome.storage.local.remove('scholicToken');
+    throw new Error('Authentication session expired. Please sign in again.');
+  }
+
   if (!response.ok) {
     const errorBody = await response.text();
     throw new Error(`API error ${response.status}: ${errorBody}`);

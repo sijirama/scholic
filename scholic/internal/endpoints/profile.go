@@ -54,7 +54,7 @@ func UpdateProfile(c *gin.Context) {
 	// Fetch current user to check against
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
 
@@ -124,16 +124,23 @@ func GetUserProfile(c *gin.Context) {
 		return
 	}
 
-	// Check if current user is following
+	// Check if current user is the owner to show private annotations
+	isOwner := false
+	currentUserID, exists := c.Get("userID")
+	if exists && currentUserID.(uint) == user.ID {
+		isOwner = true
+	}
+
+	// Check if current user is following (if not owner)
 	isFollowing := false
-	if currentUserID, exists := c.Get("userID"); exists {
+	if exists && !isOwner {
 		var follow models.Follow
 		if err := database.DB.Where("follower_id = ? AND following_id = ?", currentUserID, user.ID).First(&follow).Error; err == nil {
 			isFollowing = true
 		}
 	}
 
-	// Fetch user's public annotations with pagination
+	// Fetch user's annotations with pagination
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
 	limit, _ := strconv.Atoi(limitStr)
@@ -145,15 +152,25 @@ func GetUserProfile(c *gin.Context) {
 	var annotations []models.Annotation
 	var totalActivity int64
 
-	database.DB.Model(&models.Annotation{}).Where("user_id = ? AND is_private = ?", user.ID, false).Count(&totalActivity)
+	// Build activity query based on ownership
+	activityQuery := database.DB.Model(&models.Annotation{}).Where("user_id = ?", user.ID)
+	if !isOwner {
+		activityQuery = activityQuery.Where("is_private = ?", false)
+	}
+	activityQuery.Count(&totalActivity)
 
-	database.DB.Preload("User").
+	fetchQuery := database.DB.Preload("User").
 		Preload("Comments", func(db *gorm.DB) *gorm.DB {
 			return db.Order("created_at ASC").Limit(5)
 		}).
 		Preload("Comments.User").
-		Where("user_id = ? AND is_private = ?", user.ID, false).
-		Order("created_at DESC").Limit(limit).Offset(offset).Find(&annotations)
+		Where("user_id = ?", user.ID)
+
+	if !isOwner {
+		fetchQuery = fetchQuery.Where("is_private = ?", false)
+	}
+
+	fetchQuery.Order("created_at DESC").Limit(limit).Offset(offset).Find(&annotations)
 
 	for i := range annotations {
 		var count int64

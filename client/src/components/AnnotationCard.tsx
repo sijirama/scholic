@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface User {
@@ -33,6 +33,7 @@ export interface Annotation {
   user: User;
   commentCount?: number;
   comments?: Comment[];
+  isPrivate?: boolean;
 }
 
 interface AnnotationCardProps {
@@ -126,6 +127,23 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             <span style={{ fontSize: '12px', color: '#444' }}>
               {formatDate(annotation.createdAt)}
             </span>
+            {annotation.isPrivate && (
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '4px', 
+                  padding: '2px 6px', 
+                  borderRadius: '4px', 
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)'
+                }}
+                title="Private Annotation"
+              >
+                <Lock style={{ width: 10, height: 10, color: '#666' }} />
+                <span style={{ fontSize: '10px', fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private</span>
+              </div>
+            )}
           </div>
           
           <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>

@@ -204,6 +204,9 @@ export class TextQuoteAnchor {
     // This helps disambiguate when the same text appears multiple times.
     const contextLen = 32;
 
+    // We store the raw exact text, but we'll normalize during matching.
+    // For context (prefix/suffix), we'll store them as-is but the matcher
+    // will handle them robustly.
     return new TextQuoteAnchor(root, text.slice(start, end), {
       prefix: text.slice(Math.max(0, start - contextLen), start),
       suffix: text.slice(end, Math.min(text.length, end + contextLen)),

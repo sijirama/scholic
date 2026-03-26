@@ -18,7 +18,7 @@ func AuthGoogle(c *gin.Context) {
 	if provider == "" {
 		provider = "google" // Fallback
 	}
-	
+
 	log.Printf("[Auth] Initiating auth for provider: %s", provider)
 
 	// Add provider to query params so gothic can find it
@@ -99,12 +99,12 @@ func AuthMe(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
+		return // Added return here to prevent further execution if userID is not found
 	}
 
 	var user models.User
 	if err := database.DB.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
 

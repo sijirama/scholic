@@ -30739,7 +30739,24 @@
   });
 
   // src/anchoring/match-quote.ts
-  function search2(text, str, maxErrors) {
+  function normalizeWhitespace(text) {
+    return text.replace(/\s+/g, " ").trim();
+  }
+  function search2(text, str, maxErrors, options = {}) {
+    if (typeof options.hint === "number") {
+      const windowSize = options.windowSize || 4096;
+      const startWindow = Math.max(0, options.hint - windowSize);
+      const endWindow = Math.min(text.length, options.hint + windowSize);
+      const subtext = text.slice(startWindow, endWindow);
+      const matches = search2(subtext, str, maxErrors);
+      if (matches.length > 0) {
+        return matches.map((m) => ({
+          ...m,
+          start: m.start + startWindow,
+          end: m.end + startWindow
+        }));
+      }
+    }
     let matchPos = 0;
     const exactMatches = [];
     while (matchPos !== -1) {
@@ -30762,39 +30779,47 @@
     if (str.length === 0 || text.length === 0) {
       return 0;
     }
-    const matches = search2(text, str, str.length);
-    return 1 - matches[0].errors / str.length;
+    const normText = normalizeWhitespace(text);
+    const normStr = normalizeWhitespace(str);
+    if (normStr.length === 0) return 1;
+    const matches = search2(normText, normStr, normStr.length);
+    return 1 - matches[0].errors / normStr.length;
   }
   function matchQuote(text, quote, context = {}) {
     if (quote.length === 0) {
       return null;
     }
-    const maxErrors = Math.min(256, quote.length / 2);
-    const matches = search2(text, quote, maxErrors);
+    const normText = normalizeWhitespace(text);
+    const normQuote = normalizeWhitespace(quote);
+    if (normQuote.length === 0) return null;
+    const maxErrors = Math.min(256, Math.ceil(normQuote.length * 0.25));
+    const matches = search2(normText, normQuote, maxErrors, { hint: context.hint });
     if (matches.length === 0) {
-      return null;
+      const fallbackMatches = search2(normText, normQuote, maxErrors);
+      if (fallbackMatches.length === 0) return null;
+      matches.push(...fallbackMatches);
     }
     const scoreMatch = (match2) => {
       const quoteWeight = 50;
       const prefixWeight = 20;
       const suffixWeight = 20;
       const posWeight = 10;
-      const quoteScore = 1 - match2.errors / quote.length;
+      const quoteScore = 1 - match2.errors / normQuote.length;
       const prefixScore = context.prefix ? textMatchScore(
-        text.slice(
-          Math.max(0, match2.start - context.prefix.length),
+        normText.slice(
+          Math.max(0, match2.start - context.prefix.length * 2),
           match2.start
         ),
         context.prefix
       ) : 1;
       const suffixScore = context.suffix ? textMatchScore(
-        text.slice(match2.end, match2.end + context.suffix.length),
+        normText.slice(match2.end, match2.end + context.suffix.length * 2),
         context.suffix
       ) : 1;
       let posScore = 1;
       if (typeof context.hint === "number") {
         const offset = Math.abs(match2.start - context.hint);
-        posScore = 1 - offset / text.length;
+        posScore = 1 - Math.min(1, offset / normText.length);
       }
       const rawScore = quoteWeight * quoteScore + prefixWeight * prefixScore + suffixWeight * suffixScore + posWeight * posScore;
       const maxScore = quoteWeight + prefixWeight + suffixWeight + posWeight;
@@ -30806,7 +30831,36 @@
       score: scoreMatch(m)
     }));
     scoredMatches.sort((a, b) => b.score - a.score);
-    return scoredMatches[0];
+    const bestMatch = scoredMatches[0];
+    if (bestMatch.score < 0.5) return null;
+    return {
+      start: findNearestOffset(text, normQuote, bestMatch.start),
+      end: findNearestOffset(text, normQuote, bestMatch.end, true),
+      score: bestMatch.score
+    };
+  }
+  function findNearestOffset(text, normIndex, isEnd = false) {
+    if (normIndex <= 0) return 0;
+    let normPos = 0;
+    let inWhitespace = false;
+    let lastNonWhitespace = 0;
+    for (let i = 0; i < text.length; i++) {
+      const isWhitespace = /\s/.test(text[i]);
+      if (!isWhitespace) {
+        if (inWhitespace) {
+          normPos++;
+          inWhitespace = false;
+        }
+        if (normPos === normIndex) return i;
+        normPos++;
+        lastNonWhitespace = i;
+      } else {
+        if (!inWhitespace) {
+          inWhitespace = true;
+        }
+      }
+    }
+    return isEnd ? lastNonWhitespace + 1 : lastNonWhitespace;
   }
   var init_match_quote = __esm({
     "src/anchoring/match-quote.ts"() {
