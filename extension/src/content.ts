@@ -38,6 +38,18 @@ let pendingHighlightElements: HTMLElement[] = [];
 /** Current active tab ('mine' | 'community' | 'all') */
 let currentActiveTab: 'mine' | 'community' | 'all' = 'mine';
 
+/** Guard flag: when true, highlight removals are from our own code (not external DOM mutations) */
+let suppressObserver = false;
+
+/** Tracks annotation IDs that need re-anchoring after DOM mutations */
+let pendingReanchorIds = new Set<string>();
+
+/** Debounce timer for batching re-anchor operations */
+let reanchorTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** MutationObserver that watches for highlights removed by external DOM mutations */
+let domObserver: MutationObserver | null = null;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Initialize Components
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,7 +99,101 @@ const snipper = new Snipper(
 
 let isEnabled = false;
 
-/** 
+/**
+ * Start observing the DOM for external mutations that destroy highlight elements.
+ *
+ * Dynamic sites (Medium, React/Next.js apps, etc.) re-render portions of the page
+ * after initial load — hydration, lazy loading, SPA transitions — which replaces
+ * DOM nodes and destroys any <scholic-highlight> elements we inserted. This observer
+ * detects those removals and schedules re-anchoring for the affected annotations.
+ */
+function startDomObserver(): void {
+  if (domObserver) return;
+
+  domObserver = new MutationObserver((mutations) => {
+    if (suppressObserver) return;
+
+    for (const mutation of mutations) {
+      for (const removed of mutation.removedNodes) {
+        // Check the removed subtree for any highlight elements
+        collectRemovedHighlightIds(removed);
+      }
+    }
+
+    if (pendingReanchorIds.size > 0 && !reanchorTimer) {
+      // Debounce: wait for the framework to finish its render cycle before re-anchoring.
+      // 300ms handles most hydration/re-render bursts without noticeable delay.
+      reanchorTimer = setTimeout(() => {
+        reanchorTimer = null;
+        const ids = new Set(pendingReanchorIds);
+        pendingReanchorIds.clear();
+        reanchorAnnotations(ids);
+      }, 300);
+    }
+  });
+
+  domObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+/**
+ * Walk a removed DOM node (and its children) to find destroyed highlight elements.
+ * Adds their annotation IDs to the pending re-anchor set.
+ */
+function collectRemovedHighlightIds(node: Node): void {
+  if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+  const el = node as HTMLElement;
+  if (el.tagName === 'SCHOLIC-HIGHLIGHT') {
+    const id = el.dataset?.annotationId || (el as any)._scholicAnnotationId;
+    if (id) pendingReanchorIds.add(id);
+  }
+
+  // Check children — a framework re-render removes a container element,
+  // taking our highlights with it
+  for (const child of el.querySelectorAll('scholic-highlight')) {
+    const id = (child as HTMLElement).dataset?.annotationId || (child as any)._scholicAnnotationId;
+    if (id) pendingReanchorIds.add(id);
+  }
+}
+
+/**
+ * Re-anchor a set of annotations whose highlights were destroyed by external DOM mutations.
+ */
+async function reanchorAnnotations(ids: Set<string>): Promise<void> {
+  for (const id of ids) {
+    // Skip if the highlight is actually still in the DOM (e.g. moved, not removed)
+    const existing = highlightMap.get(id);
+    if (existing && existing.some((el) => el.isConnected)) continue;
+
+    // Clean up the stale entry
+    highlightMap.delete(id);
+
+    const annotation = pageAnnotations.find((a) => String(a.id) === id);
+    if (!annotation) continue;
+
+    await anchorAndHighlight(annotation);
+  }
+
+  // Re-apply tab filtering to the newly created highlights
+  await filterHighlights();
+}
+
+function stopDomObserver(): void {
+  if (domObserver) {
+    domObserver.disconnect();
+    domObserver = null;
+  }
+  if (reanchorTimer) {
+    clearTimeout(reanchorTimer);
+    reanchorTimer = null;
+  }
+  pendingReanchorIds.clear();
+}
+
+/**
  * Check if Scholic is enabled for the current domain.
  * If enabled, initialize components and show the "peek" sidebar.
  */
@@ -109,10 +215,12 @@ async function bootstrap(): Promise<void> {
     sidebar.showPeek();
     loadAnnotations();
     setupListeners();
+    startDomObserver();
   } else {
     sidebar.hideCompletely();
     clearStateAndHighlights();
     removeListeners();
+    stopDomObserver();
   }
 }
 
@@ -140,10 +248,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sidebar.showPeek();
       loadAnnotations();
       setupListeners();
+      startDomObserver();
     } else {
       sidebar.hideCompletely();
       clearStateAndHighlights();
       removeListeners();
+      stopDomObserver();
     }
     sendResponse({ ok: true });
   } else if (message.type === 'TOGGLE_SIDEBAR') {
@@ -404,8 +514,10 @@ async function handleDeleteAnnotation(annotationId: string): Promise<void> {
     // Remove highlights from the DOM
     const highlights = highlightMap.get(annotationId);
     if (highlights) {
+      suppressObserver = true;
       removeHighlights(highlights as any);
       highlightMap.delete(annotationId);
+      suppressObserver = false;
     }
   } catch (err) {
     console.error('[Scholic] Failed to delete annotation:', err);
@@ -541,11 +653,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
  * Clear all current highlights and local state.
  */
 function clearStateAndHighlights(): void {
+  suppressObserver = true;
   for (const highlights of highlightMap.values()) {
     removeHighlights(highlights as any);
   }
   highlightMap.clear();
   pageAnnotations = [];
+  suppressObserver = false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
