@@ -59,7 +59,6 @@ interface AnnotationCardProps {
   toggleComments: (id: number) => void;
   renderAvatar: (user: User, size: number) => React.ReactNode;
   renderAnnotationAction: (annotation: Annotation) => React.ReactNode;
-  formatDate: (date: string) => string;
   handleComment?: (id: number, text: string) => void;
   fetchMoreComments?: (id: number) => void;
   fetchingComments?: { [key: number]: boolean };
@@ -199,7 +198,6 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   toggleComments,
   renderAvatar,
   renderAnnotationAction,
-  formatDate,
   handleComment,
   fetchMoreComments,
   fetchingComments,

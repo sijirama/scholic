@@ -209,10 +209,6 @@ const Profile: React.FC = () => {
   const isOwnProfile = currentUser?.username === username;
   const tabs = ['Annotations'];
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
 
   const renderAnnotationAction = useCallback((annotation: Annotation) => {
     let domainName = annotation.linkDomain;
@@ -463,7 +459,6 @@ const Profile: React.FC = () => {
                     toggleComments={(id) => setOpenComments(prev => ({ ...prev, [id]: !prev[id] }))}
                     renderAvatar={renderAvatar as (u: BaseUser, s: number) => React.ReactNode}
                     renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
-                    formatDate={formatDate}
                     handleComment={(id, text) => submitComment(id, text)}
                     fetchMoreComments={fetchMoreComments}
                     fetchingComments={fetchingComments}

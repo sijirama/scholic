@@ -223,10 +223,6 @@ const Feed: React.FC = () => {
     return () => observer.disconnect();
   }, [hasMore, fetchingMore, loading, page, fetchFeed]);
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
 
   const renderAnnotationAction = useCallback((annotation: Annotation) => {
     let domainName = annotation.linkDomain;
@@ -310,7 +306,6 @@ const Feed: React.FC = () => {
                 toggleComments={toggleComments}
                 renderAvatar={renderAvatar as (u: AnnotationUser, s: number) => React.ReactNode}
                 renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
-                formatDate={formatDate}
                 handleComment={(id, text) => {
                   submitComment(id, text);
                 }}
