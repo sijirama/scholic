@@ -3,11 +3,26 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
-import { ArrowLeft, ExternalLink, Lock, MessageCircle, Send, Share2, Link2, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Lock, MessageCircle, Send, Share2, Link2, Check, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react';
 import Avatar from '../components/Avatar';
 import { toast } from 'sonner';
 import type { Annotation, Comment, User as AnnotationUser } from '../components/AnnotationCard';
 import ImageLightbox from '../components/ImageLightbox';
+
+const HIGHLIGHT_COLORS = [
+  { name: 'Sage',    hex: '#A8D5B5' },
+  { name: 'Butter', hex: '#F5E4A0' },
+  { name: 'Sky',    hex: '#A3C4F3' },
+  { name: 'Lilac',  hex: '#C5A8D5' },
+  { name: 'Peach',  hex: '#F5C4A3' },
+  { name: 'Rose',   hex: '#F5A8C0' },
+  { name: 'Forest', hex: '#4A9B6F' },
+  { name: 'Amber',  hex: '#D4A017' },
+  { name: 'Ocean',  hex: '#2E7BC4' },
+  { name: 'Plum',   hex: '#8B4BAF' },
+  { name: 'Coral',  hex: '#E8603C' },
+  { name: 'Crimson',hex: '#C0392B' },
+];
 
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex && hex.startsWith('#') && hex.length === 7 ? hex : '#A8D5B5';
@@ -87,6 +102,16 @@ const AnnotationPage: React.FC = () => {
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const commentsFetched = useRef(false);
+
+  // Edit state
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Paginated comments
   const [comments, setComments] = useState<Comment[]>([]);
@@ -179,6 +204,51 @@ const AnnotationPage: React.FC = () => {
       setCommentText('');
     } catch {
       toast.error('Failed to post comment');
+    }
+  };
+
+  const isOwner = !!(currentUser && annotation && String((currentUser as any).id) === String(annotation.user?.id));
+
+  const startEditing = () => {
+    if (!annotation) return;
+    setEditText(annotation.text || '');
+    setEditColor(annotation.highlightColor || '#A8D5B5');
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+  };
+
+  const saveEdit = async () => {
+    if (!annotation) return;
+    setSaving(true);
+    try {
+      const response = await api.put(`/annotations/${annotation.id}`, {
+        text: editText,
+        highlightColor: editColor,
+      });
+      setAnnotation(response.data);
+      setEditing(false);
+      toast.success('Annotation updated');
+    } catch {
+      toast.error('Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!annotation) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/annotations/${annotation.id}`);
+      toast.success('Annotation deleted');
+      navigate(-1);
+    } catch {
+      toast.error('Failed to delete annotation');
+      setDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -298,15 +368,11 @@ const AnnotationPage: React.FC = () => {
             boxShadow: '0 2px 8px rgba(0,0,0,0.25), 0 12px 48px rgba(0,0,0,0.5)',
             marginBottom: 20,
           }}>
-            {/* Red margin line */}
-            <div style={{ width: 4, background: 'rgba(220,100,100,0.5)', flexShrink: 0 }} />
+            {/* Margin line — uses current color (edit or saved) */}
+            <div style={{ width: 4, background: hexToRgba(editing ? editColor : (annotation.highlightColor || '#A8D5B5'), 0.7), flexShrink: 0, transition: 'background 0.2s' }} />
 
             {/* Paper body */}
-            <div style={{
-              flex: 1,
-              background: '#f9f6f0',
-              padding: '28px 32px 28px 22px',
-            }}>
+            <div style={{ flex: 1, background: '#f9f6f0', padding: '28px 32px 28px 22px' }}>
               {annotation.quoteText && (
                 <p style={{
                   fontSize: 17,
@@ -320,36 +386,102 @@ const AnnotationPage: React.FC = () => {
                   overflow: 'hidden',
                 }}>
                   <mark style={{
-                    background: hexToRgba(annotation.highlightColor || '#A8D5B5', 0.35),
+                    background: hexToRgba(editing ? editColor : (annotation.highlightColor || '#A8D5B5'), 0.35),
                     color: 'inherit',
                     borderRadius: 2,
                     padding: '2px 1px',
+                    transition: 'background 0.2s',
                   }}>
                     {annotation.quoteText}
                   </mark>
                 </p>
               )}
 
-              {annotation.text && (
+              {editing ? (
                 <>
                   {annotation.quoteText && (
                     <hr style={{ border: 'none', borderTop: '1px dashed rgba(0,0,0,0.14)', margin: '18px 0 16px' }} />
                   )}
-                  <p style={{
-                    fontFamily: '"Caveat", cursive',
-                    fontSize: 22,
-                    color: '#3a5c45',
-                    lineHeight: 1.5,
-                    margin: 0,
-                    letterSpacing: 0.2,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 6,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}>
-                    {annotation.text}
-                  </p>
+                  {/* Color picker */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {HIGHLIGHT_COLORS.map(c => (
+                      <button
+                        key={c.hex}
+                        title={c.name}
+                        onClick={() => setEditColor(c.hex)}
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: '50%',
+                          background: c.hex,
+                          border: editColor === c.hex ? '2px solid #333' : '2px solid transparent',
+                          cursor: 'pointer',
+                          padding: 0,
+                          boxShadow: editColor === c.hex ? '0 0 0 1px #fff' : 'none',
+                          transition: 'transform 0.1s',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {/* Text edit */}
+                  <textarea
+                    value={editText}
+                    onChange={e => setEditText(e.target.value)}
+                    placeholder="Add a note..."
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      fontFamily: '"Caveat", cursive',
+                      fontSize: 20,
+                      color: '#3a5c45',
+                      lineHeight: 1.5,
+                      background: 'rgba(0,0,0,0.04)',
+                      border: '1px dashed rgba(0,0,0,0.15)',
+                      borderRadius: 6,
+                      padding: '8px 10px',
+                      resize: 'vertical',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={cancelEditing}
+                      style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: 7, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#555', fontFamily: 'inherit' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveEdit}
+                      disabled={saving}
+                      style={{ background: '#3a5c45', border: 'none', borderRadius: 7, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer', color: '#fff', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}
+                    >
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
                 </>
+              ) : (
+                annotation.text && (
+                  <>
+                    {annotation.quoteText && (
+                      <hr style={{ border: 'none', borderTop: '1px dashed rgba(0,0,0,0.14)', margin: '18px 0 16px' }} />
+                    )}
+                    <p style={{
+                      fontFamily: '"Caveat", cursive',
+                      fontSize: 22,
+                      color: '#3a5c45',
+                      lineHeight: 1.5,
+                      margin: 0,
+                      letterSpacing: 0.2,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 6,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}>
+                      {annotation.text}
+                    </p>
+                  </>
+                )
               )}
             </div>
           </div>
@@ -376,6 +508,28 @@ const AnnotationPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Owner actions */}
+          {isOwner && !editing && (
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={startEditing}
+                title="Edit annotation"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, color: '#555', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+                className="hover:bg-white/5 hover:text-white"
+              >
+                <Pencil style={{ width: 15, height: 15 }} />
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                title="Delete annotation"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, color: '#555', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+                className="hover:bg-red-500/10 hover:text-red-400"
+              >
+                <Trash2 style={{ width: 15, height: 15 }} />
+              </button>
+            </div>
+          )}
 
           {/* Share button */}
           <div ref={shareRef} style={{ position: 'relative' }}>
@@ -507,6 +661,40 @@ const AnnotationPage: React.FC = () => {
         mark { -webkit-print-color-adjust: exact; }
       `}</style>
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+
+      {/* Delete confirmation modal */}
+      {showDeleteModal && (
+        <div
+          onClick={() => { if (!deleting) setShowDeleteModal(false); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '28px 28px 24px', maxWidth: 380, width: '100%', boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}
+          >
+            <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#fff' }}>Delete annotation?</h3>
+            <p style={{ margin: '0 0 24px', fontSize: 13, color: '#777', lineHeight: 1.6 }}>
+              This will permanently remove the annotation and all its comments. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#ccc', fontFamily: 'inherit' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                style={{ background: deleting ? 'rgba(239,68,68,0.5)' : '#ef4444', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: deleting ? 'default' : 'pointer', color: '#fff', fontFamily: 'inherit' }}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

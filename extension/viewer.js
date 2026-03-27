@@ -30453,7 +30453,7 @@
               displayAnnotations = displayAnnotations.filter((a) => String(a.userId) !== String(myUserId));
             }
             if (displayAnnotations.length === 0) {
-              let msg = this.activeTab === "mine" ? "You haven't made any highlights here yet." : "No one else has annotated this page yet.";
+              let msg = this.activeTab === "mine" ? "You haven't made any highlights here yet." : this.activeTab === "community" ? "No one else has annotated this page yet." : "No annotations on this page yet.";
               list.innerHTML = `
           <div class="empty-state">
             ${ICONS.pen}
@@ -30527,7 +30527,7 @@
                     ${annotation.comments.map((c) => {
                   const cname = c.user?.username || c.user?.emailSlice || "User";
                   const cinit = cname[0].toUpperCase();
-                  const cavatar = c.user?.profilePicture ? `<img src="${c.user.profilePicture}" style="width:100%; height:100%; object-fit:cover;" />` : cinit;
+                  const cavatar = c.user?.profilePicture ? `<img src="${this.escapeAttr(c.user.profilePicture)}" style="width:100%; height:100%; object-fit:cover;" />` : cinit;
                   return `
                         <div class="comment-item" style="display:flex; gap:8px; align-items:flex-start; margin-bottom:6px; background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:6px;">
                           <div style="width:20px; height:20px; border-radius:50%; background:linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3)); font-size:9px; font-weight:700; color:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
@@ -30613,30 +30613,6 @@
             if (contentLayer) contentLayer.scrollTop = 0;
           } finally {
             this.isRendering = false;
-          }
-        }
-        /** Render a sign-in prompt when the user is not authenticated */
-        renderSignInState() {
-          const container = document.createElement("div");
-          container.className = "empty-state";
-          container.style.paddingTop = "80px";
-          container.innerHTML = `
-      <div style="font-size: 40px; margin-bottom: 20px;">\u{1F44B}</div>
-      <div style="font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 10px;">Welcome to Scholic</div>
-      <div style="font-size: 13px; color: #888; margin-bottom: 30px; line-height: 1.6;">Sign in to start annotating the web and save your highlights.</div>
-      <button class="btn btn-primary login-btn" style="padding: 12px 32px; font-size: 14px;">Sign in with Scholic</button>
-    `;
-          container.querySelector(".login-btn")?.addEventListener("click", () => {
-            const extId = chrome.runtime.id;
-            const loginUrl = `${CONFIG.WEB_URL}/auth/extension-login?extId=${extId}`;
-            window.open(loginUrl, "_blank");
-          });
-          const listContainer = this.panel.querySelector(".sidebar-list-container");
-          if (listContainer) {
-            listContainer.innerHTML = "";
-            listContainer.appendChild(container);
-          } else {
-            this.panel.appendChild(container);
           }
         }
         /** Escape a value for safe use inside an HTML attribute (e.g. src="...") */

@@ -9,13 +9,31 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v') }}
+    # Only deploy when CI passed AND it was triggered by a version tag push.
+    # workflow_run.head_branch holds the branch name, not the tag — so we
+    # compare the head commit SHA against known tags using the git API instead.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-      
-      - name: Download Build Artifact
+          fetch-depth: 0
+
+      # Resolve the tag that points at the triggering commit, if any.
+      # If no tag matches, TAG will be empty and we skip the deploy.
+      - name: Resolve version tag
+        id: tag
+        run: |
+          TAG=$(git tag --points-at ${{ github.event.workflow_run.head_sha }} | grep -E '^v[0-9]' | head -n1)
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if [ -z "$TAG" ]; then
+            echo "No version tag found on this commit — skipping deploy."
+          else
+            echo "Deploying tag: $TAG"
+          fi
+
+      - name: Download build artifact
+        if: steps.tag.outputs.tag != ''
         uses: actions/download-artifact@v4
         with:
           name: extension-dist
@@ -23,8 +41,21 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy Extension
+      - name: Zip extension dist
+        if: steps.tag.outputs.tag != ''
         run: |
-          echo "Deploying extension version $(cat extension/package.json | grep version | cut -d '\"' -f 4)"
-          # Add actual deployment steps here (e.g., upload to Chrome Web Store)
-          # For now, it's a placeholder as requested.
+          cd extension/dist
+          zip -r ../../extension.zip .
+          cd ../..
+          echo "Extension zipped: $(du -sh extension.zip | cut -f1)"
+
+      - name: Publish to Chrome Web Store
+        if: steps.tag.outputs.tag != ''
+        uses: mnao305/chrome-extension-actions@v4.0.1
+        with:
+          file-path: extension.zip
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publish: true

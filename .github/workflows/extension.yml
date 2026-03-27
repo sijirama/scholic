@@ -2,6 +2,8 @@ name: Extension CI
 
 on:
   push:
+    branches:
+      - '**'
     paths:
       - 'extension/**'
     tags:
@@ -30,3 +32,5 @@ jobs:
         with:
           name: extension-dist
           path: extension/dist/
+          # Keep artifacts for 7 days — deploy workflow downloads from here
+          retention-days: 7

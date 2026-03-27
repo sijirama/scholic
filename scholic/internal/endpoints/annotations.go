@@ -207,7 +207,8 @@ func DeleteAnnotation(c *gin.Context) {
 }
 
 type UpdateAnnotationRequest struct {
-	Text string `json:"text"`
+	Text           string `json:"text"`
+	HighlightColor string `json:"highlightColor"`
 }
 
 // UpdateAnnotation handles PUT /api/annotations/:id
@@ -243,6 +244,9 @@ func UpdateAnnotation(c *gin.Context) {
 	}
 
 	annotation.Text = req.Text
+	if req.HighlightColor != "" {
+		annotation.HighlightColor = req.HighlightColor
+	}
 	if err := database.DB.Save(&annotation).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update annotation"})
 		return
