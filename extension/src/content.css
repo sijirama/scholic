@@ -14,6 +14,8 @@ scholic-highlight {
   --sr: 168;
   --sg: 213;
   --sb: 181;
+  /* --sa: luminance-adaptive alpha, set per-element by applyHighlightColor() */
+  --sa: 0.45;
   border-radius: 2px;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -21,11 +23,11 @@ scholic-highlight {
 
 /* ── Public annotation highlight — uses per-element CSS vars ── */
 scholic-highlight.scholic-annotation {
-  background-color: rgba(var(--sr), var(--sg), var(--sb), 0.25);
-  border-bottom: 2px solid rgba(var(--sr), var(--sg), var(--sb), 0.6);
+  background-color: rgba(var(--sr), var(--sg), var(--sb), var(--sa));
+  border-bottom: 2px solid rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.2));
 }
 scholic-highlight.scholic-annotation:hover {
-  background-color: rgba(var(--sr), var(--sg), var(--sb), 0.45);
+  background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.15));
 }
 
 /* ── Private highlight (fixed amber — not user-customisable) ── */
@@ -39,8 +41,9 @@ scholic-highlight.scholic-private:hover {
 
 /* ── Pending annotation (while user is writing a note) ── */
 scholic-highlight.scholic-annotation-pending {
-  background-color: rgba(var(--sr), var(--sg), var(--sb), 0.15);
-  border-bottom: 2px dashed rgba(var(--sr), var(--sg), var(--sb), 0.4);
+  background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) * 0.6));
+  border-bottom: 2px dashed rgba(var(--sr), var(--sg), var(--sb), var(--sa));
+  mix-blend-mode: multiply;
 }
 
 /* ── Focused highlight (when user clicks an annotation in the sidebar) ── */
@@ -49,9 +52,9 @@ scholic-highlight.scholic-highlight-focused {
 }
 
 @keyframes scholic-pulse {
-  0%   { background-color: rgba(var(--sr), var(--sg), var(--sb), 0.6); }
-  50%  { background-color: rgba(var(--sr), var(--sg), var(--sb), 0.3); }
-  100% { background-color: rgba(var(--sr), var(--sg), var(--sb), 0.25); }
+  0%   { background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.2)); }
+  50%  { background-color: rgba(var(--sr), var(--sg), var(--sb), var(--sa)); }
+  100% { background-color: rgba(var(--sr), var(--sg), var(--sb), var(--sa)); }
 }
 
 /* ── Hidden highlight (on tab filtering) ── */

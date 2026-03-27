@@ -53,28 +53,30 @@
     ::selection {
       background: rgba(110,183,129,0.3);
     }
-    /* Scholic Highlights — color driven by CSS vars set inline per element */
+    /* Scholic Highlights — color + luminance-adaptive alpha set inline per element */
     scholic-highlight {
       --sr: 168;
       --sg: 213;
       --sb: 181;
+      --sa: 0.45;
       cursor: pointer;
       border-radius: 3px;
       transition: background-color 0.15s ease;
     }
     scholic-highlight.scholic-annotation {
-      background-color: rgba(var(--sr), var(--sg), var(--sb), 0.35) !important;
-      border-bottom: 2px solid rgba(var(--sr), var(--sg), var(--sb), 0.7);
+      background-color: rgba(var(--sr), var(--sg), var(--sb), var(--sa)) !important;
+      border-bottom: 2px solid rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.2));
     }
     scholic-highlight.scholic-annotation:hover {
-      background-color: rgba(var(--sr), var(--sg), var(--sb), 0.55) !important;
+      background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.15)) !important;
     }
     scholic-highlight.scholic-private {
-      background-color: rgba(232, 197, 71, 0.25) !important;
+      background-color: rgba(232, 197, 71, 0.3) !important;
       border-bottom: 2px solid rgba(232, 197, 71, 0.6);
+      mix-blend-mode: multiply;
     }
     scholic-highlight.scholic-highlight-focused {
-      background-color: rgba(var(--sr), var(--sg), var(--sb), 0.6) !important;
+      background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.2)) !important;
       box-shadow: 0 0 0 2px rgba(var(--sr), var(--sg), var(--sb), 0.8);
     }
     scholic-highlight.scholic-hidden {

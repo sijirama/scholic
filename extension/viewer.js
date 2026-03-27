@@ -32421,10 +32421,13 @@
         const r = parseInt(color.slice(1, 3), 16);
         const g = parseInt(color.slice(3, 5), 16);
         const b = parseInt(color.slice(5, 7), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const alpha = luminance >= 0.65 ? 0.3 : luminance >= 0.45 ? 0.2 : luminance >= 0.3 ? 0.14 : 0.1;
         elements.forEach((el) => {
           el.style.setProperty("--sr", String(r));
           el.style.setProperty("--sg", String(g));
           el.style.setProperty("--sb", String(b));
+          el.style.setProperty("--sa", String(alpha));
         });
       }
       var ScholicPdfViewer = class {
@@ -32442,6 +32445,10 @@
         snipper;
         pendingSelectors = null;
         pendingHighlightElements = [];
+        // Per-page version counter: incremented each time textlayerrendered fires for
+        // that page. In-flight restoreHighlightsForPage calls check this after every
+        // await and bail if a newer call has taken over, preventing double-highlights.
+        restoreVersions = /* @__PURE__ */ new Map();
         constructor() {
           this.sidebar = new Sidebar({
             onSave: (a) => this.handleSave(a),
@@ -32618,6 +32625,8 @@
           });
         }
         async restoreHighlightsForPage(pageNum) {
+          const version3 = (this.restoreVersions.get(pageNum) ?? 0) + 1;
+          this.restoreVersions.set(pageNum, version3);
           const pageView = this.pdfViewer.getPageView(pageNum - 1);
           if (!pageView || !pageView.div) return;
           const existingHighlights = Array.from(pageView.div.querySelectorAll("scholic-highlight"));
@@ -32626,8 +32635,10 @@
           }
           for (const ann of this.annotations) {
             if (ann.type === "image") continue;
+            if (this.restoreVersions.get(pageNum) !== version3) return;
             try {
               const range = await anchor(document.getElementById("viewer"), ann.selectors);
+              if (this.restoreVersions.get(pageNum) !== version3) return;
               const cssClass = ann.isPrivate ? "scholic-private" : "scholic-annotation";
               const highlights = highlightRange(range, `scholic-highlight ${cssClass}`, ann.id);
               if (!ann.isPrivate) {

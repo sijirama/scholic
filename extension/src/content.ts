@@ -58,18 +58,29 @@ let syncAttemptsLeft = 0;
 
 /**
  * Apply a hex highlight color to a set of highlight elements via CSS custom
- * properties. The content.css uses var(--sr), var(--sg), var(--sb) so hover
- * states also pick up the right color automatically.
+ * properties. The content.css uses var(--sr), var(--sg), var(--sb) for color
+ * and var(--sa) for luminance-adaptive alpha, so hover states work automatically.
+ *
+ * mix-blend-mode: multiply handles text legibility on light backgrounds.
+ * Darker colors get a lower alpha so they don't overpower light-colored text.
  */
 function applyHighlightColor(elements: HTMLElement[], hex: string): void {
   const color = hex && hex.startsWith('#') && hex.length === 7 ? hex : '#A8D5B5';
   const r = parseInt(color.slice(1, 3), 16);
   const g = parseInt(color.slice(3, 5), 16);
   const b = parseInt(color.slice(5, 7), 16);
+  // Relative luminance (0 = black, 1 = white)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  // Pastels stay visible; saturated mid/dark tones get heavily dimmed so text shows through
+  const alpha = luminance >= 0.65 ? 0.30
+              : luminance >= 0.45 ? 0.20
+              : luminance >= 0.30 ? 0.14
+              : 0.10;
   elements.forEach(el => {
     el.style.setProperty('--sr', String(r));
     el.style.setProperty('--sg', String(g));
     el.style.setProperty('--sb', String(b));
+    el.style.setProperty('--sa', String(alpha));
   });
 }
 

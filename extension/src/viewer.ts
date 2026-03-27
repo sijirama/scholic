@@ -22,10 +22,17 @@ function applyHighlightColor(elements: HTMLElement[], hex: string): void {
   const r = parseInt(color.slice(1, 3), 16);
   const g = parseInt(color.slice(3, 5), 16);
   const b = parseInt(color.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  // Pastels stay visible; saturated mid/dark tones get heavily dimmed so text shows through
+  const alpha = luminance >= 0.65 ? 0.30
+              : luminance >= 0.45 ? 0.20
+              : luminance >= 0.30 ? 0.14
+              : 0.10;
   elements.forEach(el => {
     el.style.setProperty('--sr', String(r));
     el.style.setProperty('--sg', String(g));
     el.style.setProperty('--sb', String(b));
+    el.style.setProperty('--sa', String(alpha));
   });
 }
 
@@ -46,6 +53,10 @@ class ScholicPdfViewer {
   private snipper: Snipper;
   private pendingSelectors: any[] | null = null;
   private pendingHighlightElements: any[] = [];
+  // Per-page version counter: incremented each time textlayerrendered fires for
+  // that page. In-flight restoreHighlightsForPage calls check this after every
+  // await and bail if a newer call has taken over, preventing double-highlights.
+  private restoreVersions = new Map<number, number>();
 
   constructor() {
     this.sidebar = new Sidebar({
@@ -267,13 +278,15 @@ class ScholicPdfViewer {
   }
 
   private async restoreHighlightsForPage(pageNum: number) {
+    // Stamp this invocation. If textlayerrendered fires again for the same page
+    // while we're still awaiting anchor(), the newer call bumps the version and
+    // this call will bail out — preventing double-highlight opacity stacking.
+    const version = (this.restoreVersions.get(pageNum) ?? 0) + 1;
+    this.restoreVersions.set(pageNum, version);
+
     const pageView = this.pdfViewer.getPageView(pageNum - 1);
     if (!pageView || !pageView.div) return;
 
-    // PREVENT OPACITY STACKING: 
-    // pdf.js caches and re-uses text layer elements when zooming. 
-    // If we don't unwrap existing highlights first, we'll wrap them again,
-    // multiplying the background opacity until the text is blacked out.
     const existingHighlights = Array.from(pageView.div.querySelectorAll('scholic-highlight')) as any[];
     if (existingHighlights.length > 0) {
       removeHighlights(existingHighlights);
@@ -281,8 +294,13 @@ class ScholicPdfViewer {
 
     for (const ann of this.annotations) {
       if (ann.type === 'image') continue;
+      // Bail if a newer restore has started for this page
+      if (this.restoreVersions.get(pageNum) !== version) return;
       try {
         const range = await anchor(document.getElementById('viewer')!, ann.selectors);
+        // Check again after the async anchor call
+        if (this.restoreVersions.get(pageNum) !== version) return;
+
         const cssClass = ann.isPrivate ? 'scholic-private' : 'scholic-annotation';
         const highlights = highlightRange(range, `scholic-highlight ${cssClass}`, ann.id);
 
