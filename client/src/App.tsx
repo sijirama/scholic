@@ -9,10 +9,12 @@ import ExtensionLogin from './pages/ExtensionLogin';
 import Feed from './pages/Feed';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import { Toaster } from 'sonner';
 
 function App() {
   return (
     <AuthProvider>
+      <Toaster theme="dark" position="bottom-right" richColors />
       <BrowserRouter>
          <Routes>
           <Route path="/" element={<Layout />}>

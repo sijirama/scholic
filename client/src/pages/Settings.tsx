@@ -356,8 +356,9 @@ const Settings: React.FC = () => {
               </label>
               <textarea
                 value={bio}
-                onChange={(e) => setBio(e.target.value)}
+                onChange={(e) => { if (e.target.value.length <= 280) setBio(e.target.value); }}
                 placeholder="Tell us about yourself..."
+                maxLength={280}
                 rows={3}
                 style={{
                   width: '100%',

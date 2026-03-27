@@ -12,10 +12,11 @@ import (
 var jwtSecret []byte
 
 func InitJWT() {
-	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
-	if len(jwtSecret) == 0 {
-		jwtSecret = []byte("scholic-secret-key-change-me")
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		panic("JWT_SECRET environment variable is required")
 	}
+	jwtSecret = []byte(secret)
 }
 
 type Claims struct {

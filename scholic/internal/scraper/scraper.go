@@ -30,9 +30,9 @@ func ExtractMetadata(url string) (*LinkMetadata, error) {
 		url = strings.TrimSuffix(url, ".pdf")
 	}
 
-	// Create an HTTP client that ignores SSL errors and timeouts quickly
+	// Create an HTTP client with proper TLS and quick timeouts
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	customTransport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 
 	client := &http.Client{
 		Timeout:   12 * time.Second,

@@ -77,7 +77,10 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	// Return updated user
-	database.DB.First(&user, userID)
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Profile updated but failed to reload"})
+		return
+	}
 	c.JSON(http.StatusOK, user)
 }
 
@@ -148,6 +151,9 @@ func GetUserProfile(c *gin.Context) {
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	var annotations []models.Annotation
 	var totalActivity int64
@@ -172,10 +178,14 @@ func GetUserProfile(c *gin.Context) {
 
 	fetchQuery.Order("created_at DESC").Limit(limit).Offset(offset).Find(&annotations)
 
+	// Batch-load comment counts (single query instead of N+1)
+	annotationIDs := make([]uint, len(annotations))
+	for i, a := range annotations {
+		annotationIDs[i] = a.ID
+	}
+	commentCounts := batchCommentCounts(annotationIDs)
 	for i := range annotations {
-		var count int64
-		database.DB.Model(&models.Comment{}).Where("annotation_id = ?", annotations[i].ID).Count(&count)
-		annotations[i].CommentCount = count
+		annotations[i].CommentCount = commentCounts[annotations[i].ID]
 	}
 
 	// Fetch follower counts
@@ -220,6 +230,9 @@ func SearchUsers(c *gin.Context) {
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	pattern := "%" + query + "%"
 
@@ -236,8 +249,19 @@ func SearchUsers(c *gin.Context) {
 		Limit(limit).Offset(offset).
 		Find(&users)
 
-	// Check follow status for current user
+	// Batch-load follow counts and follow status (3 queries instead of 3*N)
 	currentUserID, hasAuth := c.Get("userID")
+
+	userIDs := make([]uint, len(users))
+	for i, u := range users {
+		userIDs[i] = u.ID
+	}
+	followersMap, followingMap := batchFollowCounts(userIDs)
+
+	var isFollowingMap map[uint]bool
+	if hasAuth {
+		isFollowingMap = batchIsFollowing(currentUserID.(uint), userIDs)
+	}
 
 	type userResult struct {
 		ID               uint   `json:"id"`
@@ -254,18 +278,6 @@ func SearchUsers(c *gin.Context) {
 
 	results := make([]userResult, 0, len(users))
 	for _, u := range users {
-		var followersCount, followingCount int64
-		database.DB.Model(&models.Follow{}).Where("following_id = ?", u.ID).Count(&followersCount)
-		database.DB.Model(&models.Follow{}).Where("follower_id = ?", u.ID).Count(&followingCount)
-
-		isFollowing := false
-		if hasAuth && currentUserID.(uint) != u.ID {
-			var f models.Follow
-			if err := database.DB.Where("follower_id = ? AND following_id = ?", currentUserID, u.ID).First(&f).Error; err == nil {
-				isFollowing = true
-			}
-		}
-
 		results = append(results, userResult{
 			ID:               u.ID,
 			Username:         u.Username,
@@ -274,9 +286,9 @@ func SearchUsers(c *gin.Context) {
 			ProfilePicture:   u.ProfilePicture,
 			MemberNumber:     u.MemberNumber,
 			ShowMemberNumber: u.ShowMemberNumber,
-			FollowersCount:   followersCount,
-			FollowingCount:   followingCount,
-			IsFollowing:      isFollowing,
+			FollowersCount:   followersMap[u.ID],
+			FollowingCount:   followingMap[u.ID],
+			IsFollowing:      isFollowingMap[u.ID],
 		})
 	}
 
@@ -298,6 +310,9 @@ func GetFollowers(c *gin.Context) {
 	offset, _ := strconv.Atoi(offsetStr)
 	if limit <= 0 || limit > 50 {
 		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
 	}
 
 	var total int64
@@ -323,15 +338,18 @@ func GetFollowers(c *gin.Context) {
 		IsFollowing      bool   `json:"isFollowing"`
 	}
 
+	// Batch-load follow status
+	followerIDs := make([]uint, len(follows))
+	for i, f := range follows {
+		followerIDs[i] = f.Follower.ID
+	}
+	var isFollowingMap map[uint]bool
+	if hasAuth {
+		isFollowingMap = batchIsFollowing(currentUserID.(uint), followerIDs)
+	}
+
 	results := make([]userResult, 0, len(follows))
 	for _, f := range follows {
-		isFollowing := false
-		if hasAuth && currentUserID.(uint) != f.Follower.ID {
-			var existing models.Follow
-			if err := database.DB.Where("follower_id = ? AND following_id = ?", currentUserID, f.Follower.ID).First(&existing).Error; err == nil {
-				isFollowing = true
-			}
-		}
 		results = append(results, userResult{
 			ID:               f.Follower.ID,
 			Username:         f.Follower.Username,
@@ -340,7 +358,7 @@ func GetFollowers(c *gin.Context) {
 			ProfilePicture:   f.Follower.ProfilePicture,
 			MemberNumber:     f.Follower.MemberNumber,
 			ShowMemberNumber: f.Follower.ShowMemberNumber,
-			IsFollowing:      isFollowing,
+			IsFollowing:      isFollowingMap[f.Follower.ID],
 		})
 	}
 
@@ -362,6 +380,9 @@ func GetFollowing(c *gin.Context) {
 	offset, _ := strconv.Atoi(offsetStr)
 	if limit <= 0 || limit > 50 {
 		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
 	}
 
 	var total int64
@@ -387,19 +408,26 @@ func GetFollowing(c *gin.Context) {
 		IsFollowing      bool   `json:"isFollowing"`
 	}
 
+	// Batch-load follow status
+	followingIDs := make([]uint, len(follows))
+	for i, f := range follows {
+		followingIDs[i] = f.Following.ID
+	}
+	var isFollowingMap map[uint]bool
+	if hasAuth {
+		// If viewing own following list, they follow everyone on it
+		if currentUserID.(uint) == user.ID {
+			isFollowingMap = make(map[uint]bool, len(followingIDs))
+			for _, id := range followingIDs {
+				isFollowingMap[id] = true
+			}
+		} else {
+			isFollowingMap = batchIsFollowing(currentUserID.(uint), followingIDs)
+		}
+	}
+
 	results := make([]userResult, 0, len(follows))
 	for _, f := range follows {
-		isFollowing := false
-		if hasAuth && currentUserID.(uint) != f.Following.ID {
-			var existing models.Follow
-			if err := database.DB.Where("follower_id = ? AND following_id = ?", currentUserID, f.Following.ID).First(&existing).Error; err == nil {
-				isFollowing = true
-			}
-		}
-		// If this is the current user's following list, they're following everyone on it
-		if hasAuth && currentUserID.(uint) == user.ID {
-			isFollowing = true
-		}
 		results = append(results, userResult{
 			ID:               f.Following.ID,
 			Username:         f.Following.Username,
@@ -408,7 +436,7 @@ func GetFollowing(c *gin.Context) {
 			ProfilePicture:   f.Following.ProfilePicture,
 			MemberNumber:     f.Following.MemberNumber,
 			ShowMemberNumber: f.Following.ShowMemberNumber,
-			IsFollowing:      isFollowing,
+			IsFollowing:      isFollowingMap[f.Following.ID],
 		})
 	}
 
@@ -435,20 +463,34 @@ func ToggleFollow(c *gin.Context) {
 		return
 	}
 
-	var follow models.Follow
-	result := database.DB.Where("follower_id = ? AND following_id = ?", followerID, targetUser.ID).First(&follow)
+	var following bool
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		var follow models.Follow
+		result := tx.Where("follower_id = ? AND following_id = ?", followerID, targetUser.ID).First(&follow)
 
-	if result.Error == nil {
-		// Already following -> Unfollow
-		database.DB.Where("follower_id = ? AND following_id = ?", followerID, targetUser.ID).Delete(&models.Follow{})
-		c.JSON(http.StatusOK, gin.H{"following": false})
-	} else {
-		// Not following -> Follow
-		follow = models.Follow{
-			FollowerID:  followerID.(uint),
-			FollowingID: targetUser.ID,
+		if result.Error == nil {
+			// Already following -> Unfollow
+			if err := tx.Where("follower_id = ? AND following_id = ?", followerID, targetUser.ID).Delete(&models.Follow{}).Error; err != nil {
+				return err
+			}
+			following = false
+		} else {
+			// Not following -> Follow
+			follow = models.Follow{
+				FollowerID:  followerID.(uint),
+				FollowingID: targetUser.ID,
+			}
+			if err := tx.Create(&follow).Error; err != nil {
+				return err
+			}
+			following = true
 		}
-		database.DB.Create(&follow)
-		c.JSON(http.StatusOK, gin.H{"following": true})
+		return nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to toggle follow"})
+		return
 	}
+	c.JSON(http.StatusOK, gin.H{"following": following})
 }

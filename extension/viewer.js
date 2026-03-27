@@ -29424,6 +29424,8 @@
         /** Active tab: 'mine' | 'community' | 'all' */
         activeTab = "mine";
         isAuthenticated = false;
+        /** Stored document click handler for cleanup */
+        menuCloseHandler = null;
         constructor(callbacks) {
           this.callbacks = callbacks;
           this.fetchUserData();
@@ -29559,9 +29561,11 @@
             this.renderAnnotationList([]);
             window.postMessage({ type: "SCHOLIC_LOGOUT_SUCCESS" }, "*");
           });
-          document.addEventListener("click", () => {
-            menu?.classList.remove("show");
-          });
+          if (this.menuCloseHandler) {
+            document.removeEventListener("click", this.menuCloseHandler);
+          }
+          this.menuCloseHandler = () => menu?.classList.remove("show");
+          document.addEventListener("click", this.menuCloseHandler);
           container.appendChild(header);
           const tabsContainer = this.panel.querySelector(".sidebar-tabs-container");
           if (!tabsContainer) return;
@@ -31701,11 +31705,18 @@
             this.host.style.top = `${rect.top + scrollY - 46}px`;
           }
           document.body.appendChild(this.host);
+          this.scrollHandler = () => this.hide();
+          window.addEventListener("scroll", this.scrollHandler, { once: true, passive: true });
         }
+        scrollHandler = null;
         /**
          * Hide and remove the popover from the DOM.
          */
         hide() {
+          if (this.scrollHandler) {
+            window.removeEventListener("scroll", this.scrollHandler);
+            this.scrollHandler = null;
+          }
           if (this.host && this.host.parentNode) {
             this.host.parentNode.removeChild(this.host);
           }
@@ -31833,12 +31844,15 @@
               } else {
                 noteTextEl.textContent = words.slice(0, currentLimit).join(" ") + "...";
               }
-              this.host.style.top = "-10000px";
-              setTimeout(() => {
-                const rect2 = highlightEl.getBoundingClientRect();
-                const pHeight = popup.offsetHeight;
-                this.host.style.top = rect2.top < pHeight + 16 ? `${rect2.bottom + window.scrollY + 8}px` : `${rect2.top + window.scrollY - pHeight - 8}px`;
-              }, 0);
+              if (this.host) {
+                this.host.style.top = "-10000px";
+                setTimeout(() => {
+                  if (!this.host || !this.host.parentNode) return;
+                  const rect2 = highlightEl.getBoundingClientRect();
+                  const pHeight = popup.offsetHeight;
+                  this.host.style.top = rect2.top < pHeight + 16 ? `${rect2.bottom + window.scrollY + 8}px` : `${rect2.top + window.scrollY - pHeight - 8}px`;
+                }, 0);
+              }
             });
           }
           this.host.addEventListener("mouseenter", () => this.cancelHide());
@@ -32288,6 +32302,8 @@
         };
         cleanup() {
           if (this.overlay) {
+            this.overlay.removeEventListener("mousedown", this.handleMouseDown);
+            this.overlay.removeEventListener("keydown", this.handleKeyDown);
             this.overlay.remove();
             this.overlay = null;
           }

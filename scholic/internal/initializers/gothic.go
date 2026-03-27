@@ -12,7 +12,7 @@ import (
 func InitGothic() {
 	secret := os.Getenv("SESSION_SECRET")
 	if secret == "" {
-		secret = "scholic-default-secret-change-in-prod"
+		panic("SESSION_SECRET environment variable is required")
 	}
 
 	// Initialize the session store for Gothic
@@ -20,7 +20,7 @@ func InitGothic() {
 	store.MaxAge(86400 * 30) // 30 days
 	store.Options.Path = "/"
 	store.Options.HttpOnly = true
-	store.Options.Secure = false // Set to true if using HTTPS (production)
+	store.Options.Secure = os.Getenv("ENV") == "production"
 	gothic.Store = store
 
 	goth.UseProviders(

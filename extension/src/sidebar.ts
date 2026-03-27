@@ -106,6 +106,8 @@ export class Sidebar {
   /** Active tab: 'mine' | 'community' | 'all' */
   private activeTab: 'mine' | 'community' | 'all' = 'mine';
   private isAuthenticated: boolean = false;
+  /** Stored document click handler for cleanup */
+  private menuCloseHandler: (() => void) | null = null;
 
   constructor(callbacks: SidebarCallbacks) {
     this.callbacks = callbacks;
@@ -276,10 +278,12 @@ export class Sidebar {
       window.postMessage({ type: 'SCHOLIC_LOGOUT_SUCCESS' }, '*');
     });
 
-    // Close menu when clicking outside
-    document.addEventListener('click', () => {
-      menu?.classList.remove('show');
-    });
+    // Close menu when clicking outside — remove old handler first to avoid leaks
+    if (this.menuCloseHandler) {
+      document.removeEventListener('click', this.menuCloseHandler);
+    }
+    this.menuCloseHandler = () => menu?.classList.remove('show');
+    document.addEventListener('click', this.menuCloseHandler);
 
     container.appendChild(header);
 

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import api from '../lib/api';
 import UserRow from './UserRow';
@@ -99,8 +100,8 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           u.username === targetUsername ? { ...u, isFollowing: response.data.following } : u
         )
       );
-    } catch (err) {
-      console.error('Failed to toggle follow', err);
+    } catch {
+      toast.error('Failed to follow user');
     }
   };
 

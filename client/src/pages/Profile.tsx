@@ -7,6 +7,8 @@ import { ArrowLeft, Settings } from 'lucide-react';
 import AnnotationCard from '../components/AnnotationCard';
 import type { Annotation, User as BaseUser, Comment } from '../components/AnnotationCard';
 import FollowersModal from '../components/FollowersModal';
+import Avatar from '../components/Avatar';
+import { toast } from 'sonner';
 
 interface ProfileUser extends BaseUser {
   bio: string;
@@ -17,8 +19,6 @@ interface ProfileUser extends BaseUser {
   followingCount?: number;
   isFollowing?: boolean;
 }
-
-
 
 const ProfileSkeleton: React.FC = () => (
   <div style={{ maxWidth: '640px', padding: '32px 20px', margin: '0 auto' }}>
@@ -50,6 +50,7 @@ const Profile: React.FC = () => {
 
   const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
   const [activity, setActivity] = useState<Annotation[]>([]);
+  const [totalActivity, setTotalActivity] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -67,12 +68,13 @@ const Profile: React.FC = () => {
 
   // Comments state
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
-
   const [commentOffsets, setCommentOffsets] = useState<Record<number, number>>({});
   const [fetchingComments, setFetchingComments] = useState<Record<number, boolean>>({});
+  const [followLoading, setFollowLoading] = useState(false);
 
   const toggleFollow = async () => {
-    if (!profileUser) return;
+    if (!profileUser || followLoading) return;
+    setFollowLoading(true);
     try {
       const response = await api.post(`/users/${profileUser.username}/follow`);
       setProfileUser(prev => {
@@ -85,8 +87,10 @@ const Profile: React.FC = () => {
           followersCount: (prev.followersCount || 0) + diff
         };
       });
-    } catch (err) {
-      console.error('Failed to toggle follow:', err);
+    } catch {
+      toast.error('Failed to toggle follow');
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -100,10 +104,11 @@ const Profile: React.FC = () => {
       const limit = 20;
       const offset = pageNum * limit;
       const response = await api.get(`/users/${username}?limit=${limit}&offset=${offset}`);
-      
+
       const total = response.data.totalActivity || 0;
       if (isInitial) {
         setProfileUser(response.data.user);
+        setTotalActivity(total);
       }
       setActivity(prev => {
         const next = isInitial ? (response.data.activity || []) : [...prev, ...(response.data.activity || [])];
@@ -111,11 +116,11 @@ const Profile: React.FC = () => {
         return next;
       });
     } catch (err: unknown) {
-      console.error('Failed to fetch profile:', err);
       if (isInitial) {
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        const axiosError = err as any; 
+        const axiosError = err as { response?: { data?: { error?: string } } };
         setError(axiosError.response?.data?.error || 'User not found');
+      } else {
+        toast.error('Failed to load more activity');
       }
     } finally {
       setLoading(false);
@@ -166,37 +171,52 @@ const Profile: React.FC = () => {
     return <span>annotated <a href={annotation.url} target="_blank" rel="noreferrer" style={{color: '#6EB781', textDecoration: 'none'}} className="hover:underline">{domainName}</a></span>;
   }, []);
 
-  const renderAvatar = useCallback((annotationUser: ProfileUser, size = 36) => {
-    const initial = annotationUser.username?.[0]?.toUpperCase() || annotationUser.firstName?.[0]?.toUpperCase() || '?';
-    if (annotationUser.profilePicture) {
-      return (
-        <img
-          src={annotationUser.profilePicture}
-          alt={annotationUser.username}
-          style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-        />
-      );
-    }
-    return (
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, rgba(110,183,129,0.5), rgba(71,163,232,0.5))',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: size * 0.38,
-          fontWeight: 700,
-          color: '#fff',
-          flexShrink: 0,
-        }}
-      >
-        {initial}
-      </div>
-    );
+  const renderAvatar = useCallback((annotationUser: BaseUser, size = 36) => {
+    return <Avatar user={annotationUser} size={size} />;
   }, []);
+
+  const submitComment = async (annotationId: number, text: string) => {
+    if (!text?.trim()) return;
+    try {
+      const response = await api.post(`/annotations/${annotationId}/comments`, { text });
+      setActivity(prev => prev.map(ann => {
+        if (ann.id === annotationId) {
+          return {
+            ...ann,
+            comments: [...(ann.comments || []), response.data],
+            commentCount: (ann.commentCount || 0) + 1
+          };
+        }
+        return ann;
+      }));
+      setCommentOffsets(prev => ({ ...prev, [annotationId]: (prev[annotationId] || (activity.find(a => a.id === annotationId)?.comments?.length || 0)) + 1 }));
+    } catch {
+      toast.error('Failed to post comment');
+    }
+  };
+
+  const fetchMoreComments = async (annotationId: number) => {
+    if (fetchingComments[annotationId]) return;
+    setFetchingComments(prev => ({ ...prev, [annotationId]: true }));
+    const currentOffset = commentOffsets[annotationId] !== undefined ? commentOffsets[annotationId] : (activity.find(a => a.id === annotationId)?.comments?.length || 0);
+    try {
+      const response = await api.get(`/annotations/${annotationId}/comments?limit=10&offset=${currentOffset}`);
+      const newComments = response.data.comments || [];
+      setActivity(prev => prev.map(ann => {
+        if (ann.id === annotationId) {
+          const existingIds = new Set((ann.comments || []).map(c => c.id));
+          const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
+          return { ...ann, comments: [...(ann.comments || []), ...filteredNew] };
+        }
+        return ann;
+      }));
+      setCommentOffsets(prev => ({ ...prev, [annotationId]: currentOffset + newComments.length }));
+    } catch {
+      toast.error('Failed to load comments');
+    } finally {
+      setFetchingComments(prev => ({ ...prev, [annotationId]: false }));
+    }
+  };
 
   if (loading) {
     return (
@@ -210,22 +230,6 @@ const Profile: React.FC = () => {
             100% { opacity: 0.4; }
           }
           .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-          
-          /* Custom Scrollbar */
-          body::-webkit-scrollbar {
-            width: 8px;
-          }
-          body::-webkit-scrollbar-track {
-            background: #121212;
-          }
-          body::-webkit-scrollbar-thumb {
-            background: rgba(110,183,129,0.2);
-            border-radius: 10px;
-            border: 2px solid #121212;
-          }
-          body::-webkit-scrollbar-thumb:hover {
-            background: rgba(110,183,129,0.4);
-          }
         `}</style>
       </div>
     );
@@ -268,6 +272,7 @@ const Profile: React.FC = () => {
           {!isOwnProfile && currentUser && profileUser && (
             <button
               onClick={toggleFollow}
+              disabled={followLoading}
               style={{
                 padding: '6px 16px',
                 fontSize: '13px',
@@ -276,7 +281,8 @@ const Profile: React.FC = () => {
                 border: profileUser.isFollowing ? '1px solid #555' : 'none',
                 background: profileUser.isFollowing ? 'transparent' : '#fff',
                 color: profileUser.isFollowing ? '#ccc' : '#000',
-                cursor: 'pointer',
+                cursor: followLoading ? 'wait' : 'pointer',
+                opacity: followLoading ? 0.6 : 1,
                 transition: 'all 0.2s',
               }}
               className="hover:opacity-90 ml-auto"
@@ -336,7 +342,7 @@ const Profile: React.FC = () => {
               </div>
             )}
             <div className="flex items-center gap-4" style={{ fontSize: '12px', color: '#888' }}>
-              <span><strong style={{ color: '#fff' }}>{activity.length}</strong> notes</span>
+              <span><strong style={{ color: '#fff' }}>{totalActivity}</strong> notes</span>
               <span
                 onClick={() => { setFollowersModalTab('followers'); setFollowersModalOpen(true); }}
                 style={{ cursor: 'pointer', transition: 'color 0.15s' }}
@@ -392,50 +398,15 @@ const Profile: React.FC = () => {
                   <AnnotationCard
                     key={annotation.id}
                     annotation={annotation}
-                openComments={openComments}
-                toggleComments={(id) => setOpenComments(prev => ({ ...prev, [id]: !prev[id] }))}
-                renderAvatar={renderAvatar as (u: BaseUser, s: number) => React.ReactNode}
-                renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
-                formatDate={formatDate}
-                handleComment={(id, text) => {
-                  if (!text?.trim()) return;
-                  api.post(`/annotations/${id}/comments`, { text }).then((response) => {
-                    setActivity(prev => prev.map(ann => {
-                      if (ann.id === id) {
-                        return {
-                          ...ann,
-                          comments: [...(ann.comments || []), response.data],
-                          commentCount: (ann.commentCount || 0) + 1
-                        };
-                      }
-                      return ann;
-                    }));
-                  });
-                }}
-                fetchMoreComments={async (id) => {
-                  if (fetchingComments[id]) return;
-                  setFetchingComments(prev => ({ ...prev, [id]: true }));
-                  const currentOffset = commentOffsets[id] || 5;
-                  try {
-                    const response = await api.get(`/annotations/${id}/comments?limit=10&offset=${currentOffset}`);
-                    const newComments = response.data.comments || [];
-                    setActivity(prev => prev.map(ann => {
-                      if (ann.id === id) {
-                        const existingIds = new Set((ann.comments || []).map(c => c.id));
-                        const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
-                        return { ...ann, comments: [...(ann.comments || []), ...filteredNew] };
-                      }
-                      return ann;
-                    }));
-                    setCommentOffsets(prev => ({ ...prev, [id]: currentOffset + newComments.length }));
-                  } catch (err) {
-                    console.error('Failed to fetch more comments', err);
-                  } finally {
-                    setFetchingComments(prev => ({ ...prev, [id]: false }));
-                  }
-                }}
-                fetchingComments={fetchingComments}
-                currentUser={currentUser as BaseUser | null}
+                    openComments={openComments}
+                    toggleComments={(id) => setOpenComments(prev => ({ ...prev, [id]: !prev[id] }))}
+                    renderAvatar={renderAvatar as (u: BaseUser, s: number) => React.ReactNode}
+                    renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
+                    formatDate={formatDate}
+                    handleComment={(id, text) => submitComment(id, text)}
+                    fetchMoreComments={fetchMoreComments}
+                    fetchingComments={fetchingComments}
+                    currentUser={currentUser as BaseUser | null}
                     isProfile={true}
                   />
                 ))}

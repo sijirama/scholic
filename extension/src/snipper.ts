@@ -125,6 +125,8 @@ export class Snipper {
 
   private cleanup(): void {
     if (this.overlay) {
+      this.overlay.removeEventListener('mousedown', this.handleMouseDown);
+      this.overlay.removeEventListener('keydown', this.handleKeyDown);
       this.overlay.remove();
       this.overlay = null;
     }

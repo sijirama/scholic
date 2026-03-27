@@ -22,6 +22,11 @@ import { HighlightPopup } from './highlight-popup';
 import { Snipper, Area } from './snipper';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Iframe guard: skip content script in iframes to avoid duplicate sidebars
+// ─────────────────────────────────────────────────────────────────────────────
+const IS_IFRAME = window.self !== window.top;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -479,7 +484,7 @@ async function handleDeleteAnnotation(annotationId: string): Promise<void> {
     const highlights = highlightMap.get(annotationId);
     if (highlights) {
       suppressSync = true;
-      removeHighlights(highlights as any);
+      removeHighlights(highlights);
       highlightMap.delete(annotationId);
       suppressSync = false;
     }
@@ -599,8 +604,9 @@ async function filterHighlights(): Promise<void> {
 
 /**
  * Listen for storage changes (login/logout sync) to refresh state.
+ * Stored as a named function so it can be removed if needed.
  */
-chrome.storage.onChanged.addListener((changes, area) => {
+function onStorageChanged(changes: { [key: string]: chrome.storage.StorageChange }, area: string) {
   if (area === 'local' && changes.scholicToken) {
     if (changes.scholicToken.newValue) {
       console.log('[Scholic] Token detected, refreshing page state...');
@@ -611,7 +617,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
       sidebar.renderAnnotationList([]);
     }
   }
-});
+}
+chrome.storage.onChanged.addListener(onStorageChanged);
 
 /**
  * Clear all current highlights and local state.
@@ -619,7 +626,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 function clearStateAndHighlights(): void {
   suppressSync = true;
   for (const highlights of highlightMap.values()) {
-    removeHighlights(highlights as any);
+    removeHighlights(highlights);
   }
   highlightMap.clear();
   pageAnnotations = [];
@@ -716,15 +723,18 @@ function removePendingHighlights(): void {
   const pending = document.querySelectorAll(
     'scholic-highlight.scholic-annotation-pending',
   );
+  const parentsToNormalize = new Set<Node>();
   pending.forEach((el) => {
     const parent = el.parentNode;
     if (parent) {
       const children = Array.from(el.childNodes);
       children.forEach((child) => parent.insertBefore(child, el));
       parent.removeChild(el);
-      parent.normalize();
+      parentsToNormalize.add(parent);
     }
   });
+  // Batch normalize — only once per unique parent instead of per element
+  parentsToNormalize.forEach((parent) => parent.normalize());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -735,11 +745,11 @@ function removePendingHighlights(): void {
  * Initialize Scholic on page load.
  * Wait for the DOM to be ready, then fetch and restore annotations.
  */
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => bootstrap());
-} else {
-  // DOM is already ready (script was loaded after DOMContentLoaded)
-  bootstrap();
+if (!IS_IFRAME) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => bootstrap());
+  } else {
+    bootstrap();
+  }
+  console.log('[Scholic] Content script loaded.');
 }
-
-console.log('[Scholic] Content script loaded.');

@@ -4,8 +4,8 @@ import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import AnnotationCard from '../components/AnnotationCard';
 import type { Annotation, User as AnnotationUser, Comment } from '../components/AnnotationCard';
-
-
+import Avatar from '../components/Avatar';
+import { toast } from 'sonner';
 
 const FeedSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -28,8 +28,6 @@ const FeedSkeleton: React.FC = () => (
   </div>
 );
 
-
-
 const Feed: React.FC = () => {
   const { user } = useAuth();
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -43,13 +41,13 @@ const Feed: React.FC = () => {
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
-  
-  // Track how many comments are loaded per annotation
-  // (Backend initially sends 3)
   const [commentOffsets, setCommentOffsets] = useState<Record<number, number>>({});
   const [fetchingComments, setFetchingComments] = useState<Record<number, boolean>>({});
 
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  // AbortController for cancelling in-flight requests on tab switch
+  const abortRef = useRef<AbortController | null>(null);
 
   const toggleComments = (annotationId: number) => {
     setOpenComments(prev => {
@@ -63,33 +61,30 @@ const Feed: React.FC = () => {
 
   const fetchMoreComments = async (annotationId: number) => {
     if (fetchingComments[annotationId]) return;
-    
+
     setFetchingComments(prev => ({ ...prev, [annotationId]: true }));
     const currentOffset = commentOffsets[annotationId] !== undefined ? commentOffsets[annotationId] : (annotations.find(a => a.id === annotationId)?.comments?.length || 0);
-    
+
     try {
       const response = await api.get(`/annotations/${annotationId}/comments?limit=10&offset=${currentOffset}`);
       const newComments = response.data.comments || [];
-      
+
       setAnnotations(prev => prev.map(ann => {
         if (ann.id === annotationId) {
-          // Merge and avoid duplicates
           const existingIds = new Set((ann.comments || []).map(c => c.id));
           const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
           return { ...ann, comments: [...(ann.comments || []), ...filteredNew] };
         }
         return ann;
       }));
-      
+
       setCommentOffsets(prev => ({ ...prev, [annotationId]: currentOffset + newComments.length }));
-    } catch (err) {
-      console.error('Failed to fetch more comments', err);
+    } catch {
+      toast.error('Failed to load comments');
     } finally {
       setFetchingComments(prev => ({ ...prev, [annotationId]: false }));
     }
   };
-
-
 
   const submitComment = async (annotationId: number, text: string) => {
     if (!text?.trim()) return;
@@ -106,43 +101,51 @@ const Feed: React.FC = () => {
         return ann;
       }));
       setCommentOffsets(prev => ({ ...prev, [annotationId]: (prev[annotationId] || (annotations.find(a => a.id === annotationId)?.comments?.length || 0)) + 1 }));
-    } catch (err) {
-      console.error('Failed to post comment', err);
+    } catch {
+      toast.error('Failed to post comment');
     }
   };
 
   const bodyFont = { fontFamily: '"Inter", sans-serif' };
   const brandFont = { fontFamily: '"Outfit", sans-serif' };
 
-  const fetchFeed = useCallback(async (pageNum: number, isInitial = false) => {
+  const fetchFeed = useCallback(async (pageNum: number, isInitial = false, signal?: AbortSignal) => {
     if (isInitial) setLoading(true);
     else setFetchingMore(true);
 
     try {
       const limit = 20;
       const offset = pageNum * limit;
-      const response = await api.get(`/feed?limit=${limit}&offset=${offset}&tab=${tab}`);
-      
+      const response = await api.get(`/feed?limit=${limit}&offset=${offset}&tab=${tab}`, { signal });
+
       const total = response.data.total || 0;
       setAnnotations(prev => {
         const next = isInitial ? (response.data.annotations || []) : [...prev, ...(response.data.annotations || [])];
         setHasMore(next.length < total);
         return next;
       });
-    } catch (err) {
-      console.error('Failed to fetch feed', err);
+    } catch (err: unknown) {
+      if ((err as Error).name !== 'CanceledError') {
+        toast.error('Failed to load feed');
+      }
     } finally {
       setLoading(false);
       setFetchingMore(false);
     }
   }, [tab]);
 
-  // Reset when tab changes
+  // Reset when tab changes — cancel any in-flight request
   useEffect(() => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setAnnotations([]);
     setPage(0);
     setHasMore(true);
-    fetchFeed(0, true);
+    fetchFeed(0, true, controller.signal);
+
+    return () => controller.abort();
   }, [tab, fetchFeed]);
 
   // Infinite scroll observer
@@ -175,7 +178,7 @@ const Feed: React.FC = () => {
     if (!domainName) {
       try { domainName = new URL(annotation.url).hostname.replace('www.', ''); } catch { domainName = annotation.url; }
     }
-    
+
     if (annotation.text?.trim()) {
       return <span>shared a thought on <a href={annotation.url} target="_blank" rel="noreferrer" style={{ color: '#6EB781', textDecoration: 'none' }} className="hover:underline">{domainName}</a></span>;
     }
@@ -183,35 +186,7 @@ const Feed: React.FC = () => {
   }, []);
 
   const renderAvatar = useCallback((annotationUser: AnnotationUser, size = 36) => {
-    const initial = annotationUser.username?.[0]?.toUpperCase() || annotationUser.firstName?.[0]?.toUpperCase() || '?';
-    if (annotationUser.profilePicture) {
-      return (
-        <img
-          src={annotationUser.profilePicture}
-          alt={annotationUser.username}
-          style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-        />
-      );
-    }
-    return (
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, rgba(110,183,129,0.5), rgba(71,163,232,0.5))',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: size * 0.38,
-          fontWeight: 700,
-          color: '#fff',
-          flexShrink: 0,
-        }}
-      >
-        {initial}
-      </div>
-    );
+    return <Avatar user={annotationUser} size={size} />;
   }, []);
 
   return (
@@ -236,14 +211,14 @@ const Feed: React.FC = () => {
           <div style={{
             display: 'flex', gap: '20px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px'
           }}>
-            <button 
+            <button
               onClick={() => setTab('global')}
               style={{ background: 'none', border: 'none', color: tab === 'global' ? '#fff' : '#666', fontSize: '15px', fontWeight: tab === 'global' ? 600 : 500, cursor: 'pointer', position: 'relative', padding: '0 4px', fontFamily: 'inherit' }}
             >
               Global
               {tab === 'global' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: '#6EB781', borderRadius: '2px' }} />}
             </button>
-            <button 
+            <button
               onClick={() => setTab('following')}
               style={{ background: 'none', border: 'none', color: tab === 'following' ? '#fff' : '#666', fontSize: '15px', fontWeight: tab === 'following' ? 600 : 500, cursor: 'pointer', position: 'relative', padding: '0 4px', fontFamily: 'inherit' }}
             >
@@ -300,7 +275,7 @@ const Feed: React.FC = () => {
           100% { opacity: 0.4; }
         }
         .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        
+
         input::placeholder { color: #444; }
       `}</style>
     </div>

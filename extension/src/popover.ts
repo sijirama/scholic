@@ -175,12 +175,22 @@ export class SelectionPopover {
     }
 
     document.body.appendChild(this.host);
+
+    // Auto-hide on scroll so popover doesn't float away
+    this.scrollHandler = () => this.hide();
+    window.addEventListener('scroll', this.scrollHandler, { once: true, passive: true });
   }
+
+  private scrollHandler: (() => void) | null = null;
 
   /**
    * Hide and remove the popover from the DOM.
    */
   hide(): void {
+    if (this.scrollHandler) {
+      window.removeEventListener('scroll', this.scrollHandler);
+      this.scrollHandler = null;
+    }
     if (this.host && this.host.parentNode) {
       this.host.parentNode.removeChild(this.host);
     }

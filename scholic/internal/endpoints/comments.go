@@ -49,7 +49,10 @@ func CreateComment(c *gin.Context) {
 	}
 
 	// Preload the user so the frontend gets avatar/name immediately
-	database.DB.Preload("User").First(&comment, comment.ID)
+	if err := database.DB.Preload("User").First(&comment, comment.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Comment created but failed to reload"})
+		return
+	}
 
 	c.JSON(http.StatusCreated, comment)
 }
@@ -73,10 +76,14 @@ func GetComments(c *gin.Context) {
 	var total int64
 
 	// Ensure annotation exists
-	if err := database.DB.Model(&models.Annotation{}).Where("id = ?", annotationID).Count(&total).Error; err != nil {
+	var annotation models.Annotation
+	if err := database.DB.First(&annotation, annotationID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Annotation not found"})
 		return
 	}
+
+	// Count comments (not annotations)
+	database.DB.Model(&models.Comment{}).Where("annotation_id = ?", annotationID).Count(&total)
 
 	// Fetch paginated comments
 	if err := database.DB.Preload("User").

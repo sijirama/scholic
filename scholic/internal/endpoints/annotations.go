@@ -114,7 +114,10 @@ func CreateAnnotation(c *gin.Context) {
 	}
 
 	// Reload with user data
-	database.DB.Preload("User").First(&annotation, annotation.ID)
+	if err := database.DB.Preload("User").First(&annotation, annotation.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Annotation created but failed to reload"})
+		return
+	}
 
 	c.JSON(http.StatusCreated, annotation)
 }
@@ -240,11 +243,14 @@ func GetFeed(c *gin.Context) {
 		Preload("Comments.User").
 		Order("annotations.created_at DESC").Limit(limit).Offset(offset).Find(&annotations)
 
-	// Calculate total comment count for each annotation (since Preload Limit affects the slice)
+	// Batch-load comment counts (single query instead of N+1)
+	annotationIDs := make([]uint, len(annotations))
+	for i, a := range annotations {
+		annotationIDs[i] = a.ID
+	}
+	commentCounts := batchCommentCounts(annotationIDs)
 	for i := range annotations {
-		var count int64
-		database.DB.Model(&models.Comment{}).Where("annotation_id = ?", annotations[i].ID).Count(&count)
-		annotations[i].CommentCount = count
+		annotations[i].CommentCount = commentCounts[annotations[i].ID]
 	}
 
 	c.JSON(http.StatusOK, gin.H{

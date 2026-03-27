@@ -154,14 +154,17 @@ export class HighlightPopup {
         }
         
         // Reposition after expansion
-        this.host!.style.top = '-10000px'; 
-        setTimeout(() => {
-          const rect = highlightEl.getBoundingClientRect();
-          const pHeight = popup.offsetHeight;
-          this.host!.style.top = rect.top < pHeight + 16
-            ? `${rect.bottom + window.scrollY + 8}px`
-            : `${rect.top + window.scrollY - pHeight - 8}px`;
-        }, 0);
+        if (this.host) {
+          this.host.style.top = '-10000px';
+          setTimeout(() => {
+            if (!this.host || !this.host.parentNode) return;
+            const rect = highlightEl.getBoundingClientRect();
+            const pHeight = popup.offsetHeight;
+            this.host.style.top = rect.top < pHeight + 16
+              ? `${rect.bottom + window.scrollY + 8}px`
+              : `${rect.top + window.scrollY - pHeight - 8}px`;
+          }, 0);
+        }
       });
     }
 

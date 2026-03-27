@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import api from '../lib/api';
 import UserRow from './UserRow';
@@ -49,6 +50,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId 
       setResults(response.data.users || []);
     } catch {
       setResults([]);
+      toast.error('Search failed');
     } finally {
       setLoading(false);
     }
@@ -68,8 +70,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId 
           u.username === username ? { ...u, isFollowing: response.data.following } : u
         )
       );
-    } catch (err) {
-      console.error('Failed to toggle follow', err);
+    } catch {
+      toast.error('Failed to follow user');
     }
   };
 
