@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthRedirect from './components/AuthRedirect';
 import Landing from './pages/Landing';
@@ -18,6 +19,7 @@ function App() {
     <AuthProvider>
       <Toaster theme="dark" position="bottom-right" richColors />
       <BrowserRouter>
+      <ErrorBoundary>
          <Routes>
           <Route path="/" element={<Layout />}>
             <Route element={<AuthRedirect />}>
@@ -44,6 +46,7 @@ function App() {
             } />
           </Route>
         </Routes>
+      </ErrorBoundary>
       </BrowserRouter>
     </AuthProvider>
   );

@@ -7,6 +7,7 @@ import { ArrowLeft, ExternalLink, Lock, MessageCircle, Send, Share2, Link2, Chec
 import Avatar from '../components/Avatar';
 import { toast } from 'sonner';
 import type { Annotation, Comment, User as AnnotationUser } from '../components/AnnotationCard';
+import ImageLightbox from '../components/ImageLightbox';
 
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex && hex.startsWith('#') && hex.length === 7 ? hex : '#A8D5B5';
@@ -80,6 +81,7 @@ const AnnotationPage: React.FC = () => {
   const { user: currentUser } = useAuth();
 
   const [annotation, setAnnotation] = useState<Annotation | null>(null);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [commentText, setCommentText] = useState('');
@@ -279,7 +281,10 @@ const AnnotationPage: React.FC = () => {
 
         {/* Image annotation */}
         {annotation.type === 'image' && annotation.imageUrl && (
-          <div style={{ borderRadius: 8, overflow: 'hidden', marginBottom: 20, border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div
+            onClick={() => setLightboxSrc(annotation.imageUrl!)}
+            style={{ borderRadius: 8, overflow: 'hidden', marginBottom: 20, border: '1px solid rgba(255,255,255,0.08)', cursor: 'zoom-in' }}
+          >
             <img src={annotation.imageUrl} alt="Annotation Screenshot" style={{ width: '100%', display: 'block' }} />
           </div>
         )}
@@ -501,6 +506,7 @@ const AnnotationPage: React.FC = () => {
         .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         mark { -webkit-print-color-adjust: exact; }
       `}</style>
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     </div>
   );
 };

@@ -11,14 +11,14 @@ type User struct {
 	CreatedAt        time.Time      `json:"createdAt"`
 	UpdatedAt        time.Time      `json:"updatedAt"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
-	Email            string         `gorm:"uniqueIndex;not null" json:"email"`
-	Username         string         `gorm:"uniqueIndex" json:"username"`
-	FirstName        string         `json:"firstName"`
-	LastName         string         `json:"lastName"`
-	ProfilePicture   string         `json:"profilePicture"`
-	GoogleID         string         `gorm:"uniqueIndex" json:"googleId"`
+	Email            string         `gorm:"uniqueIndex;not null;size:320" json:"email"`
+	Username         string         `gorm:"uniqueIndex;size:30" json:"username"`
+	FirstName        string         `gorm:"size:100" json:"firstName"`
+	LastName         string         `gorm:"size:100" json:"lastName"`
+	ProfilePicture   string         `gorm:"size:2048" json:"profilePicture"`
+	GoogleID         string         `gorm:"uniqueIndex;size:255" json:"googleId"`
 	Onboarded        bool           `gorm:"default:false" json:"onboarded"`
 	MemberNumber     uint           `gorm:"uniqueIndex" json:"memberNumber"`
-	Bio              string         `json:"bio"`
+	Bio              string         `gorm:"size:500" json:"bio"`
 	ShowMemberNumber bool           `gorm:"default:true" json:"showMemberNumber"`
 }

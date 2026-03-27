@@ -53,18 +53,34 @@
     ::selection {
       background: rgba(110,183,129,0.3);
     }
-    /* Scholic Highlights */
-    .scholic-highlight {
-      background-color: rgba(110,183,129,0.2) !important;
+    /* Scholic Highlights — color driven by CSS vars set inline per element */
+    scholic-highlight {
+      --sr: 168;
+      --sg: 213;
+      --sb: 181;
       cursor: pointer;
       border-radius: 3px;
+      transition: background-color 0.15s ease;
     }
-    .scholic-highlight-focused {
-      background-color: rgba(110,183,129,0.5) !important;
-      box-shadow: 0 0 0 2px #6EB781;
+    scholic-highlight.scholic-annotation {
+      background-color: rgba(var(--sr), var(--sg), var(--sb), 0.35) !important;
+      border-bottom: 2px solid rgba(var(--sr), var(--sg), var(--sb), 0.7);
     }
-    .scholic-hidden {
-      display: none !important;
+    scholic-highlight.scholic-annotation:hover {
+      background-color: rgba(var(--sr), var(--sg), var(--sb), 0.55) !important;
+    }
+    scholic-highlight.scholic-private {
+      background-color: rgba(232, 197, 71, 0.25) !important;
+      border-bottom: 2px solid rgba(232, 197, 71, 0.6);
+    }
+    scholic-highlight.scholic-highlight-focused {
+      background-color: rgba(var(--sr), var(--sg), var(--sb), 0.6) !important;
+      box-shadow: 0 0 0 2px rgba(var(--sr), var(--sg), var(--sb), 0.8);
+    }
+    scholic-highlight.scholic-hidden {
+      background-color: transparent !important;
+      border-bottom-color: transparent !important;
+      pointer-events: none !important;
     }
     #viewer-container {
       position: absolute;

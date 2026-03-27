@@ -223,6 +223,7 @@ const Settings: React.FC = () => {
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  maxLength={100}
                   placeholder="Your name"
                   style={{
                     width: '100%',

@@ -26,7 +26,7 @@ type Annotation struct {
 	User   User `gorm:"foreignKey:UserID" json:"user"`
 
 	// URL is the page where the annotation was created (indexed for fast lookup)
-	URL string `gorm:"index;not null" json:"url"`
+	URL string `gorm:"index;not null;size:2000" json:"url"`
 
 	// Selectors is a JSON string containing an array of selector objects.
 	// Example: [{"type":"TextQuoteSelector","exact":"hello","prefix":"say ","suffix":" world"}]
@@ -34,10 +34,10 @@ type Annotation struct {
 	Selectors string `gorm:"type:jsonb;not null" json:"selectors"`
 
 	// Text is the user's note/comment about the selected text
-	Text string `json:"text"`
+	Text string `gorm:"size:5000" json:"text"`
 
 	// QuoteText is the exact text the user highlighted
-	QuoteText string `json:"quoteText"`
+	QuoteText string `gorm:"size:10000" json:"quoteText"`
 
 	// IsPrivate marks this as a personal highlight (not visible to others)
 	IsPrivate bool `gorm:"default:false" json:"isPrivate"`

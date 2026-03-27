@@ -35,12 +35,20 @@ export interface AnnotationData {
 }
 
 const HIGHLIGHT_COLORS = [
+  // Pastels (light backgrounds)
   { name: 'Sage',     hex: '#A8D5B5' },
   { name: 'Butter',  hex: '#F5E4A0' },
   { name: 'Sky',     hex: '#A3C4F3' },
   { name: 'Lilac',   hex: '#C5A8D5' },
   { name: 'Peach',   hex: '#F5C4A3' },
   { name: 'Rose',    hex: '#F5A8C0' },
+  // Deeper tones (light mode papers / dark backgrounds)
+  { name: 'Forest',  hex: '#4A9B6F' },
+  { name: 'Amber',   hex: '#D4A017' },
+  { name: 'Ocean',   hex: '#2E7BC4' },
+  { name: 'Plum',    hex: '#8B4BAF' },
+  { name: 'Coral',   hex: '#E8603C' },
+  { name: 'Crimson', hex: '#C0392B' },
 ];
 
 /** Callbacks the sidebar uses to communicate with the content script */
@@ -309,7 +317,7 @@ export class Sidebar {
     if (this.isAuthenticated) {
       tabsHtml = `
         <button class="tab-btn ${this.activeTab === 'mine' ? 'active' : ''}" data-tab="mine">Mine</button>
-        <button class="tab-btn ${this.activeTab === 'community' ? 'active' : ''}" data-tab="community">Community</button>
+        <button class="tab-btn ${this.activeTab === 'community' ? 'active' : ''}" data-tab="community">Following</button>
       `;
     }
     
@@ -1090,7 +1098,7 @@ export class Sidebar {
     form.innerHTML = `
       ${previewHtml}
       <div class="form-label">Your Note</div>
-      <textarea class="note-input" placeholder="Add your thoughts..."></textarea>
+      <textarea class="note-input" placeholder="Add your thoughts..." maxlength="5000"></textarea>
       ${type === 'text' ? swatchesHtml : ''}
       <div class="privacy-toggle">
         <div class="toggle-switch" id="privacy-switch">
@@ -1250,7 +1258,7 @@ export class Sidebar {
           const authorName = annotation.user?.username || annotation.user?.email?.split('@')[0] || 'Unknown';
           const authorInitial = authorName[0].toUpperCase();
           const avatarHtml = annotation.user?.profilePicture
-            ? `<img src="${annotation.user.profilePicture}" style="width:100%; height:100%; object-fit:cover;" />`
+            ? `<img src="${this.escapeAttr(annotation.user.profilePicture)}" style="width:100%; height:100%; object-fit:cover;" />`
             : authorInitial;
 
           item.innerHTML = `
@@ -1269,7 +1277,7 @@ export class Sidebar {
             </div>
             ${annotation.type === 'image' && annotation.imageUrl ? `
               <div class="annotation-image" style="margin-bottom: 8px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-                <img src="${annotation.imageUrl}" style="width: 100%; display: block;" />
+                <img src="${this.escapeAttr(annotation.imageUrl || '')}" style="width: 100%; display: block;" />
               </div>
             ` : `<div class="annotation-quote"><mark style="background:${this.hexToRgba(annotation.highlightColor || '#A8D5B5', 0.12)}">${this.escapeHtml(annotation.quoteText)}</mark></div>`}
             ${annotation.id ? `
@@ -1447,6 +1455,16 @@ export class Sidebar {
     } else {
       this.panel.appendChild(container); // Fallback
     }
+  }
+
+  /** Escape a value for safe use inside an HTML attribute (e.g. src="...") */
+  private escapeAttr(value: string): string {
+    return (value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
   private hexToRgba(hex: string, alpha: number): string {

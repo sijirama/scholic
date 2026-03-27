@@ -18,5 +18,5 @@ type Comment struct {
 	UserID uint `gorm:"index;not null" json:"userId"`
 	User   User `gorm:"foreignKey:UserID" json:"user"`
 
-	Text string `gorm:"not null" json:"text"`
+	Text string `gorm:"not null;size:1000" json:"text"`
 }

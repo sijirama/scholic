@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageCircle, Lock, Send, Trash2, Pencil, MoreHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ImageLightbox from './ImageLightbox';
 
 function timeAgo(dateStr: string): string {
   const now = new Date();
@@ -219,6 +220,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   onEditComment,
 }) => {
   const [commentText, setCommentText] = React.useState('');
+  const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
   const [annotationMenuOpen, setAnnotationMenuOpen] = React.useState(false);
   const [editingAnnotation, setEditingAnnotation] = React.useState(false);
   const [editAnnotationText, setEditAnnotationText] = React.useState('');
@@ -309,17 +311,21 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
 
           {/* Content: Image or Quote */}
           {annotation.type === 'image' && annotation.imageUrl ? (
-            <div style={{
-              borderRadius: '8px',
-              overflow: 'hidden',
-              marginBottom: '10px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.02)'
-            }}>
-              <img 
-                src={annotation.imageUrl} 
-                alt="Annotation Screenshot" 
-                style={{ width: '100%', display: 'block' }} 
+            <div
+              onClick={() => setLightboxSrc(annotation.imageUrl!)}
+              style={{
+                borderRadius: '8px',
+                overflow: 'hidden',
+                marginBottom: '10px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.02)',
+                cursor: 'zoom-in',
+              }}
+            >
+              <img
+                src={annotation.imageUrl}
+                alt="Annotation Screenshot"
+                style={{ width: '100%', display: 'block' }}
               />
             </div>
           ) : annotation.quoteText && (
@@ -350,6 +356,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
               <textarea
                 value={editAnnotationText}
                 onChange={(e) => setEditAnnotationText(e.target.value)}
+                maxLength={5000}
                 rows={3}
                 style={{
                   width: '100%',
@@ -516,6 +523,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                         <textarea
                           placeholder="Reply..."
                           value={commentText}
+                          maxLength={1000}
                           onChange={(e) => setCommentText(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
@@ -620,6 +628,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                               <textarea
                                 value={editCommentText}
                                 onChange={(e) => setEditCommentText(e.target.value)}
+                                maxLength={1000}
                                 rows={2}
                                 style={{
                                   width: '100%',
@@ -717,6 +726,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
           </AnimatePresence>
         </div>
       </div>
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     </div>
   );
 };

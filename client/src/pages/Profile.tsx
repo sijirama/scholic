@@ -290,8 +290,16 @@ const Profile: React.FC = () => {
     return (
       <div className="min-h-screen w-full" style={{ ...bodyFont, background: '#121212', color: '#fff' }}>
         <Navbar />
-        <div className="text-center" style={{ padding: '60px 0', color: '#555' }}>
+        <div className="text-center" style={{ padding: '60px 0', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
           <p style={{ fontSize: '14px' }}>{error || 'User not found'}</p>
+          {error && (
+            <button
+              onClick={() => { setError(''); fetchProfile(0, true); }}
+              style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, background: 'rgba(110,183,129,0.12)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.25)', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Try again
+            </button>
+          )}
         </div>
       </div>
     );

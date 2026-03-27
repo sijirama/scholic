@@ -32,6 +32,7 @@ const Feed: React.FC = () => {
   const { user } = useAuth();
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedError, setFeedError] = useState(false);
   const [tab, setTab] = useState<'global' | 'following'>('global');
 
   // Pagination state
@@ -173,6 +174,7 @@ const Feed: React.FC = () => {
       const offset = pageNum * limit;
       const response = await api.get(`/feed?limit=${limit}&offset=${offset}&tab=${tab}`, { signal });
 
+      setFeedError(false);
       const total = response.data.total || 0;
       setAnnotations(prev => {
         const next = isInitial ? (response.data.annotations || []) : [...prev, ...(response.data.annotations || [])];
@@ -181,7 +183,8 @@ const Feed: React.FC = () => {
       });
     } catch (err: unknown) {
       if ((err as Error).name !== 'CanceledError') {
-        toast.error('Failed to load feed');
+        if (isInitial) setFeedError(true);
+        else toast.error('Failed to load more');
       }
     } finally {
       setLoading(false);
@@ -282,6 +285,16 @@ const Feed: React.FC = () => {
         {/* States */}
         {loading ? (
           <FeedSkeleton />
+        ) : feedError ? (
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>
+            <p style={{ fontSize: '14px', marginBottom: '16px' }}>Failed to load feed</p>
+            <button
+              onClick={() => { setFeedError(false); setAnnotations([]); setPage(0); setHasMore(true); fetchFeed(0, true); }}
+              style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, background: 'rgba(110,183,129,0.12)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.25)', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Try again
+            </button>
+          </div>
         ) : annotations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>
             {tab === 'following' ? (

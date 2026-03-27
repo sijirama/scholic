@@ -17,6 +17,18 @@ import { Snipper, Area } from './snipper';
 // Load the worker from the local extension package
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('pdf.worker.min.mjs');
 
+function applyHighlightColor(elements: HTMLElement[], hex: string): void {
+  const color = hex && hex.startsWith('#') && hex.length === 7 ? hex : '#A8D5B5';
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  elements.forEach(el => {
+    el.style.setProperty('--sr', String(r));
+    el.style.setProperty('--sg', String(g));
+    el.style.setProperty('--sb', String(b));
+  });
+}
+
 class ScholicPdfViewer {
   private sidebar: Sidebar;
   private pdfUrl: string = '';
@@ -273,7 +285,11 @@ class ScholicPdfViewer {
         const range = await anchor(document.getElementById('viewer')!, ann.selectors);
         const cssClass = ann.isPrivate ? 'scholic-private' : 'scholic-annotation';
         const highlights = highlightRange(range, `scholic-highlight ${cssClass}`, ann.id);
-        
+
+        if (!ann.isPrivate) {
+          applyHighlightColor(highlights, ann.highlightColor || '#A8D5B5');
+        }
+
         // Apply filtering class
         const isMine = String(ann.userId) === String(this.myUserId);
         let shouldHide = false;
@@ -326,6 +342,7 @@ class ScholicPdfViewer {
       if (this.pendingHighlightElements.length > 0) {
         // Upgrade existing highlight elements in-place with the real annotation ID
         // and correct CSS class. This avoids re-anchoring which fails or causes blinking.
+        applyHighlightColor(this.pendingHighlightElements, savedAnnotation.highlightColor || '#A8D5B5');
         this.pendingHighlightElements.forEach((el) => {
           el.className = `scholic-highlight ${cssClass}`; // Add correct main class
           (el as any)._scholicAnnotationId = annotationId;

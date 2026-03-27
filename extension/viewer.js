@@ -29398,12 +29398,20 @@
       "use strict";
       init_config();
       HIGHLIGHT_COLORS = [
+        // Pastels (light backgrounds)
         { name: "Sage", hex: "#A8D5B5" },
         { name: "Butter", hex: "#F5E4A0" },
         { name: "Sky", hex: "#A3C4F3" },
         { name: "Lilac", hex: "#C5A8D5" },
         { name: "Peach", hex: "#F5C4A3" },
-        { name: "Rose", hex: "#F5A8C0" }
+        { name: "Rose", hex: "#F5A8C0" },
+        // Deeper tones (light mode papers / dark backgrounds)
+        { name: "Forest", hex: "#4A9B6F" },
+        { name: "Amber", hex: "#D4A017" },
+        { name: "Ocean", hex: "#2E7BC4" },
+        { name: "Plum", hex: "#8B4BAF" },
+        { name: "Coral", hex: "#E8603C" },
+        { name: "Crimson", hex: "#C0392B" }
       ];
       ICONS = {
         lock: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
@@ -29584,7 +29592,7 @@
           if (this.isAuthenticated) {
             tabsHtml = `
         <button class="tab-btn ${this.activeTab === "mine" ? "active" : ""}" data-tab="mine">Mine</button>
-        <button class="tab-btn ${this.activeTab === "community" ? "active" : ""}" data-tab="community">Community</button>
+        <button class="tab-btn ${this.activeTab === "community" ? "active" : ""}" data-tab="community">Following</button>
       `;
           }
           tabsHtml += `<button class="tab-btn ${this.activeTab === "all" ? "active" : ""}" data-tab="all">All</button>`;
@@ -30339,7 +30347,7 @@
           form.innerHTML = `
       ${previewHtml}
       <div class="form-label">Your Note</div>
-      <textarea class="note-input" placeholder="Add your thoughts..."></textarea>
+      <textarea class="note-input" placeholder="Add your thoughts..." maxlength="5000"></textarea>
       ${type === "text" ? swatchesHtml : ""}
       <div class="privacy-toggle">
         <div class="toggle-switch" id="privacy-switch">
@@ -30461,7 +30469,7 @@
                 const timeStr = annotation.createdAt ? timeAgo(annotation.createdAt) : "";
                 const authorName = annotation.user?.username || annotation.user?.email?.split("@")[0] || "Unknown";
                 const authorInitial = authorName[0].toUpperCase();
-                const avatarHtml = annotation.user?.profilePicture ? `<img src="${annotation.user.profilePicture}" style="width:100%; height:100%; object-fit:cover;" />` : authorInitial;
+                const avatarHtml = annotation.user?.profilePicture ? `<img src="${this.escapeAttr(annotation.user.profilePicture)}" style="width:100%; height:100%; object-fit:cover;" />` : authorInitial;
                 item.innerHTML = `
             <div class="annotation-item-header">
               ${privacyBadge}
@@ -30478,7 +30486,7 @@
             </div>
             ${annotation.type === "image" && annotation.imageUrl ? `
               <div class="annotation-image" style="margin-bottom: 8px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-                <img src="${annotation.imageUrl}" style="width: 100%; display: block;" />
+                <img src="${this.escapeAttr(annotation.imageUrl || "")}" style="width: 100%; display: block;" />
               </div>
             ` : `<div class="annotation-quote"><mark style="background:${this.hexToRgba(annotation.highlightColor || "#A8D5B5", 0.12)}">${this.escapeHtml(annotation.quoteText)}</mark></div>`}
             ${annotation.id ? `
@@ -30630,6 +30638,10 @@
           } else {
             this.panel.appendChild(container);
           }
+        }
+        /** Escape a value for safe use inside an HTML attribute (e.g. src="...") */
+        escapeAttr(value) {
+          return (value || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
         hexToRgba(hex, alpha) {
           const h = hex && hex.startsWith("#") && hex.length === 7 ? hex : "#A8D5B5";
@@ -32360,12 +32372,13 @@
           this.cleanup();
           if (width > 5 && height > 5) {
             const dpr = window.devicePixelRatio || 1;
-            this.onSelect({
+            const area = {
               x: x * dpr,
               y: y * dpr,
               width: width * dpr,
               height: height * dpr
-            });
+            };
+            requestAnimationFrame(() => requestAnimationFrame(() => this.onSelect(area)));
           } else {
             this.onCancel();
           }
@@ -32403,6 +32416,17 @@
       init_highlight_popup();
       init_snipper();
       __webpack_exports__GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("pdf.worker.min.mjs");
+      function applyHighlightColor(elements, hex) {
+        const color = hex && hex.startsWith("#") && hex.length === 7 ? hex : "#A8D5B5";
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        elements.forEach((el) => {
+          el.style.setProperty("--sr", String(r));
+          el.style.setProperty("--sg", String(g));
+          el.style.setProperty("--sb", String(b));
+        });
+      }
       var ScholicPdfViewer = class {
         sidebar;
         pdfUrl = "";
@@ -32606,6 +32630,9 @@
               const range = await anchor(document.getElementById("viewer"), ann.selectors);
               const cssClass = ann.isPrivate ? "scholic-private" : "scholic-annotation";
               const highlights = highlightRange(range, `scholic-highlight ${cssClass}`, ann.id);
+              if (!ann.isPrivate) {
+                applyHighlightColor(highlights, ann.highlightColor || "#A8D5B5");
+              }
               const isMine = String(ann.userId) === String(this.myUserId);
               let shouldHide = false;
               if (this.currentTab === "mine") {
@@ -32643,6 +32670,7 @@
             const annotationId = String(savedAnnotation.id);
             const cssClass = savedAnnotation.isPrivate ? "scholic-private" : "scholic-annotation";
             if (this.pendingHighlightElements.length > 0) {
+              applyHighlightColor(this.pendingHighlightElements, savedAnnotation.highlightColor || "#A8D5B5");
               this.pendingHighlightElements.forEach((el) => {
                 el.className = `scholic-highlight ${cssClass}`;
                 el._scholicAnnotationId = annotationId;

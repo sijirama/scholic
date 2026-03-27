@@ -146,8 +146,16 @@ func GetUserProfile(c *gin.Context) {
 	// Fetch user's annotations with pagination
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
-	limit, _ := strconv.Atoi(limitStr)
-	offset, _ := strconv.Atoi(offsetStr)
+	limit, limErr := strconv.Atoi(limitStr)
+	if limErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		return
+	}
+	offset, offErr := strconv.Atoi(offsetStr)
+	if offErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter"})
+		return
+	}
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
@@ -225,8 +233,16 @@ func SearchUsers(c *gin.Context) {
 
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
-	limit, _ := strconv.Atoi(limitStr)
-	offset, _ := strconv.Atoi(offsetStr)
+	limit, limErr := strconv.Atoi(limitStr)
+	if limErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		return
+	}
+	offset, offErr := strconv.Atoi(offsetStr)
+	if offErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter"})
+		return
+	}
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
@@ -306,8 +322,16 @@ func GetFollowers(c *gin.Context) {
 
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
-	limit, _ := strconv.Atoi(limitStr)
-	offset, _ := strconv.Atoi(offsetStr)
+	limit, limErr := strconv.Atoi(limitStr)
+	if limErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		return
+	}
+	offset, offErr := strconv.Atoi(offsetStr)
+	if offErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter"})
+		return
+	}
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}
@@ -376,8 +400,16 @@ func GetFollowing(c *gin.Context) {
 
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
-	limit, _ := strconv.Atoi(limitStr)
-	offset, _ := strconv.Atoi(offsetStr)
+	limit, limErr := strconv.Atoi(limitStr)
+	if limErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		return
+	}
+	offset, offErr := strconv.Atoi(offsetStr)
+	if offErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter"})
+		return
+	}
 	if limit <= 0 || limit > 50 {
 		limit = 20
 	}

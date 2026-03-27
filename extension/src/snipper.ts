@@ -105,12 +105,14 @@ export class Snipper {
     if (width > 5 && height > 5) {
       // Use devicePixelRatio to ensure correct dimensions for high-DPI screens
       const dpr = window.devicePixelRatio || 1;
-      this.onSelect({
+      const area = {
         x: x * dpr,
         y: y * dpr,
         width: width * dpr,
         height: height * dpr,
-      });
+      };
+      // Double rAF ensures the overlay is painted away before the tab capture fires
+      requestAnimationFrame(() => requestAnimationFrame(() => this.onSelect(area)));
     } else {
       this.onCancel();
     }
