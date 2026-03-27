@@ -198,6 +198,90 @@ func DeleteAnnotation(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Annotation deleted"})
 }
 
+type UpdateAnnotationRequest struct {
+	Text string `json:"text"`
+}
+
+// UpdateAnnotation handles PUT /api/annotations/:id
+func UpdateAnnotation(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid annotation ID"})
+		return
+	}
+
+	var annotation models.Annotation
+	if err := database.DB.First(&annotation, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Annotation not found"})
+		return
+	}
+
+	if annotation.UserID != userID.(uint) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only edit your own annotations"})
+		return
+	}
+
+	var req UpdateAnnotationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	annotation.Text = req.Text
+	if err := database.DB.Save(&annotation).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update annotation"})
+		return
+	}
+
+	if err := database.DB.Preload("User").First(&annotation, annotation.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Updated but failed to reload"})
+		return
+	}
+
+	c.JSON(http.StatusOK, annotation)
+}
+
+// GetAnnotation handles GET /api/annotations/:id
+func GetAnnotation(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid annotation ID"})
+		return
+	}
+
+	var annotation models.Annotation
+	if err := database.DB.Preload("User").Preload("Comments", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at ASC")
+	}).Preload("Comments.User").First(&annotation, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Annotation not found"})
+		return
+	}
+
+	// If private, only the owner can see it
+	if annotation.IsPrivate {
+		userID, exists := c.Get("userID")
+		if !exists || userID.(uint) != annotation.UserID {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Annotation not found"})
+			return
+		}
+	}
+
+	// Set comment count
+	var commentCount int64
+	database.DB.Model(&models.Comment{}).Where("annotation_id = ?", annotation.ID).Count(&commentCount)
+	annotation.CommentCount = commentCount
+
+	c.JSON(http.StatusOK, annotation)
+}
+
 // GetFeed handles GET /api/feed
 //
 // Returns all public annotations across all URLs, paginated.

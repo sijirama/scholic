@@ -57,6 +57,90 @@ func CreateComment(c *gin.Context) {
 	c.JSON(http.StatusCreated, comment)
 }
 
+type UpdateCommentRequest struct {
+	Text string `json:"text" binding:"required"`
+}
+
+// UpdateComment handles PUT /api/annotations/:id/comments/:commentId
+func UpdateComment(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	commentIDStr := c.Param("commentId")
+	commentID, err := strconv.ParseUint(commentIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
+		return
+	}
+
+	var comment models.Comment
+	if err := database.DB.First(&comment, commentID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Comment not found"})
+		return
+	}
+
+	if comment.UserID != userID.(uint) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only edit your own comments"})
+		return
+	}
+
+	var req UpdateCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	comment.Text = req.Text
+	if err := database.DB.Save(&comment).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update comment"})
+		return
+	}
+
+	if err := database.DB.Preload("User").First(&comment, comment.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Updated but failed to reload"})
+		return
+	}
+
+	c.JSON(http.StatusOK, comment)
+}
+
+// DeleteComment handles DELETE /api/annotations/:id/comments/:commentId
+func DeleteComment(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	commentIDStr := c.Param("commentId")
+	commentID, err := strconv.ParseUint(commentIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
+		return
+	}
+
+	var comment models.Comment
+	if err := database.DB.First(&comment, commentID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Comment not found"})
+		return
+	}
+
+	if comment.UserID != userID.(uint) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own comments"})
+		return
+	}
+
+	if err := database.DB.Delete(&comment).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete comment"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Comment deleted"})
+}
+
 // GetComments handles GET /api/annotations/:id/comments
 func GetComments(c *gin.Context) {
 	annotationID := c.Param("id")

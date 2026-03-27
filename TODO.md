@@ -1,0 +1,33 @@
+# Scholic — Future Features
+
+## Annotation Reactions
+- Emoji-based reactions on annotations (not simple likes — full emoji picker)
+- New `annotation_reactions` table with emoji field
+- Toggle endpoint, batch counts in feed
+
+## Notifications System
+- Triggers: someone follows you, comments on your annotation, reacts to your annotation
+- New `notifications` table (type, actorID, targetID, read status)
+- Badge count in navbar, dropdown or dedicated page
+- Mark as read (individual + bulk)
+
+## Annotation Search & Filter
+- Search own annotations by text, URL, or tag
+- Backend: `ILIKE` or full-text search on quote_text, text, url
+- Frontend: search bar on profile page, filter by tag
+
+## Tags / Labels on Annotations
+- Many-to-many: `annotation_tags` join table + `tags` table
+- Tag input on annotation creation (extension sidebar + web)
+- Tag-based browsing/filtering in feed and profile
+- Build together with search/filter above
+
+## Trending / Discover Feed
+- New feed tab: "Trending" or "Discover"
+- Most-annotated URLs, most-commented annotations across all users
+- Combine with tags and reactions for richer discovery
+
+## Real-Time Updates
+- WebSocket or SSE for live comment updates
+- New annotations appearing in feed without refresh
+- Go goroutines + channels for efficient broadcasting

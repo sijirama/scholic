@@ -1,0 +1,30 @@
+name: Extension Deployment
+
+on:
+  workflow_run:
+    workflows: ["Extension CI"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-dist
+          path: extension/dist/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy Extension
+        run: |
+          echo "Deploying extension version $(cat extension/package.json | grep version | cut -d '\"' -f 4)"
+          # Add actual deployment steps here (e.g., upload to Chrome Web Store)
+          # For now, it's a placeholder as requested.

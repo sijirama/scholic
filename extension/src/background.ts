@@ -86,6 +86,20 @@ chrome.action.onClicked.addListener(async (tab) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Badge
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Update the extension badge for a specific tab.
+ * Shows the annotation count when > 0, or clears the badge otherwise.
+ */
+async function updateBadge(tabId: number, count: number): Promise<void> {
+  const text = count > 0 ? String(count) : '';
+  await chrome.action.setBadgeText({ text, tabId });
+  await chrome.action.setBadgeBackgroundColor({ color: '#6EB781', tabId });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Message Listener — API Proxy
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -97,9 +111,24 @@ chrome.action.onClicked.addListener(async (tab) => {
  *   - FETCH_ANNOTATIONS → GET /api/annotations?url=...
  *   - DELETE_ANNOTATION → DELETE /api/annotations/:id
  */
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Handle badge updates directly (needs sender.tab.id, not routed through handleMessage)
+  if (message.type === 'UPDATE_BADGE') {
+    if (sender.tab?.id) {
+      updateBadge(sender.tab.id, message.data?.count || 0);
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+
   handleMessage(message)
-    .then(sendResponse)
+    .then((result) => {
+      // Update badge when annotations are fetched
+      if (message.type === 'FETCH_ANNOTATIONS' && sender.tab?.id && result?.annotations) {
+        updateBadge(sender.tab.id, result.annotations.length);
+      }
+      sendResponse(result);
+    })
     .catch((err) => {
       console.error('[Scholic] API error:', err);
       sendResponse({ error: err.message });

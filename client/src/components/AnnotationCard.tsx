@@ -1,6 +1,23 @@
 import React from 'react';
-import { MessageCircle, Lock, Send } from 'lucide-react';
+import { MessageCircle, Lock, Send, Trash2, Pencil, MoreHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay === 1) return 'yesterday';
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 export interface User {
   id: number;
@@ -48,7 +65,94 @@ interface AnnotationCardProps {
   fetchingComments?: { [key: number]: boolean };
   currentUser?: User | null;
   isProfile?: boolean;
+  onDeleteAnnotation?: (id: number) => void;
+  onEditAnnotation?: (id: number, text: string) => void;
+  onDeleteComment?: (annotationId: number, commentId: number) => void;
+  onEditComment?: (annotationId: number, commentId: number, text: string) => void;
 }
+
+const DropdownMenu: React.FC<{
+  onEdit: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}> = ({ onEdit, onDelete, onClose }) => {
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={menuRef}
+      style={{
+        position: 'absolute',
+        right: 0,
+        top: '100%',
+        marginTop: '4px',
+        background: '#1a1a1a',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '8px',
+        padding: '4px',
+        zIndex: 50,
+        minWidth: '120px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+      }}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(); onClose(); }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          width: '100%',
+          padding: '6px 10px',
+          background: 'none',
+          border: 'none',
+          color: '#ccc',
+          fontSize: '12px',
+          cursor: 'pointer',
+          borderRadius: '6px',
+          fontFamily: 'inherit',
+          transition: 'background 0.15s',
+        }}
+        className="hover:bg-white/5"
+      >
+        <Pencil style={{ width: 12, height: 12 }} />
+        Edit
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(); onClose(); }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          width: '100%',
+          padding: '6px 10px',
+          background: 'none',
+          border: 'none',
+          color: '#ccc',
+          fontSize: '12px',
+          cursor: 'pointer',
+          borderRadius: '6px',
+          fontFamily: 'inherit',
+          transition: 'all 0.15s',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = '#ff5f57'; e.currentTarget.style.background = 'rgba(255,95,87,0.08)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.background = 'none'; }}
+      >
+        <Trash2 style={{ width: 12, height: 12 }} />
+        Delete
+      </button>
+    </div>
+  );
+};
 
 const TruncatedText: React.FC<{ text: string }> = ({ text }) => {
   const [limit, setLimit] = React.useState(60);
@@ -101,11 +205,23 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   fetchingComments,
   currentUser,
   isProfile = false,
+  onDeleteAnnotation,
+  onEditAnnotation,
+  onDeleteComment,
+  onEditComment,
 }) => {
   const [commentText, setCommentText] = React.useState('');
+  const [annotationMenuOpen, setAnnotationMenuOpen] = React.useState(false);
+  const [editingAnnotation, setEditingAnnotation] = React.useState(false);
+  const [editAnnotationText, setEditAnnotationText] = React.useState('');
+  const [commentMenuOpen, setCommentMenuOpen] = React.useState<number | null>(null);
+  const [editingCommentId, setEditingCommentId] = React.useState<number | null>(null);
+  const [editCommentText, setEditCommentText] = React.useState('');
 
   const isFetching = fetchingComments?.[annotation.id];
   const hasMore = (annotation.commentCount || 0) > (annotation.comments?.length || 0);
+
+  const isAnnotationOwner = currentUser?.id === annotation.user?.id;
 
   return (
     <div
@@ -124,17 +240,17 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 @{annotation.user?.username || 'unknown'}
               </span>
             </a>
-            <span style={{ fontSize: '12px', color: '#444' }}>
-              {formatDate(annotation.createdAt)}
-            </span>
+            <a href={`/annotation/${annotation.id}`} style={{ fontSize: '12px', color: '#444', textDecoration: 'none', transition: 'color 0.15s' }} className="hover:underline">
+              {timeAgo(annotation.createdAt)}
+            </a>
             {annotation.isPrivate && (
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '4px', 
-                  padding: '2px 6px', 
-                  borderRadius: '4px', 
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
                   background: 'rgba(255,255,255,0.03)',
                   border: '1px solid rgba(255,255,255,0.06)'
                 }}
@@ -142,6 +258,39 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
               >
                 <Lock style={{ width: 10, height: 10, color: '#666' }} />
                 <span style={{ fontSize: '10px', fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private</span>
+              </div>
+            )}
+            {isAnnotationOwner && (onEditAnnotation || onDeleteAnnotation) && (
+              <div style={{ marginLeft: 'auto', position: 'relative' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setAnnotationMenuOpen(prev => !prev); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    opacity: 0.4,
+                    transition: 'opacity 0.15s',
+                  }}
+                  className="hover:bg-white/5"
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4'; }}
+                >
+                  <MoreHorizontal style={{ width: 16, height: 16, color: '#888' }} />
+                </button>
+                {annotationMenuOpen && (
+                  <DropdownMenu
+                    onEdit={() => {
+                      setEditingAnnotation(true);
+                      setEditAnnotationText(annotation.text || '');
+                    }}
+                    onDelete={() => onDeleteAnnotation?.(annotation.id)}
+                    onClose={() => setAnnotationMenuOpen(false)}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -179,9 +328,71 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             </div>
           )}
 
-          {annotation.text && (
+          {editingAnnotation ? (
+            <div style={{ marginBottom: '12px' }}>
+              <textarea
+                value={editAnnotationText}
+                onChange={(e) => setEditAnnotationText(e.target.value)}
+                rows={3}
+                style={{
+                  width: '100%',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  color: '#fff',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  lineHeight: 1.65,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(110,183,129,0.4)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  onClick={() => {
+                    onEditAnnotation?.(annotation.id, editAnnotationText);
+                    setEditingAnnotation(false);
+                  }}
+                  style={{
+                    padding: '4px 12px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: '#6EB781',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingAnnotation(false)}
+                  style={{
+                    padding: '4px 12px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: 'rgba(255,255,255,0.06)',
+                    color: '#999',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : annotation.text ? (
             <TruncatedText text={annotation.text} />
-          )}
+          ) : null}
 
           {/* Link Card */}
           <a href={annotation.url} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit', margin: '0 0 16px 0' }}>
@@ -317,18 +528,124 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                     </div>
                   )}
 
-                  {annotation.comments?.map((comment) => (
-                    <div key={comment.id} style={{ display: 'flex', gap: '10px' }}>
-                      {renderAvatar(comment.user, 24)}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#eee' }}>@{comment.user.username}</span>
-                          <span style={{ fontSize: '11px', color: '#444' }}>{formatDate(comment.createdAt)}</span>
+                  {annotation.comments?.map((comment) => {
+                    const isCommentOwner = currentUser?.id === comment.user?.id;
+                    const isEditingThis = editingCommentId === comment.id;
+
+                    return (
+                      <div
+                        key={comment.id}
+                        style={{ display: 'flex', gap: '10px', position: 'relative' }}
+                        className="comment-row"
+                      >
+                        {renderAvatar(comment.user, 24)}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#eee' }}>@{comment.user.username}</span>
+                            <span style={{ fontSize: '11px', color: '#444' }}>{timeAgo(comment.createdAt)}</span>
+                            {isCommentOwner && (onEditComment || onDeleteComment) && (
+                              <div style={{ marginLeft: 'auto', position: 'relative' }}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setCommentMenuOpen(prev => prev === comment.id ? null : comment.id); }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '2px',
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    opacity: 0.4,
+                                    transition: 'opacity 0.15s',
+                                  }}
+                                  className="hover:bg-white/5"
+                                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4'; }}
+                                >
+                                  <MoreHorizontal style={{ width: 14, height: 14, color: '#888' }} />
+                                </button>
+                                {commentMenuOpen === comment.id && (
+                                  <DropdownMenu
+                                    onEdit={() => {
+                                      setEditingCommentId(comment.id);
+                                      setEditCommentText(comment.text);
+                                    }}
+                                    onDelete={() => onDeleteComment?.(annotation.id, comment.id)}
+                                    onClose={() => setCommentMenuOpen(null)}
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {isEditingThis ? (
+                            <div>
+                              <textarea
+                                value={editCommentText}
+                                onChange={(e) => setEditCommentText(e.target.value)}
+                                rows={2}
+                                style={{
+                                  width: '100%',
+                                  background: 'rgba(255,255,255,0.03)',
+                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  borderRadius: '8px',
+                                  padding: '8px 10px',
+                                  fontSize: '13px',
+                                  color: '#fff',
+                                  resize: 'vertical',
+                                  fontFamily: 'inherit',
+                                  lineHeight: 1.5,
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(110,183,129,0.4)'; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                                autoFocus
+                              />
+                              <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                                <button
+                                  onClick={() => {
+                                    onEditComment?.(annotation.id, comment.id, editCommentText);
+                                    setEditingCommentId(null);
+                                  }}
+                                  style={{
+                                    padding: '3px 10px',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    background: '#6EB781',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'inherit',
+                                  }}
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingCommentId(null)}
+                                  style={{
+                                    padding: '3px 10px',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    background: 'rgba(255,255,255,0.06)',
+                                    color: '#999',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'inherit',
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p style={{ fontSize: '13px', color: '#bbb', margin: 0, lineHeight: 1.5 }}>{comment.text}</p>
+                          )}
                         </div>
-                        <p style={{ fontSize: '13px', color: '#bbb', margin: 0, lineHeight: 1.5 }}>{comment.text}</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {fetchMoreComments && hasMore && (
                     <div style={{ display: 'flex', flexDirection: 'column', marginTop: '4px' }}>

@@ -199,11 +199,13 @@ async function bootstrap(): Promise<void> {
 function setupListeners(): void {
   document.addEventListener('mouseup', handleMouseUp);
   document.addEventListener('mousedown', handleMouseDown);
+  document.addEventListener('keydown', handleKeyDown);
 }
 
 function removeListeners(): void {
   document.removeEventListener('mouseup', handleMouseUp);
   document.removeEventListener('mousedown', handleMouseDown);
+  document.removeEventListener('keydown', handleKeyDown);
   popover.hide();
 }
 
@@ -223,6 +225,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       clearStateAndHighlights();
       removeListeners();
       stopHighlightSync();
+      chrome.runtime.sendMessage({ type: 'UPDATE_BADGE', data: { count: 0 } });
     }
     sendResponse({ ok: true });
   } else if (message.type === 'TOGGLE_SIDEBAR') {
@@ -299,6 +302,44 @@ function cropImage(dataUrl: string, area: Area): Promise<string> {
 }
 
 /**
+ * Handle keyboard shortcuts.
+ *
+ *   Alt+S  — Toggle sidebar open/close
+ *   Alt+H  — Highlight current text selection (same as clicking "Highlight" in popover)
+ *   Escape — Hide popover if visible
+ */
+function handleKeyDown(e: KeyboardEvent): void {
+  if (!isEnabled) return;
+
+  // Don't trigger if user is typing in an input/textarea/contenteditable
+  const target = e.target as HTMLElement;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+  if (e.altKey && e.key === 's') {
+    e.preventDefault();
+    sidebar.toggle();
+  }
+
+  if (e.altKey && e.key === 'h') {
+    e.preventDefault();
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && selection.toString().trim()) {
+      try {
+        const range = selection.getRangeAt(0);
+        handleHighlight(range, selection.toString().trim());
+        popover.hide();
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  if (e.key === 'Escape') {
+    popover.hide();
+  }
+}
+
+/**
  * Handle mouseup (selection)
  */
 function handleMouseUp(e: MouseEvent): void {
@@ -339,6 +380,21 @@ function handleMouseDown(e: MouseEvent): void {
   ) {
     popover.hide();
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Badge
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Send an UPDATE_BADGE message to the background script so the extension icon
+ * reflects the current annotation count for this tab.
+ */
+function updateBadgeCount(): void {
+  chrome.runtime.sendMessage({
+    type: 'UPDATE_BADGE',
+    data: { count: pageAnnotations.length },
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -460,6 +516,8 @@ async function handleSaveAnnotation(annotation: AnnotationData): Promise<void> {
         removePendingHighlights();
         await resolveAndRenderAnnotations([savedAnnotation]);
       }
+
+      updateBadgeCount();
     }
   } catch (err) {
     console.error('[Scholic] Failed to save annotation:', err);
@@ -488,6 +546,8 @@ async function handleDeleteAnnotation(annotationId: string): Promise<void> {
       highlightMap.delete(annotationId);
       suppressSync = false;
     }
+
+    updateBadgeCount();
   } catch (err) {
     console.error('[Scholic] Failed to delete annotation:', err);
   }
@@ -631,6 +691,7 @@ function clearStateAndHighlights(): void {
   highlightMap.clear();
   pageAnnotations = [];
   suppressSync = false;
+  updateBadgeCount();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -661,9 +722,12 @@ async function loadAnnotations(): Promise<void> {
 
       // Ensure initial highlights match the default tab
       await filterHighlights();
+
+      updateBadgeCount();
     } else {
       // Still render empty list if no annotations found (to show 'No annotations' vs 'Sign in')
       await sidebar.renderAnnotationList([]);
+      updateBadgeCount();
     }
   } catch (err) {
     console.error('[Scholic] Failed to load annotations:', err);

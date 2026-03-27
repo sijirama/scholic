@@ -94,6 +94,61 @@ const Profile: React.FC = () => {
     }
   };
 
+  const deleteAnnotation = async (id: number) => {
+    try {
+      await api.delete(`/annotations/${id}`);
+      setActivity(prev => prev.filter(a => a.id !== id));
+      toast.success('Annotation deleted');
+    } catch {
+      toast.error('Failed to delete annotation');
+    }
+  };
+
+  const editAnnotation = async (id: number, text: string) => {
+    try {
+      await api.put(`/annotations/${id}`, { text });
+      setActivity(prev => prev.map(a => a.id === id ? { ...a, text } : a));
+      toast.success('Annotation updated');
+    } catch {
+      toast.error('Failed to update annotation');
+    }
+  };
+
+  const deleteComment = async (annotationId: number, commentId: number) => {
+    try {
+      await api.delete(`/annotations/${annotationId}/comments/${commentId}`);
+      setActivity(prev => prev.map(a => {
+        if (a.id === annotationId) {
+          return {
+            ...a,
+            comments: (a.comments || []).filter(c => c.id !== commentId),
+            commentCount: Math.max(0, (a.commentCount || 0) - 1),
+          };
+        }
+        return a;
+      }));
+    } catch {
+      toast.error('Failed to delete comment');
+    }
+  };
+
+  const editComment = async (annotationId: number, commentId: number, text: string) => {
+    try {
+      await api.put(`/annotations/${annotationId}/comments/${commentId}`, { text });
+      setActivity(prev => prev.map(a => {
+        if (a.id === annotationId) {
+          return {
+            ...a,
+            comments: (a.comments || []).map(c => c.id === commentId ? { ...c, text } : c),
+          };
+        }
+        return a;
+      }));
+    } catch {
+      toast.error('Failed to update comment');
+    }
+  };
+
   const bodyFont = { fontFamily: '"Inter", sans-serif' };
 
   const fetchProfile = useCallback(async (pageNum: number, isInitial = false) => {
@@ -389,8 +444,14 @@ const Profile: React.FC = () => {
           <div>
             {activity.length === 0 ? (
               <div className="text-center" style={{ padding: '60px 0', color: '#555' }}>
-                <p style={{ fontSize: '14px', marginBottom: '6px' }}>No activity yet</p>
-                <p style={{ fontSize: '12px', color: '#444' }}>Rankings, notes, and reviews will appear here.</p>
+                {isOwnProfile ? (
+                  <>
+                    <p style={{ fontSize: '14px', marginBottom: '6px' }}>You haven't made any annotations yet</p>
+                    <p style={{ fontSize: '12px', color: '#444' }}>Install the Scholic extension to start annotating the web</p>
+                  </>
+                ) : (
+                  <p style={{ fontSize: '14px', marginBottom: '6px' }}>This user hasn't made any annotations yet</p>
+                )}
               </div>
             ) : (
               <div className="flex flex-col" style={{ gap: '8px' }}>
@@ -408,6 +469,10 @@ const Profile: React.FC = () => {
                     fetchingComments={fetchingComments}
                     currentUser={currentUser as BaseUser | null}
                     isProfile={true}
+                    onDeleteAnnotation={deleteAnnotation}
+                    onEditAnnotation={editAnnotation}
+                    onDeleteComment={deleteComment}
+                    onEditComment={editComment}
                   />
                 ))}
 

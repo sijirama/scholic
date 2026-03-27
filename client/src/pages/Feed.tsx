@@ -106,6 +106,61 @@ const Feed: React.FC = () => {
     }
   };
 
+  const deleteAnnotation = async (id: number) => {
+    try {
+      await api.delete(`/annotations/${id}`);
+      setAnnotations(prev => prev.filter(a => a.id !== id));
+      toast.success('Annotation deleted');
+    } catch {
+      toast.error('Failed to delete annotation');
+    }
+  };
+
+  const editAnnotation = async (id: number, text: string) => {
+    try {
+      await api.put(`/annotations/${id}`, { text });
+      setAnnotations(prev => prev.map(a => a.id === id ? { ...a, text } : a));
+      toast.success('Annotation updated');
+    } catch {
+      toast.error('Failed to update annotation');
+    }
+  };
+
+  const deleteComment = async (annotationId: number, commentId: number) => {
+    try {
+      await api.delete(`/annotations/${annotationId}/comments/${commentId}`);
+      setAnnotations(prev => prev.map(a => {
+        if (a.id === annotationId) {
+          return {
+            ...a,
+            comments: (a.comments || []).filter(c => c.id !== commentId),
+            commentCount: Math.max(0, (a.commentCount || 0) - 1),
+          };
+        }
+        return a;
+      }));
+    } catch {
+      toast.error('Failed to delete comment');
+    }
+  };
+
+  const editComment = async (annotationId: number, commentId: number, text: string) => {
+    try {
+      await api.put(`/annotations/${annotationId}/comments/${commentId}`, { text });
+      setAnnotations(prev => prev.map(a => {
+        if (a.id === annotationId) {
+          return {
+            ...a,
+            comments: (a.comments || []).map(c => c.id === commentId ? { ...c, text } : c),
+          };
+        }
+        return a;
+      }));
+    } catch {
+      toast.error('Failed to update comment');
+    }
+  };
+
   const bodyFont = { fontFamily: '"Inter", sans-serif' };
   const brandFont = { fontFamily: '"Outfit", sans-serif' };
 
@@ -233,8 +288,17 @@ const Feed: React.FC = () => {
           <FeedSkeleton />
         ) : annotations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>
-            <p style={{ fontSize: '14px', marginBottom: '6px' }}>No annotations yet</p>
-            <p style={{ fontSize: '12px', color: '#444' }}>Start annotating the web with the Scholic extension!</p>
+            {tab === 'following' ? (
+              <>
+                <p style={{ fontSize: '14px', marginBottom: '6px' }}>Your feed is empty</p>
+                <p style={{ fontSize: '12px', color: '#444' }}>Follow other scholars to see their annotations here</p>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: '14px', marginBottom: '6px' }}>No annotations yet</p>
+                <p style={{ fontSize: '12px', color: '#444' }}>Start annotating the web with the Scholic extension!</p>
+              </>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -253,6 +317,10 @@ const Feed: React.FC = () => {
                 fetchMoreComments={fetchMoreComments}
                 fetchingComments={fetchingComments}
                 currentUser={user as AnnotationUser | null}
+                onDeleteAnnotation={deleteAnnotation}
+                onEditAnnotation={editAnnotation}
+                onDeleteComment={deleteComment}
+                onEditComment={editComment}
               />
             ))}
 

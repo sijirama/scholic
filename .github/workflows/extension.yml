@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'extension/**'
+    tags:
+      - 'v*'
   pull_request:
     paths:
       - 'extension/**'
