@@ -244,7 +244,7 @@ const Feed: React.FC = () => {
     <div style={{ ...bodyFont, minHeight: '100vh', background: '#121212', color: '#fff' }}>
       <Navbar />
 
-      <div style={{ maxWidth: '640px', padding: '32px 20px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>

@@ -10,6 +10,7 @@ import Feed from './pages/Feed';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import AnnotationPage from './pages/AnnotationPage';
+import SitePage from './pages/SitePage';
 import { Toaster } from 'sonner';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
             <Route path="auth/extension-login" element={<ExtensionLogin />} />
             <Route path="u/:username" element={<Profile />} />
             <Route path="annotation/:id" element={<AnnotationPage />} />
+            <Route path="page" element={<SitePage />} />
             <Route path="onboarding" element={
               <ProtectedRoute>
                 <Onboarding />

@@ -21,7 +21,7 @@ interface ProfileUser extends BaseUser {
 }
 
 const ProfileSkeleton: React.FC = () => (
-  <div style={{ maxWidth: '640px', padding: '32px 20px', margin: '0 auto' }}>
+  <div style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
     <div style={{ display: 'flex', alignItems: 'start', gap: '16px', marginBottom: '32px' }}>
       <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} className="pulse" />
       <div style={{ flex: 1, marginTop: '8px' }}>
@@ -303,7 +303,7 @@ const Profile: React.FC = () => {
     <div className="min-h-screen w-full" style={{ ...bodyFont, background: '#121212', color: '#fff' }}>
       <Navbar />
 
-      <div className="mx-auto" style={{ maxWidth: '640px', padding: '32px 20px', margin: '0 auto' }}>
+      <div className="mx-auto" style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
         {/* Back and Settings */}
         <div className="flex justify-between items-center" style={{ marginBottom: '24px' }}>
           <button

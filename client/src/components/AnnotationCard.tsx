@@ -34,9 +34,19 @@ export interface Comment {
   createdAt: string;
 }
 
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex && hex.startsWith('#') && hex.length === 7 ? hex : '#A8D5B5';
+  const r = parseInt(h.slice(1, 3), 16);
+  const g = parseInt(h.slice(3, 5), 16);
+  const b = parseInt(h.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export interface Annotation {
   id: number;
   url: string;
+  selectors?: string;
+  highlightColor?: string;
   quoteText?: string;
   text?: string;
   type?: string;
@@ -313,17 +323,26 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
               />
             </div>
           ) : annotation.quoteText && (
-            <div style={{
-              borderLeft: '2px solid rgba(110,183,129,0.5)',
-              paddingLeft: '12px',
+            <p style={{
               margin: '0 0 10px 0',
               fontSize: '13px',
-              color: '#bbb',
-              lineHeight: 1.65,
+              color: '#ddd',
+              lineHeight: 1.7,
               fontStyle: 'italic',
+              display: '-webkit-box',
+              WebkitLineClamp: 5,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
             }}>
-              {annotation.quoteText}
-            </div>
+              <mark style={{
+                background: hexToRgba(annotation.highlightColor || '#A8D5B5', 0.2),
+                color: 'inherit',
+                borderRadius: '2px',
+                padding: '1px 0',
+              }}>
+                {annotation.quoteText}
+              </mark>
+            </p>
           )}
 
           {editingAnnotation ? (
@@ -393,52 +412,73 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
           ) : null}
 
           {/* Link Card */}
-          <a href={annotation.url} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit', margin: '0 0 16px 0' }}>
-              <div style={{
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-                background: 'rgba(255,255,255,0.02)',
-                transition: 'background 0.2s',
-              }} className="hover:bg-white/5">
-                {annotation.linkImage && (
-                  <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
-                )}
-                <div style={{ padding: '12px 14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                    {annotation.linkFavicon && <img src={annotation.linkFavicon} style={{ width: '14px', height: '14px', borderRadius: '2px' }} alt="" />}
-                    <span style={{ fontSize: '12px', color: '#888', fontWeight: 500 }}>{annotation.linkDomain || new URL(annotation.url).hostname.replace('www.', '')}</span>
-                  </div>
-                  <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 4px 0', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{annotation.linkTitle || annotation.url}</h3>
-                  {annotation.linkDescription && (
-                    <p style={{ fontSize: '12px', color: '#888', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{annotation.linkDescription}</p>
-                  )}
-                </div>
+          <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)', margin: '0 0 16px 0' }}>
+            {annotation.linkImage && (
+              <a href={annotation.url} target="_blank" rel="noreferrer">
+                <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
+              </a>
+            )}
+            <div style={{ padding: '12px 14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                {annotation.linkFavicon && <img src={annotation.linkFavicon} style={{ width: '14px', height: '14px', borderRadius: '2px' }} alt="" />}
+                <a
+                  href={`/page?url=${encodeURIComponent(annotation.url)}`}
+                  style={{ fontSize: '12px', color: '#888', fontWeight: 500, textDecoration: 'none' }}
+                  className="hover:underline"
+                >
+                  {annotation.linkDomain || (() => { try { return new URL(annotation.url).hostname.replace('www.', ''); } catch { return annotation.url; } })()}
+                </a>
               </div>
-            </a>
+              <a href={annotation.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }} className="hover:bg-white/5">
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 4px 0', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{annotation.linkTitle || annotation.url}</h3>
+                {annotation.linkDescription && (
+                  <p style={{ fontSize: '12px', color: '#888', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{annotation.linkDescription}</p>
+                )}
+              </a>
+            </div>
+          </div>
 
-          {/* Comment toggle */}
-          <button
-            onClick={() => toggleComments(annotation.id)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: openComments[annotation.id] ? '#6EB781' : '#555',
-              fontSize: '13px',
-              padding: '0',
-              transition: 'color 0.15s',
-              fontFamily: 'inherit',
-            }}
-          >
-            <MessageCircle style={{ width: 15, height: 15 }} />
-            <span>{annotation.commentCount || 0}</span>
-          </button>
+          {/* Bottom bar: comment toggle + navigation links */}
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button
+              onClick={() => toggleComments(annotation.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: openComments[annotation.id] ? '#6EB781' : '#555',
+                fontSize: '13px',
+                padding: '0',
+                transition: 'color 0.15s',
+                fontFamily: 'inherit',
+              }}
+            >
+              <MessageCircle style={{ width: 15, height: 15 }} />
+              <span>{annotation.commentCount || 0}</span>
+            </button>
+
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <a
+                href={`/annotation/${annotation.id}`}
+                style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#444'; }}
+              >
+                view annotation →
+              </a>
+              <a
+                href={`/page?url=${encodeURIComponent(annotation.url)}`}
+                style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#444'; }}
+              >
+                all on {(() => { try { return annotation.linkDomain || new URL(annotation.url).hostname.replace('www.', ''); } catch { return 'site'; } })()} →
+              </a>
+            </div>
+          </div>
 
           {/* Comments section */}
           <AnimatePresence initial={false}>

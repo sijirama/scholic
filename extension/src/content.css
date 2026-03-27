@@ -3,25 +3,32 @@
  *
  * These styles are injected into every webpage via the manifest.json content_scripts.
  * The <scholic-highlight> custom element name avoids conflicts with page styles.
+ *
+ * Highlight colors are driven by CSS custom properties (--sr, --sg, --sb) set
+ * inline on each element, so users can have per-annotation colors.
  */
 
 /* ── Base highlight element ── */
 scholic-highlight {
+  /* Default RGB components (pastel sage green = #A8D5B5 → 168, 213, 181) */
+  --sr: 168;
+  --sg: 213;
+  --sb: 181;
   border-radius: 2px;
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
 
-/* ── Public annotation highlight (green) ── */
+/* ── Public annotation highlight — uses per-element CSS vars ── */
 scholic-highlight.scholic-annotation {
-  background-color: rgba(110, 183, 129, 0.25);
-  border-bottom: 2px solid rgba(110, 183, 129, 0.6);
+  background-color: rgba(var(--sr), var(--sg), var(--sb), 0.25);
+  border-bottom: 2px solid rgba(var(--sr), var(--sg), var(--sb), 0.6);
 }
 scholic-highlight.scholic-annotation:hover {
-  background-color: rgba(110, 183, 129, 0.45);
+  background-color: rgba(var(--sr), var(--sg), var(--sb), 0.45);
 }
 
-/* ── Private highlight (yellow, for your eyes only) ── */
+/* ── Private highlight (fixed amber — not user-customisable) ── */
 scholic-highlight.scholic-private {
   background-color: rgba(232, 197, 71, 0.2);
   border-bottom: 2px solid rgba(232, 197, 71, 0.5);
@@ -32,8 +39,8 @@ scholic-highlight.scholic-private:hover {
 
 /* ── Pending annotation (while user is writing a note) ── */
 scholic-highlight.scholic-annotation-pending {
-  background-color: rgba(110, 183, 129, 0.15);
-  border-bottom: 2px dashed rgba(110, 183, 129, 0.4);
+  background-color: rgba(var(--sr), var(--sg), var(--sb), 0.15);
+  border-bottom: 2px dashed rgba(var(--sr), var(--sg), var(--sb), 0.4);
 }
 
 /* ── Focused highlight (when user clicks an annotation in the sidebar) ── */
@@ -42,9 +49,9 @@ scholic-highlight.scholic-highlight-focused {
 }
 
 @keyframes scholic-pulse {
-  0%   { background-color: rgba(110, 183, 129, 0.6); }
-  50%  { background-color: rgba(110, 183, 129, 0.3); }
-  100% { background-color: rgba(110, 183, 129, 0.25); }
+  0%   { background-color: rgba(var(--sr), var(--sg), var(--sb), 0.6); }
+  50%  { background-color: rgba(var(--sr), var(--sg), var(--sb), 0.3); }
+  100% { background-color: rgba(var(--sr), var(--sg), var(--sb), 0.25); }
 }
 
 /* ── Hidden highlight (on tab filtering) ── */

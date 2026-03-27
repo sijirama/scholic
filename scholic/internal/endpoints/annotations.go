@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"scholic/internal/database"
 	"scholic/internal/models"
@@ -18,15 +19,16 @@ import (
 
 // CreateAnnotationRequest is the JSON body for creating a new annotation.
 type CreateAnnotationRequest struct {
-	URL       string `json:"url" binding:"required"`
-	Selectors string `json:"selectors" binding:"required"`
-	Text      string `json:"text"`
-	QuoteText string `json:"quoteText"`
-	IsPrivate bool   `json:"isPrivate"`
-	Type      string `json:"type"`      // text, image, html, etc.
-	Image     string `json:"image"`     // base64 encoded image data (for type="image")
-	PDFHash   string `json:"pdfHash"`   // Digital fingerprint of the PDF
-	PDFPage   int    `json:"pdfPage"`   // Page number within the PDF
+	URL            string `json:"url" binding:"required"`
+	Selectors      string `json:"selectors" binding:"required"`
+	Text           string `json:"text"`
+	QuoteText      string `json:"quoteText"`
+	IsPrivate      bool   `json:"isPrivate"`
+	Type           string `json:"type"`           // text, image, html, etc.
+	Image          string `json:"image"`          // base64 encoded image data (for type="image")
+	PDFHash        string `json:"pdfHash"`        // Digital fingerprint of the PDF
+	PDFPage        int    `json:"pdfPage"`        // Page number within the PDF
+	HighlightColor string `json:"highlightColor"` // User-chosen pastel highlight color (hex)
 }
 
 // CreateAnnotation handles POST /api/annotations
@@ -90,6 +92,11 @@ func CreateAnnotation(c *gin.Context) {
 		}
 	}
 
+	highlightColor := req.HighlightColor
+	if highlightColor == "" {
+		highlightColor = "#A8D5B5"
+	}
+
 	annotation := models.Annotation{
 		UserID:          userID.(uint),
 		URL:             req.URL,
@@ -106,6 +113,7 @@ func CreateAnnotation(c *gin.Context) {
 		LinkImage:       linkImage,
 		LinkFavicon:     linkFavicon,
 		LinkDomain:      linkDomain,
+		HighlightColor:  highlightColor,
 	}
 
 	if err := database.DB.Create(&annotation).Error; err != nil {
@@ -342,5 +350,90 @@ func GetFeed(c *gin.Context) {
 		"total":       total,
 		"limit":       limit,
 		"offset":      offset,
+	})
+}
+
+// GetSitePage handles GET /api/site?url=...&author=...&timeRange=...
+//
+// Returns all public annotations for a given URL with optional author and
+// time range filters. Also returns the list of all annotators on that URL
+// so the frontend can build the author filter dropdown.
+func GetSitePage(c *gin.Context) {
+	urlStr := c.Query("url")
+	if urlStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url query parameter is required"})
+		return
+	}
+
+	authors := c.QueryArray("author") // ?author=user1&author=user2
+	timeRange := c.DefaultQuery("timeRange", "all")
+
+	userID, exists := c.Get("userID")
+
+	// Step 1: get all unique annotators on this URL for the filter UI
+	var allForURL []models.Annotation
+	database.DB.Model(&models.Annotation{}).Preload("User").
+		Where("url = ? AND is_private = ?", urlStr, false).
+		Find(&allForURL)
+
+	seen := map[string]bool{}
+	var authorList []string
+	for _, a := range allForURL {
+		if a.User.Username != "" && !seen[a.User.Username] {
+			seen[a.User.Username] = true
+			authorList = append(authorList, a.User.Username)
+		}
+	}
+	if authorList == nil {
+		authorList = []string{}
+	}
+
+	// Step 2: build filtered query
+	query := database.DB.Model(&models.Annotation{}).Preload("User").Where("annotations.url = ?", urlStr)
+
+	if exists {
+		query = query.Where("(annotations.user_id = ? OR annotations.is_private = ?)", userID, false)
+	} else {
+		query = query.Where("annotations.is_private = ?", false)
+	}
+
+	if len(authors) > 0 {
+		var authorIDs []uint
+		database.DB.Model(&models.User{}).Where("username IN ?", authors).Pluck("id", &authorIDs)
+		if len(authorIDs) == 0 {
+			c.JSON(http.StatusOK, gin.H{"annotations": []models.Annotation{}, "authors": authorList, "total": 0})
+			return
+		}
+		query = query.Where("annotations.user_id IN ?", authorIDs)
+	}
+
+	now := time.Now()
+	switch timeRange {
+	case "today":
+		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		query = query.Where("annotations.created_at >= ?", start)
+	case "week":
+		query = query.Where("annotations.created_at >= ?", now.AddDate(0, 0, -7))
+	case "month":
+		query = query.Where("annotations.created_at >= ?", now.AddDate(0, -1, 0))
+	}
+
+	var annotations []models.Annotation
+	query.Order("annotations.created_at ASC").Find(&annotations)
+
+	// Batch comment counts
+	annotationIDs := make([]uint, len(annotations))
+	for i, a := range annotations {
+		annotationIDs[i] = a.ID
+	}
+	commentCounts := batchCommentCounts(annotationIDs)
+	for i := range annotations {
+		annotations[i].CommentCount = commentCounts[annotations[i].ID]
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"annotations": annotations,
+		"authors":     authorList,
+		"total":       len(annotations),
 	})
 }

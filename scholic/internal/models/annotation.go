@@ -60,6 +60,9 @@ type Annotation struct {
 	LinkImage       string `json:"linkImage"`
 	LinkFavicon     string `json:"linkFavicon"`
 	LinkDomain      string `json:"linkDomain"`
+	// HighlightColor is the user-chosen pastel color for the highlight (hex, e.g. "#A8D5B5")
+	HighlightColor string `gorm:"default:'#A8D5B5'" json:"highlightColor"`
+
 	// CommentCount is a virtual field showing the total number of comments
 	CommentCount int64 `gorm:"-" json:"commentCount"`
 }

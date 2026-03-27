@@ -52,6 +52,27 @@ let syncInterval: ReturnType<typeof setInterval> | null = null;
 let syncAttemptsLeft = 0;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Apply a hex highlight color to a set of highlight elements via CSS custom
+ * properties. The content.css uses var(--sr), var(--sg), var(--sb) so hover
+ * states also pick up the right color automatically.
+ */
+function applyHighlightColor(elements: HTMLElement[], hex: string): void {
+  const color = hex && hex.startsWith('#') && hex.length === 7 ? hex : '#A8D5B5';
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  elements.forEach(el => {
+    el.style.setProperty('--sr', String(r));
+    el.style.setProperty('--sg', String(g));
+    el.style.setProperty('--sb', String(b));
+  });
+}
+
 // Initialize Components
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -496,6 +517,7 @@ async function handleSaveAnnotation(annotation: AnnotationData): Promise<void> {
         // Upgrade existing highlight elements in-place with the real annotation ID
         // and correct CSS class. This avoids re-anchoring which can fail when
         // the DOM was already modified by the initial highlight.
+        applyHighlightColor(pendingHighlightElements, savedAnnotation.highlightColor || '#A8D5B5');
         pendingHighlightElements.forEach((el) => {
           el.className = `scholic-highlight ${cssClass}`;
           (el as any)._scholicAnnotationId = annotationId;
@@ -534,8 +556,8 @@ async function handleDeleteAnnotation(annotationId: string): Promise<void> {
       data: { id: annotationId },
     });
 
-    // Remove from local state
-    pageAnnotations = pageAnnotations.filter((a) => a.id !== annotationId);
+    // Remove from local state (ids may be number or string, compare loosely)
+    pageAnnotations = pageAnnotations.filter((a) => String(a.id) !== String(annotationId));
     await sidebar.renderAnnotationList(pageAnnotations);
 
     // Remove highlights from the DOM
@@ -758,6 +780,10 @@ async function resolveAndRenderAnnotations(annotations: AnnotationData[]): Promi
       if (highlights.length === 0) {
         console.warn(`[Scholic] Anchored ${annotationId} but highlightRange returned 0 elements`);
         continue;
+      }
+
+      if (!annotation.isPrivate) {
+        applyHighlightColor(highlights, (annotation as any).highlightColor || '#A8D5B5');
       }
 
       highlightMap.set(annotationId, highlights);

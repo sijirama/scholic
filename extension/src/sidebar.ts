@@ -31,7 +31,17 @@ export interface AnnotationData {
   type?: 'text' | 'image' | 'html' | 'pdf';
   imageUrl?: string;
   image?: string; // base64 data for creation
+  highlightColor?: string; // user-chosen pastel hex color
 }
+
+const HIGHLIGHT_COLORS = [
+  { name: 'Sage',     hex: '#A8D5B5' },
+  { name: 'Butter',  hex: '#F5E4A0' },
+  { name: 'Sky',     hex: '#A3C4F3' },
+  { name: 'Lilac',   hex: '#C5A8D5' },
+  { name: 'Peach',   hex: '#F5C4A3' },
+  { name: 'Rose',    hex: '#F5A8C0' },
+];
 
 /** Callbacks the sidebar uses to communicate with the content script */
 export interface SidebarCallbacks {
@@ -652,6 +662,28 @@ export class Sidebar {
       }
       .note-input::placeholder { color: #555; }
 
+      /* Color swatches */
+      .color-swatches {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .color-swatch {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+        padding: 0;
+        transition: transform 0.15s, border-color 0.15s;
+        flex-shrink: 0;
+      }
+      .color-swatch:hover { transform: scale(1.18); }
+      .color-swatch.active {
+        border-color: rgba(255,255,255,0.8);
+        transform: scale(1.12);
+      }
+
       /* Privacy toggle */
       .privacy-toggle {
         display: flex;
@@ -784,11 +816,20 @@ export class Sidebar {
 
       .annotation-quote {
         font-size: 12px;
-        color: #888;
-        line-height: 1.5;
+        color: #ccc;
+        line-height: 1.6;
         margin-bottom: 6px;
-        border-left: 2px solid #6EB781;
-        padding-left: 10px;
+        font-style: italic;
+        display: -webkit-box;
+        -webkit-line-clamp: 5;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .annotation-quote mark {
+        background: inherit;
+        color: inherit;
+        border-radius: 2px;
+        padding: 1px 0;
       }
 
       .annotation-note {
@@ -831,7 +872,7 @@ export class Sidebar {
         color: #e8c547;
       }
 
-      .annotation-delete {
+      .annotation-delete, .annotation-view {
         background: none;
         border: none;
         color: #444;
@@ -845,6 +886,15 @@ export class Sidebar {
       .annotation-delete:hover {
         color: #ff5f57;
         background: rgba(255,95,87,0.1);
+      }
+      .annotation-view:hover {
+        color: #6EB781;
+        background: rgba(110,183,129,0.1);
+      }
+      .annotation-item-actions {
+        display: flex;
+        align-items: center;
+        gap: 2px;
       }
 
       .annotation-comments {
@@ -1008,6 +1058,7 @@ export class Sidebar {
     container.innerHTML = '';
 
     let isPrivate = false;
+    let selectedColor = HIGHLIGHT_COLORS[0].hex;
 
     const form = document.createElement('div');
     form.className = 'annotation-form';
@@ -1027,10 +1078,20 @@ export class Sidebar {
       `;
     }
 
+    const swatchesHtml = `
+      <div class="form-label">Highlight Color</div>
+      <div class="color-swatches">
+        ${HIGHLIGHT_COLORS.map((c, i) => `
+          <button class="color-swatch${i === 0 ? ' active' : ''}" data-color="${c.hex}" style="background:${c.hex}" title="${c.name}"></button>
+        `).join('')}
+      </div>
+    `;
+
     form.innerHTML = `
       ${previewHtml}
       <div class="form-label">Your Note</div>
       <textarea class="note-input" placeholder="Add your thoughts..."></textarea>
+      ${type === 'text' ? swatchesHtml : ''}
       <div class="privacy-toggle">
         <div class="toggle-switch" id="privacy-switch">
           <div class="toggle-knob"></div>
@@ -1064,6 +1125,15 @@ export class Sidebar {
         : `${ICONS.globe}<span>Public</span>`;
     });
 
+    // Color swatch selection
+    form.querySelectorAll('.color-swatch').forEach(btn => {
+      btn.addEventListener('click', () => {
+        form.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedColor = (btn as HTMLElement).dataset.color || HIGHLIGHT_COLORS[0].hex;
+      });
+    });
+
     // Cancel button
     form.querySelector('.cancel-btn')?.addEventListener('click', () => {
       form.remove();
@@ -1082,6 +1152,7 @@ export class Sidebar {
         isPrivate,
         type: type,
         image: type === 'image' ? imageData : undefined,
+        highlightColor: selectedColor,
       } as any);
       form.remove();
       this.pendingQuoteText = '';
@@ -1185,7 +1256,10 @@ export class Sidebar {
           item.innerHTML = `
             <div class="annotation-item-header">
               ${privacyBadge}
-              ${annotation.id && String(annotation.userId) === String(myUserId) ? `<button class="annotation-delete" data-id="${annotation.id}">${ICONS.trash}</button>` : ''}
+              <div class="annotation-item-actions">
+                ${annotation.id ? `<a href="${CONFIG.WEB_URL}/annotation/${annotation.id}" target="_blank" class="annotation-view" title="View annotation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
+                ${annotation.id && String(annotation.userId) === String(myUserId) ? `<button class="annotation-delete" data-id="${annotation.id}" title="Delete annotation">${ICONS.trash}</button>` : ''}
+              </div>
             </div>
             <div class="annotation-author-row">
               <div class="annotation-author-avatar">${avatarHtml}</div>
@@ -1197,7 +1271,7 @@ export class Sidebar {
               <div class="annotation-image" style="margin-bottom: 8px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
                 <img src="${annotation.imageUrl}" style="width: 100%; display: block;" />
               </div>
-            ` : `<div class="annotation-quote">${this.escapeHtml(annotation.quoteText)}</div>`}
+            ` : `<div class="annotation-quote"><mark style="background:${this.hexToRgba(annotation.highlightColor || '#A8D5B5', 0.12)}">${this.escapeHtml(annotation.quoteText)}</mark></div>`}
             ${annotation.id ? `
               <div class="annotation-note" data-id="${annotation.id}">
                 ${(() => {
@@ -1284,7 +1358,7 @@ export class Sidebar {
 
           // Click to focus the highlight in the page
           item.addEventListener('click', (e) => {
-            if ((e.target as HTMLElement).closest('.annotation-delete')) {
+            if ((e.target as HTMLElement).closest('.annotation-delete') || (e.target as HTMLElement).closest('.annotation-view')) {
               return;
             }
             if (annotation.id) {
@@ -1311,7 +1385,7 @@ export class Sidebar {
           deleteBtn?.addEventListener('click', (e) => {
             e.stopPropagation();
             const id = (e.currentTarget as HTMLElement).dataset.id;
-            if (id) {
+            if (id && confirm('Delete this annotation? This cannot be undone.')) {
               this.callbacks.onDelete(id);
             }
           });
@@ -1373,6 +1447,14 @@ export class Sidebar {
     } else {
       this.panel.appendChild(container); // Fallback
     }
+  }
+
+  private hexToRgba(hex: string, alpha: number): string {
+    const h = hex && hex.startsWith('#') && hex.length === 7 ? hex : '#A8D5B5';
+    const r = parseInt(h.slice(1, 3), 16);
+    const g = parseInt(h.slice(3, 5), 16);
+    const b = parseInt(h.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   /** Simple HTML escaping to prevent XSS in displayed text */
