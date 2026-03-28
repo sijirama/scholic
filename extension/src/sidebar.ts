@@ -32,6 +32,7 @@ export interface AnnotationData {
   imageUrl?: string;
   image?: string; // base64 data for creation
   highlightColor?: string; // user-chosen pastel hex color
+  _isPending?: boolean; // optimistic: not yet saved to backend
 }
 
 const HIGHLIGHT_COLORS = [
@@ -65,6 +66,8 @@ export interface SidebarCallbacks {
   onRefresh: () => void;
   /** Active tab changed */
   onTabChange: (tab: 'mine' | 'community' | 'all') => void;
+  /** Load next page of annotations */
+  onLoadMore?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,14 +177,6 @@ export class Sidebar {
 
     document.body.appendChild(this.host);
 
-    // Initial check for authentication to set default tab
-    chrome.storage.local.get('scholicToken').then((result) => {
-      this.isAuthenticated = !!result.scholicToken;
-      if (!this.isAuthenticated) {
-        this.activeTab = 'all';
-      }
-    });
-
     // Listen for storage changes (e.g., login sync) to re-render the sidebar
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === 'local' && changes.scholicToken) {
@@ -195,13 +190,20 @@ export class Sidebar {
     });
   }
 
-  /** Fetch current user data from the backend */
+  /** Fetch current user data from the backend.
+   * Also sets isAuthenticated so that the first renderAnnotationList call
+   * has the correct auth state (avoids the race where the sidebar banner
+   * shows "Sign in" while private annotations are already displayed). */
   private async fetchUserData(): Promise<void> {
     const result = await chrome.storage.local.get('scholicToken');
     const token = result.scholicToken;
+    // Set auth state synchronously relative to this storage read
+    this.isAuthenticated = !!token;
     if (!token) {
       this.userData = null;
-      // Don't call renderAnnotationList here — content.ts handles it
+      if (this.activeTab !== 'all') {
+        this.activeTab = 'all';
+      }
       return;
     }
 
@@ -782,6 +784,38 @@ export class Sidebar {
       .annotation-item:hover {
         background: rgba(255,255,255,0.03);
       }
+      .annotation-item.pending {
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .annotation-item.pending::after {
+        content: 'Saving…';
+        display: block;
+        font-size: 10px;
+        color: #6EB781;
+        margin-top: 4px;
+      }
+
+      .load-more-btn {
+        display: block;
+        width: calc(100% - 40px);
+        margin: 12px 20px 16px;
+        padding: 9px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        color: #888;
+        font-size: 12px;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        text-align: center;
+      }
+      .load-more-btn:hover {
+        background: rgba(255,255,255,0.07);
+        color: #ccc;
+      }
 
       .annotation-item-header {
         display: flex;
@@ -1172,7 +1206,7 @@ export class Sidebar {
    * Render the list of existing annotations in the sidebar.
    * Guarded against concurrent/duplicate renders.
    */
-  async renderAnnotationList(annotations: AnnotationData[]): Promise<void> {
+  async renderAnnotationList(annotations: AnnotationData[], hasMore = false): Promise<void> {
     // Guard against duplicate renders
     if (this.isRendering) return;
     this.isRendering = true;
@@ -1227,7 +1261,12 @@ export class Sidebar {
       // Filter based on tabs
       const myUserId = this.userData?.id;
 
-      let displayAnnotations = annotations; // Use the passed annotations parameter
+      // Defensive: never show private annotations to unauthenticated users,
+      // even if they somehow ended up in the list (e.g. from cached state).
+      let displayAnnotations = this.isAuthenticated
+        ? annotations
+        : annotations.filter((a) => !a.isPrivate);
+
       if (this.activeTab === 'mine') {
         displayAnnotations = displayAnnotations.filter((a) => String(a.userId) === String(myUserId));
       } else if (this.activeTab === 'community') {
@@ -1251,7 +1290,7 @@ export class Sidebar {
       } else {
         displayAnnotations.forEach((annotation) => {
           const item = document.createElement('div');
-          item.className = 'annotation-item';
+          item.className = annotation._isPending ? 'annotation-item pending' : 'annotation-item';
 
           const privacyBadge = annotation.isPrivate
             ? `<span class="meta-badge private">${ICONS.lock} Only you</span>`
@@ -1423,8 +1462,17 @@ export class Sidebar {
         });
       }
 
-      // The list is already appended to listContainer
-      
+      // Load more button
+      if (hasMore && this.callbacks.onLoadMore) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'load-more-btn';
+        loadMoreBtn.textContent = 'Load more';
+        loadMoreBtn.addEventListener('click', () => {
+          this.callbacks.onLoadMore?.();
+        });
+        listContainer.appendChild(loadMoreBtn);
+      }
+
       // Automatically scroll to the top to see new/optimistic updates
       const contentLayer = this.panel.querySelector('.sidebar-content');
       if (contentLayer) contentLayer.scrollTop = 0;

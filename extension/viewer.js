@@ -29477,12 +29477,6 @@
           this.panel.style.position = "fixed";
           this.panel.style.alignItems = "stretch";
           document.body.appendChild(this.host);
-          chrome.storage.local.get("scholicToken").then((result) => {
-            this.isAuthenticated = !!result.scholicToken;
-            if (!this.isAuthenticated) {
-              this.activeTab = "all";
-            }
-          });
           chrome.storage.onChanged.addListener((changes, area) => {
             if (area === "local" && changes.scholicToken) {
               console.log("[Scholic] Token changed, refreshing sidebar data...");
@@ -29494,12 +29488,19 @@
             }
           });
         }
-        /** Fetch current user data from the backend */
+        /** Fetch current user data from the backend.
+         * Also sets isAuthenticated so that the first renderAnnotationList call
+         * has the correct auth state (avoids the race where the sidebar banner
+         * shows "Sign in" while private annotations are already displayed). */
         async fetchUserData() {
           const result = await chrome.storage.local.get("scholicToken");
           const token = result.scholicToken;
+          this.isAuthenticated = !!token;
           if (!token) {
             this.userData = null;
+            if (this.activeTab !== "all") {
+              this.activeTab = "all";
+            }
             return;
           }
           try {
@@ -30047,6 +30048,38 @@
       .annotation-item:hover {
         background: rgba(255,255,255,0.03);
       }
+      .annotation-item.pending {
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .annotation-item.pending::after {
+        content: 'Saving\u2026';
+        display: block;
+        font-size: 10px;
+        color: #6EB781;
+        margin-top: 4px;
+      }
+
+      .load-more-btn {
+        display: block;
+        width: calc(100% - 40px);
+        margin: 12px 20px 16px;
+        padding: 9px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        color: #888;
+        font-size: 12px;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        text-align: center;
+      }
+      .load-more-btn:hover {
+        background: rgba(255,255,255,0.07);
+        color: #ccc;
+      }
 
       .annotation-item-header {
         display: flex;
@@ -30406,7 +30439,7 @@
          * Render the list of existing annotations in the sidebar.
          * Guarded against concurrent/duplicate renders.
          */
-        async renderAnnotationList(annotations) {
+        async renderAnnotationList(annotations, hasMore = false) {
           if (this.isRendering) return;
           this.isRendering = true;
           try {
@@ -30446,7 +30479,7 @@
             list.className = "annotation-list-inner";
             listContainer.appendChild(list);
             const myUserId = this.userData?.id;
-            let displayAnnotations = annotations;
+            let displayAnnotations = this.isAuthenticated ? annotations : annotations.filter((a) => !a.isPrivate);
             if (this.activeTab === "mine") {
               displayAnnotations = displayAnnotations.filter((a) => String(a.userId) === String(myUserId));
             } else if (this.activeTab === "community") {
@@ -30464,7 +30497,7 @@
             } else {
               displayAnnotations.forEach((annotation) => {
                 const item = document.createElement("div");
-                item.className = "annotation-item";
+                item.className = annotation._isPending ? "annotation-item pending" : "annotation-item";
                 const privacyBadge = annotation.isPrivate ? `<span class="meta-badge private">${ICONS.lock} Only you</span>` : `<span class="meta-badge public">${ICONS.globe} Public</span>`;
                 const timeStr = annotation.createdAt ? timeAgo(annotation.createdAt) : "";
                 const authorName = annotation.user?.username || annotation.user?.email?.split("@")[0] || "Unknown";
@@ -30608,6 +30641,15 @@
                 replyInput?.addEventListener("click", (e) => e.stopPropagation());
                 list.appendChild(item);
               });
+            }
+            if (hasMore && this.callbacks.onLoadMore) {
+              const loadMoreBtn = document.createElement("button");
+              loadMoreBtn.className = "load-more-btn";
+              loadMoreBtn.textContent = "Load more";
+              loadMoreBtn.addEventListener("click", () => {
+                this.callbacks.onLoadMore?.();
+              });
+              listContainer.appendChild(loadMoreBtn);
             }
             const contentLayer = this.panel.querySelector(".sidebar-content");
             if (contentLayer) contentLayer.scrollTop = 0;
@@ -31797,6 +31839,7 @@
   var init_highlight_popup = __esm({
     "src/highlight-popup.ts"() {
       "use strict";
+      init_config();
       HighlightPopup = class {
         host = null;
         shadow = null;
@@ -31832,6 +31875,7 @@
           const avatarHtml = annotation.user?.profilePicture ? `<img src="${annotation.user.profilePicture}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />` : this.escapeHtml(initial);
           const noteText = annotation.text || "";
           const commentCount = annotation.comments?.length || 0;
+          const extLinkSvg = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
           const msgSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
           const sendSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
           const commentsItemsHtml = (annotation.comments || []).map((c) => {
@@ -31850,12 +31894,15 @@
           popup.className = "scholic-popup";
           popup.innerHTML = `
       <div class="popup-header">
-        <div class="popup-avatar">${avatarHtml}</div>
-        <div class="popup-author-info">
+        <a href="${CONFIG.WEB_URL}/u/${this.escapeAttr(authorName)}" target="_blank" class="popup-author-link">
+          <div class="popup-avatar">${avatarHtml}</div>
           <span class="popup-author">@${this.escapeHtml(authorName)}</span>
+        </a>
+        <div class="popup-header-right">
           <span class="popup-badge ${annotation.isPrivate ? "badge-private" : "badge-public"}">
             ${annotation.isPrivate ? "Private" : "Public"}
           </span>
+          ${annotation.id ? `<a href="${CONFIG.WEB_URL}/annotation/${annotation.id}" target="_blank" class="popup-view-link" title="View annotation">${extLinkSvg}</a>` : ""}
         </div>
       </div>
 
@@ -32019,6 +32066,9 @@
           div.textContent = text;
           return div.innerHTML;
         }
+        escapeAttr(value) {
+          return (value || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
         getStyles() {
           return `
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32050,6 +32100,32 @@
         padding: 13px 14px 10px;
       }
 
+      .popup-author-link {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        min-width: 0;
+        flex: 1;
+      }
+      .popup-author-link:hover .popup-author { color: #6EB781; }
+
+      .popup-header-right {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-shrink: 0;
+      }
+
+      .popup-view-link {
+        display: flex;
+        align-items: center;
+        color: #555;
+        text-decoration: none;
+        transition: color 0.15s;
+      }
+      .popup-view-link:hover { color: #6EB781; }
+
       .popup-avatar {
         width: 26px;
         height: 26px;
@@ -32065,13 +32141,6 @@
         overflow: hidden;
       }
 
-      .popup-author-info {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        min-width: 0;
-      }
-
       .popup-author {
         font-size: 12px;
         font-weight: 600;
@@ -32079,6 +32148,7 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        transition: color 0.15s;
       }
 
       .popup-badge {
@@ -32490,6 +32560,11 @@
           this.pdfLinkService.setViewer(this.pdfViewer);
           this.init();
           this.setupListeners();
+          chrome.storage.onChanged.addListener((changes, area) => {
+            if (area === "local" && "scholicToken" in changes) {
+              this.loadAnnotations();
+            }
+          });
         }
         async init() {
           const params = new URLSearchParams(window.location.search);
@@ -32586,7 +32661,13 @@
           if (response?.annotations) {
             this.annotations = response.annotations;
             this.sidebar.renderAnnotationList(this.annotations);
-            this.pdfViewer.update();
+            const numPages = this.pdfViewer.pagesCount || 0;
+            for (let i = 1; i <= numPages; i++) {
+              const pageView = this.pdfViewer.getPageView(i - 1);
+              if (pageView?.div) {
+                await this.restoreHighlightsForPage(i);
+              }
+            }
           }
         }
         bindPopupEvents(annotationId) {
@@ -32611,15 +32692,15 @@
           }
           for (const ann of this.annotations) {
             if (ann.type === "image") continue;
+            if (ann.pdfPage && ann.pdfPage !== pageNum) continue;
             if (this.restoreVersions.get(pageNum) !== version3) return;
             try {
               const range = await anchor(document.getElementById("viewer"), ann.selectors);
               if (this.restoreVersions.get(pageNum) !== version3) return;
               const cssClass = ann.isPrivate ? "scholic-private" : "scholic-annotation";
               const highlights = highlightRange(range, `scholic-highlight ${cssClass}`, ann.id);
-              if (!ann.isPrivate) {
-                applyHighlightColor(highlights, ann.highlightColor || "#A8D5B5");
-              }
+              const defaultColor = ann.isPrivate ? "#E8C547" : "#A8D5B5";
+              applyHighlightColor(highlights, ann.highlightColor || defaultColor);
               const isMine = String(ann.userId) === String(this.myUserId);
               let shouldHide = false;
               if (this.currentTab === "mine") {

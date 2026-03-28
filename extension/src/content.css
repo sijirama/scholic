@@ -30,13 +30,13 @@ scholic-highlight.scholic-annotation:hover {
   background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.15));
 }
 
-/* ── Private highlight (fixed amber — not user-customisable) ── */
+/* ── Private highlight — uses same CSS vars as public (amber default via JS) ── */
 scholic-highlight.scholic-private {
-  background-color: rgba(232, 197, 71, 0.2);
-  border-bottom: 2px solid rgba(232, 197, 71, 0.5);
+  background-color: rgba(var(--sr), var(--sg), var(--sb), var(--sa));
+  border-bottom: 2px solid rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.2));
 }
 scholic-highlight.scholic-private:hover {
-  background-color: rgba(232, 197, 71, 0.35);
+  background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.15));
 }
 
 /* ── Pending annotation (while user is writing a note) ── */

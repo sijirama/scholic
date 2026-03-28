@@ -144,26 +144,42 @@ func GetAnnotations(c *gin.Context) {
 		return
 	}
 
-	var annotations []models.Annotation
-
-	// Check if user is authenticated
-	userID, exists := c.Get("userID")
-
-	if exists {
-		// Authenticated: return user's annotations (both private and public)
-		// plus other users' public annotations
-		database.DB.Preload("User").Preload("Comments").Preload("Comments.User").Where(
-			"(user_id = ? AND url = ?) OR (url = ? AND is_private = ?)",
-			userID, url, url, false,
-		).Order("created_at DESC").Find(&annotations)
-	} else {
-		// Not authenticated: return only public annotations
-		database.DB.Preload("User").Preload("Comments").Preload("Comments.User").Where(
-			"url = ? AND is_private = ?", url, false,
-		).Order("created_at DESC").Find(&annotations)
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if err != nil || limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		offset = 0
 	}
 
-	c.JSON(http.StatusOK, annotations)
+	var annotations []models.Annotation
+	var total int64
+
+	userID, exists := c.Get("userID")
+
+	var query *gorm.DB
+	if exists {
+		query = database.DB.Model(&models.Annotation{}).Where(
+			"(user_id = ? AND url = ?) OR (url = ? AND is_private = ?)",
+			userID, url, url, false,
+		)
+	} else {
+		query = database.DB.Model(&models.Annotation{}).Where(
+			"url = ? AND is_private = ?", url, false,
+		)
+	}
+
+	query.Count(&total)
+	query.Preload("User").Preload("Comments").Preload("Comments.User").
+		Order("created_at DESC").Limit(limit).Offset(offset).Find(&annotations)
+
+	c.JSON(http.StatusOK, gin.H{
+		"annotations": annotations,
+		"total":       total,
+		"limit":       limit,
+		"offset":      offset,
+	})
 }
 
 // DeleteAnnotation handles DELETE /api/annotations/:id

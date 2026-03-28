@@ -71,9 +71,11 @@
       background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.15)) !important;
     }
     scholic-highlight.scholic-private {
-      background-color: rgba(232, 197, 71, 0.3) !important;
-      border-bottom: 2px solid rgba(232, 197, 71, 0.6);
-      mix-blend-mode: multiply;
+      background-color: rgba(var(--sr), var(--sg), var(--sb), var(--sa)) !important;
+      border-bottom: 2px solid rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.2));
+    }
+    scholic-highlight.scholic-private:hover {
+      background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.15)) !important;
     }
     scholic-highlight.scholic-highlight-focused {
       background-color: rgba(var(--sr), var(--sg), var(--sb), calc(var(--sa) + 0.2)) !important;

@@ -23,32 +23,32 @@ const API_BASE = CONFIG.API_BASE;
  * by inspecting the actual Content-Type returned by the server.
  */
 chrome.webRequest.onHeadersReceived.addListener(
-  (details) => {
-    // Only intercept main frame navigation (full page loads)
+  async (details) => {
     if (details.type !== 'main_frame') return;
-
     const url = details.url;
-    // Avoid redirect loop
     if (url.includes('viewer.html?url=')) return;
 
-    // Check if response is a PDF
     const contentTypeHeader = details.responseHeaders?.find(
       (h) => h.name.toLowerCase() === 'content-type'
     );
     const contentType = contentTypeHeader?.value?.toLowerCase() || '';
-
-    // True PDF content type, or octet-stream fallback for .pdf URLs
-    const isPdf = contentType.includes('application/pdf') || 
+    const isPdf = contentType.includes('application/pdf') ||
                   (contentType.includes('application/octet-stream') && url.toLowerCase().endsWith('.pdf'));
 
-    if (isPdf) {
-      console.log(`[Scholic] PDF detected via headers: ${url}. Redirecting to viewer...`);
-      const viewerUrl = chrome.runtime.getURL(`viewer.html?url=${encodeURIComponent(url)}`);
-      
-      // We asynchronously update the tab. This cancels the ongoing PDF load
-      // in the native viewer and navigates to our custom viewer.
-      chrome.tabs.update(details.tabId, { url: viewerUrl });
+    if (!isPdf) return;
+
+    // Only redirect if the extension is enabled for this domain
+    try {
+      const domain = new URL(url).hostname;
+      const result = await chrome.storage.local.get('enabledDomains');
+      const enabledDomains = result.enabledDomains || {};
+      if (!enabledDomains[domain]) return;
+    } catch {
+      return;
     }
+
+    const viewerUrl = chrome.runtime.getURL(`viewer.html?url=${encodeURIComponent(url)}`);
+    chrome.tabs.update(details.tabId, { url: viewerUrl });
   },
   { urls: ['<all_urls>'] },
   ['responseHeaders']
@@ -63,23 +63,33 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     const url = new URL(tab.url);
     if (url.protocol.startsWith('chrome') || url.protocol.startsWith('about')) return;
-    
+
     const domain = url.hostname;
     const result = await chrome.storage.local.get('enabledDomains');
     const enabledDomains = result.enabledDomains || {};
-    
+
     const isEnabled = !enabledDomains[domain];
     enabledDomains[domain] = isEnabled;
-    
     await chrome.storage.local.set({ enabledDomains });
-    
-    // Notify the content script of the change
-    await chrome.tabs.sendMessage(tab.id, { 
-      type: 'SET_ENABLED', 
-      enabled: isEnabled 
-    });
 
     console.log(`[Scholic] ${domain} is now ${isEnabled ? 'enabled' : 'disabled'}`);
+
+    if (isEnabled) {
+      // Try to notify the content script. Content scripts run on regular web pages
+      // but NOT in PDF viewer contexts (Chrome's built-in PDF viewer, arxiv-style
+      // PDFs without .pdf extension, etc.). If sendMessage fails, the tab is
+      // likely showing a PDF — reload so onHeadersReceived can intercept it.
+      const sent = await chrome.tabs.sendMessage(tab.id, { type: 'SET_ENABLED', enabled: true })
+        .catch(() => null);
+      if (!sent) {
+        chrome.tabs.reload(tab.id);
+      }
+      return;
+    }
+
+    // Disabling: just notify the content script (or silently ignore if not running)
+    chrome.tabs.sendMessage(tab.id, { type: 'SET_ENABLED', enabled: false })
+      .catch(() => { /* tab may not have content script */ });
   } catch (err) {
     console.warn('[Scholic] Could not toggle state:', err);
   }
@@ -160,7 +170,7 @@ async function handleMessage(message: any): Promise<any> {
     case 'CREATE_ANNOTATION':
       return createAnnotation(message.data);
     case 'FETCH_ANNOTATIONS':
-      return fetchAnnotations(message.data.url);
+      return fetchAnnotations(message.data.url, message.data.limit, message.data.offset);
     case 'DELETE_ANNOTATION':
       return deleteAnnotation(message.data.id);
     case 'CREATE_COMMENT':
@@ -263,18 +273,21 @@ async function captureVisibleTab(): Promise<any> {
  *
  * GET /api/annotations?url=<encoded-url>
  */
-async function fetchAnnotations(url: string): Promise<any> {
-  const annotations = await apiRequest(
-    `/annotations?url=${encodeURIComponent(url)}`,
+async function fetchAnnotations(url: string, limit = 50, offset = 0): Promise<any> {
+  const result = await apiRequest(
+    `/annotations?url=${encodeURIComponent(url)}&limit=${limit}&offset=${offset}`,
   );
 
+  const rawAnnotations = result?.annotations || [];
+  const total = result?.total ?? rawAnnotations.length;
+
   // Parse selectors from JSON string back to objects
-  const parsed = (annotations || []).map((a: any) => ({
+  const parsed = rawAnnotations.map((a: any) => ({
     ...a,
     selectors: typeof a.selectors === 'string' ? JSON.parse(a.selectors) : a.selectors,
   }));
 
-  return { annotations: parsed };
+  return { annotations: parsed, total };
 }
 
 /**

@@ -136,6 +136,14 @@ class ScholicPdfViewer {
 
     this.init();
     this.setupListeners();
+
+    // Re-fetch annotations when the auth token changes (login/logout).
+    // Without this the viewer keeps showing cached private annotations after logout.
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && 'scholicToken' in changes) {
+        this.loadAnnotations();
+      }
+    });
   }
 
   async init() {
@@ -260,8 +268,18 @@ class ScholicPdfViewer {
     if (response?.annotations) {
       this.annotations = response.annotations;
       this.sidebar.renderAnnotationList(this.annotations);
-      // Re-render currently visible pages
-      this.pdfViewer.update();
+
+      // textlayerrendered may have already fired for visible pages before this
+      // async fetch completed, leaving this.annotations empty at that point.
+      // Manually re-apply highlights to every already-rendered page now.
+      const numPages = this.pdfViewer.pagesCount || 0;
+      for (let i = 1; i <= numPages; i++) {
+        const pageView = this.pdfViewer.getPageView(i - 1);
+        // Only re-apply if the page div exists (text layer was already built)
+        if (pageView?.div) {
+          await this.restoreHighlightsForPage(i);
+        }
+      }
     }
   }
 
@@ -294,6 +312,9 @@ class ScholicPdfViewer {
 
     for (const ann of this.annotations) {
       if (ann.type === 'image') continue;
+      // Skip annotations that belong to a different page — avoids anchoring
+      // the same annotation from multiple concurrent page restorations.
+      if (ann.pdfPage && ann.pdfPage !== pageNum) continue;
       // Bail if a newer restore has started for this page
       if (this.restoreVersions.get(pageNum) !== version) return;
       try {
@@ -304,9 +325,9 @@ class ScholicPdfViewer {
         const cssClass = ann.isPrivate ? 'scholic-private' : 'scholic-annotation';
         const highlights = highlightRange(range, `scholic-highlight ${cssClass}`, ann.id);
 
-        if (!ann.isPrivate) {
-          applyHighlightColor(highlights, ann.highlightColor || '#A8D5B5');
-        }
+        // Apply color for all annotations; amber is default for private, sage for public
+        const defaultColor = ann.isPrivate ? '#E8C547' : '#A8D5B5';
+        applyHighlightColor(highlights, ann.highlightColor || defaultColor);
 
         // Apply filtering class
         const isMine = String(ann.userId) === String(this.myUserId);

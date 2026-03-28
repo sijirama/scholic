@@ -51,6 +51,13 @@ let syncInterval: ReturnType<typeof setInterval> | null = null;
 /** How many sync cycles remain before we stop checking */
 let syncAttemptsLeft = 0;
 
+/** Total annotations available on the server for this page */
+let annotationsTotal = 0;
+/** How many annotations we've loaded so far */
+let annotationsOffset = 0;
+/** Page size for annotation fetches */
+const ANNOTATIONS_PAGE_SIZE = 50;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -106,6 +113,7 @@ const sidebar = new Sidebar({
   onComment: (annotationId, text) => handleComment(annotationId, text),
   onRefresh: () => loadAnnotations(),
   onTabChange: (tab) => handleTabChange(tab),
+  onLoadMore: () => loadMoreAnnotations(),
 });
 
 /**
@@ -507,6 +515,19 @@ function handleHighlight(range: Range, quoteText: string): void {
  */
 async function handleSaveAnnotation(annotation: AnnotationData): Promise<void> {
   console.log('[Scholic] Saving annotation...', annotation);
+
+  // Optimistic: immediately show a pending card in the sidebar
+  const tempId = `__temp_${Date.now()}`;
+  const tempAnnotation: AnnotationData = {
+    ...annotation,
+    id: tempId,
+    createdAt: new Date().toISOString(),
+    _isPending: true,
+  };
+  pageAnnotations.unshift(tempAnnotation);
+  const hasMore = annotationsOffset < annotationsTotal;
+  await sidebar.renderAnnotationList(pageAnnotations, hasMore);
+
   try {
     // Send to background script, which forwards to the backend API
     const response = await chrome.runtime.sendMessage({
@@ -516,9 +537,13 @@ async function handleSaveAnnotation(annotation: AnnotationData): Promise<void> {
     console.log('[Scholic] Save response:', response);
 
     if (response?.annotation) {
-      // Add to local state at the beginning (optimistic update to top)
-      pageAnnotations.unshift(response.annotation);
-      await sidebar.renderAnnotationList(pageAnnotations);
+      // Replace temp with the real annotation
+      pageAnnotations = pageAnnotations.map((a) =>
+        String(a.id) === tempId ? response.annotation : a
+      );
+      annotationsTotal = Math.max(annotationsTotal, pageAnnotations.filter(a => !a._isPending).length);
+      annotationsOffset = pageAnnotations.length;
+      await sidebar.renderAnnotationList(pageAnnotations, annotationsOffset < annotationsTotal);
 
       const savedAnnotation = response.annotation;
       const annotationId = String(savedAnnotation.id);
@@ -551,9 +576,16 @@ async function handleSaveAnnotation(annotation: AnnotationData): Promise<void> {
       }
 
       updateBadgeCount();
+    } else {
+      // Save failed — remove temp annotation
+      pageAnnotations = pageAnnotations.filter((a) => String(a.id) !== tempId);
+      await sidebar.renderAnnotationList(pageAnnotations, annotationsOffset < annotationsTotal);
     }
   } catch (err) {
     console.error('[Scholic] Failed to save annotation:', err);
+    // Rollback optimistic add
+    pageAnnotations = pageAnnotations.filter((a) => String(a.id) !== tempId);
+    await sidebar.renderAnnotationList(pageAnnotations, annotationsOffset < annotationsTotal);
   }
 }
 
@@ -561,28 +593,43 @@ async function handleSaveAnnotation(annotation: AnnotationData): Promise<void> {
  * Delete an annotation.
  */
 async function handleDeleteAnnotation(annotationId: string): Promise<void> {
+  // Optimistic: remove immediately from UI
+  const backup = pageAnnotations.find((a) => String(a.id) === String(annotationId));
+  pageAnnotations = pageAnnotations.filter((a) => String(a.id) !== String(annotationId));
+  annotationsTotal = Math.max(0, annotationsTotal - 1);
+  annotationsOffset = Math.max(0, annotationsOffset - 1);
+
+  const backupHighlights = highlightMap.get(annotationId);
+  suppressSync = true;
+  if (backupHighlights) {
+    removeHighlights(backupHighlights);
+    highlightMap.delete(annotationId);
+  }
+  suppressSync = false;
+
+  await sidebar.renderAnnotationList(pageAnnotations, annotationsOffset < annotationsTotal);
+  updateBadgeCount();
+
   try {
     await chrome.runtime.sendMessage({
       type: 'DELETE_ANNOTATION',
       data: { id: annotationId },
     });
-
-    // Remove from local state (ids may be number or string, compare loosely)
-    pageAnnotations = pageAnnotations.filter((a) => String(a.id) !== String(annotationId));
-    await sidebar.renderAnnotationList(pageAnnotations);
-
-    // Remove highlights from the DOM
-    const highlights = highlightMap.get(annotationId);
-    if (highlights) {
-      suppressSync = true;
-      removeHighlights(highlights);
-      highlightMap.delete(annotationId);
-      suppressSync = false;
-    }
-
-    updateBadgeCount();
   } catch (err) {
     console.error('[Scholic] Failed to delete annotation:', err);
+    // Rollback: restore the annotation and reload highlights
+    if (backup) {
+      pageAnnotations.push(backup);
+      pageAnnotations.sort((a, b) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+      annotationsTotal += 1;
+      annotationsOffset += 1;
+      await sidebar.renderAnnotationList(pageAnnotations, annotationsOffset < annotationsTotal);
+      // Re-anchor the restored annotation
+      await resolveAndRenderAnnotations([backup]);
+      updateBadgeCount();
+    }
   }
 }
 
@@ -607,7 +654,7 @@ async function handleComment(annotationId: string, text: string): Promise<void> 
         return a;
       });
       // Re-render sidebar to reflect the new comment
-      await sidebar.renderAnnotationList(pageAnnotations);
+      await sidebar.renderAnnotationList(pageAnnotations, annotationsOffset < annotationsTotal);
       
       // Refresh popup if it's currently open
       highlightPopup.refresh();
@@ -707,7 +754,7 @@ function onStorageChanged(changes: { [key: string]: chrome.storage.StorageChange
     } else {
       console.log('[Scholic] Token removed, clearing state...');
       clearStateAndHighlights();
-      sidebar.renderAnnotationList([]);
+      sidebar.renderAnnotationList([], false);
     }
   }
 }
@@ -723,6 +770,8 @@ function clearStateAndHighlights(): void {
   }
   highlightMap.clear();
   pageAnnotations = [];
+  annotationsTotal = 0;
+  annotationsOffset = 0;
   suppressSync = false;
   updateBadgeCount();
 }
@@ -738,15 +787,21 @@ async function loadAnnotations(): Promise<void> {
   try {
     // Clear existing state for clean re-fetch
     clearStateAndHighlights();
+    annotationsOffset = 0;
+    annotationsTotal = 0;
 
     const response = await chrome.runtime.sendMessage({
       type: 'FETCH_ANNOTATIONS',
-      data: { url: window.location.href },
+      data: { url: window.location.href, limit: ANNOTATIONS_PAGE_SIZE, offset: 0 },
     });
 
     if (response?.annotations && Array.isArray(response.annotations)) {
       pageAnnotations = response.annotations;
-      await sidebar.renderAnnotationList(pageAnnotations);
+      annotationsTotal = response.total ?? pageAnnotations.length;
+      annotationsOffset = pageAnnotations.length;
+
+      const hasMore = annotationsOffset < annotationsTotal;
+      await sidebar.renderAnnotationList(pageAnnotations, hasMore);
 
       // Resolve all annotations against the clean DOM, then render highlights.
       // This two-phase approach prevents highlight insertion from corrupting
@@ -764,6 +819,35 @@ async function loadAnnotations(): Promise<void> {
     }
   } catch (err) {
     console.error('[Scholic] Failed to load annotations:', err);
+  }
+}
+
+/**
+ * Load the next page of annotations and append to the current list.
+ */
+async function loadMoreAnnotations(): Promise<void> {
+  if (annotationsOffset >= annotationsTotal) return;
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'FETCH_ANNOTATIONS',
+      data: { url: window.location.href, limit: ANNOTATIONS_PAGE_SIZE, offset: annotationsOffset },
+    });
+
+    if (response?.annotations && Array.isArray(response.annotations)) {
+      const newAnnotations = response.annotations;
+      pageAnnotations = [...pageAnnotations, ...newAnnotations];
+      annotationsTotal = response.total ?? annotationsTotal;
+      annotationsOffset = pageAnnotations.length;
+
+      const hasMore = annotationsOffset < annotationsTotal;
+      await sidebar.renderAnnotationList(pageAnnotations, hasMore);
+      await resolveAndRenderAnnotations(newAnnotations);
+      await filterHighlights();
+      updateBadgeCount();
+    }
+  } catch (err) {
+    console.error('[Scholic] Failed to load more annotations:', err);
   }
 }
 
@@ -793,9 +877,8 @@ async function resolveAndRenderAnnotations(annotations: AnnotationData[]): Promi
         continue;
       }
 
-      if (!annotation.isPrivate) {
-        applyHighlightColor(highlights, (annotation as any).highlightColor || '#A8D5B5');
-      }
+      const defaultColor = annotation.isPrivate ? '#E8C547' : '#A8D5B5';
+      applyHighlightColor(highlights, (annotation as any).highlightColor || defaultColor);
 
       highlightMap.set(annotationId, highlights);
       highlights.forEach((el) => {

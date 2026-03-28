@@ -11,6 +11,7 @@
  */
 
 import type { AnnotationData } from './sidebar';
+import { CONFIG } from './config';
 
 export class HighlightPopup {
   private host: HTMLElement | null = null;
@@ -65,6 +66,7 @@ export class HighlightPopup {
     const noteText = annotation.text || '';
     const commentCount = annotation.comments?.length || 0;
 
+    const extLinkSvg = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
     const msgSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
     const sendSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
 
@@ -88,12 +90,15 @@ export class HighlightPopup {
     popup.className = 'scholic-popup';
     popup.innerHTML = `
       <div class="popup-header">
-        <div class="popup-avatar">${avatarHtml}</div>
-        <div class="popup-author-info">
+        <a href="${CONFIG.WEB_URL}/u/${this.escapeAttr(authorName)}" target="_blank" class="popup-author-link">
+          <div class="popup-avatar">${avatarHtml}</div>
           <span class="popup-author">@${this.escapeHtml(authorName)}</span>
+        </a>
+        <div class="popup-header-right">
           <span class="popup-badge ${annotation.isPrivate ? 'badge-private' : 'badge-public'}">
             ${annotation.isPrivate ? 'Private' : 'Public'}
           </span>
+          ${annotation.id ? `<a href="${CONFIG.WEB_URL}/annotation/${annotation.id}" target="_blank" class="popup-view-link" title="View annotation">${extLinkSvg}</a>` : ''}
         </div>
       </div>
 
@@ -289,6 +294,15 @@ export class HighlightPopup {
     return div.innerHTML;
   }
 
+  private escapeAttr(value: string): string {
+    return (value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   private getStyles(): string {
     return `
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -320,6 +334,32 @@ export class HighlightPopup {
         padding: 13px 14px 10px;
       }
 
+      .popup-author-link {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        min-width: 0;
+        flex: 1;
+      }
+      .popup-author-link:hover .popup-author { color: #6EB781; }
+
+      .popup-header-right {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-shrink: 0;
+      }
+
+      .popup-view-link {
+        display: flex;
+        align-items: center;
+        color: #555;
+        text-decoration: none;
+        transition: color 0.15s;
+      }
+      .popup-view-link:hover { color: #6EB781; }
+
       .popup-avatar {
         width: 26px;
         height: 26px;
@@ -335,13 +375,6 @@ export class HighlightPopup {
         overflow: hidden;
       }
 
-      .popup-author-info {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        min-width: 0;
-      }
-
       .popup-author {
         font-size: 12px;
         font-weight: 600;
@@ -349,6 +382,7 @@ export class HighlightPopup {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        transition: color 0.15s;
       }
 
       .popup-badge {
