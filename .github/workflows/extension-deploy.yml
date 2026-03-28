@@ -9,10 +9,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Only deploy when CI passed AND it was triggered by a version tag push.
-    # workflow_run.head_branch holds the branch name, not the tag — so we
-    # compare the head commit SHA against known tags using the git API instead.
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Disabled — deploying manually for now. Re-enable by restoring the if condition below.
+    if: false
     steps:
       - uses: actions/checkout@v4
         with:
