@@ -191,7 +191,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, focusedIdx, allPaths, query, tab, scopeUsername]);
+  }, [open, focusedIdx, allPaths, query, tab, scopeUsername]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showAnn = tab==='all'||tab==='annotations';
   const showUsers = tab==='all'||tab==='users';

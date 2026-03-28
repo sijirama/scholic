@@ -207,7 +207,7 @@ const AnnotationPage: React.FC = () => {
     }
   };
 
-  const isOwner = !!(currentUser && annotation && String((currentUser as any).id) === String(annotation.user?.id));
+  const isOwner = !!(currentUser && annotation && String(currentUser.id) === String(annotation.user?.id));
 
   const startEditing = () => {
     if (!annotation) return;
