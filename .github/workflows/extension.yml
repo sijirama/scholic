@@ -27,6 +27,9 @@ jobs:
         run: cd extension && npm install
       - name: Build extension
         run: cd extension && npm run build
+        env:
+          API_BASE: ${{ secrets.EXT_API_BASE }}
+          WEB_URL: ${{ secrets.EXT_WEB_URL }}
       - name: Upload dist
         uses: actions/upload-artifact@v4
         with:
