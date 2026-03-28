@@ -10,6 +10,10 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // Derive scope: if we're on a profile page /u/:username, scope search to that user
+  const profileMatch = location.pathname.match(/^\/u\/([^/]+)/);
+  const scopeUsername = profileMatch ? profileMatch[1] : undefined;
+
   const brandFont = { fontFamily: '"Outfit", sans-serif' };
 
   const initial = user?.username?.[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || '?';
@@ -35,7 +39,7 @@ const Navbar: React.FC = () => {
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', height: '48px', padding: '0 40px' }}
       >
         {/* Center: brand + search */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <span
             className="font-semibold cursor-pointer"
             style={{ ...brandFont, fontSize: '18px', color: '#fff', letterSpacing: '-0.3px' }}
@@ -45,9 +49,22 @@ const Navbar: React.FC = () => {
           </span>
           <button
             onClick={() => setSearchOpen(true)}
-            className="p-1 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
+            className="flex items-center gap-2 cursor-pointer transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: '8px',
+              padding: '4px 10px 4px 8px',
+              color: '#444',
+              fontSize: '12px',
+              fontFamily: 'inherit',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLButtonElement).style.color = '#666'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLButtonElement).style.color = '#444'; }}
           >
-            <Search className="w-3.5 h-3.5" style={{ color: '#555' }} />
+            <Search style={{ width: 12, height: 12 }} />
+            <span>Search</span>
+            <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#333', background: 'rgba(255,255,255,0.06)', borderRadius: 4, padding: '1px 5px', marginLeft: 2 }}>⌘K</span>
           </button>
         </div>
 
@@ -103,6 +120,7 @@ const Navbar: React.FC = () => {
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         currentUserId={user?.id}
+        scopeUsername={scopeUsername}
       />
     </>
   );

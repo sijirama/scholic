@@ -58,7 +58,7 @@ const PaperSkeleton: React.FC = () => (
 
 const SitePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user: currentUser } = useAuth();
+  useAuth();
 
   const siteUrl = searchParams.get('url') || '';
   const authorParams = searchParams.getAll('author');

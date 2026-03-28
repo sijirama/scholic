@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronRight, Search } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import api from '../lib/api';
+import Navbar from '../components/Navbar';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -13,6 +14,9 @@ interface LandingAnnotation {
   url: string;
   linkDomain?: string;
   linkTitle?: string;
+  linkFavicon?: string;
+  type?: string;
+  imageUrl?: string;
   isPrivate?: boolean;
   createdAt: string;
   user: {
@@ -395,45 +399,7 @@ const Landing: React.FC = () => {
       }}
     >
       {/* ── Navigation ── */}
-      <nav
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          height: 48,
-          padding: '0 40px',
-          position: 'relative',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ ...brandFont, fontSize: 18, fontWeight: 600, color: '#fff', letterSpacing: '-0.3px' }}>
-            <span style={{ color: '#6EB781' }}>#</span>scholic
-          </span>
-          <button style={{ padding: 4, borderRadius: '50%', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex' }}>
-            <Search size={14} color="#555" />
-          </button>
-        </div>
-        <button
-          onClick={login}
-          style={{
-            position: 'absolute',
-            right: 40,
-            backgroundColor: '#6EB781',
-            color: '#e0e0e0',
-            padding: '4px 14px',
-            fontSize: 12,
-            fontWeight: 600,
-            borderRadius: 6,
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          Log In
-        </button>
-      </nav>
+      <Navbar />
 
       {/* ── Hero ── */}
       <section

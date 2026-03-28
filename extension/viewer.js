@@ -29369,9 +29369,9 @@
       "use strict";
       CONFIG = {
         // The backend API endpoint
-        API_BASE: "http://localhost:8081/api",
+        API_BASE: "https://api.scholic.com/api",
         // The frontend web application URL (for profile links and login)
-        WEB_URL: "http://localhost:5173"
+        WEB_URL: "https://scholic.com"
       };
     }
   });
