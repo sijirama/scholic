@@ -12,6 +12,8 @@ RUN go mod download
 
 # Copy source and build
 COPY . .
+RUN ls -la /app && ls -la /app/cmd || echo "NO CMD DIR"
+
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o scholic_api ./cmd/api
 
