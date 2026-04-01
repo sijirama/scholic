@@ -38,76 +38,45 @@ After any rebuild, click the refresh icon on the extension card in `chrome://ext
 
 ---
 
-## Building for Production (Chrome Web Store)
+## Releasing to the Chrome Web Store
 
-### Step 1 — Build with production URLs baked in
+### Step 0 — Bump the version
 
-Run this from the `extension/` directory:
-
-```bash
-API_BASE=https://api.scholic.com/api WEB_URL=https://scholic.com node build.mjs
-```
-
-This bakes the production API URL (`https://api.scholic.com/api`) and web URL (`https://scholic.com`) directly into the compiled JS bundles. Do **not** skip the env vars — without them the build defaults to localhost and the production extension will be broken.
-
-Quick sanity check after building:
-
-```bash
-grep -o "api.scholic.com" background.js
-```
-
-It should print `api.scholic.com` at least once. If you see nothing, the env vars weren't picked up.
-
-### Step 2 — Create the zip for upload
-
-```bash
-zip -r scholic-extension.zip \
-  manifest.json \
-  background.js \
-  content.js \
-  viewer.js \
-  viewer.html \
-  content.css \
-  pdf_viewer.css \
-  pdf.worker.min.mjs \
-  icons/
-```
-
-This produces `scholic-extension.zip` in the `extension/` directory. Do **not** include:
-
-- `src/` — TypeScript source (not needed at runtime)
-- `node_modules/` — build tooling only
-- `*.map` — source maps (large, not required in the zip)
-- `build.mjs`, `package.json`, `tsconfig.json` — build scripts only
-
-### Step 3 — Upload to the Chrome Web Store
-
-1. Go to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
-2. Click **New item** (first time) or select the existing listing
-3. Upload `scholic-extension.zip`
-4. Fill in the store listing (description, screenshots, category)
-5. Submit for review
-
-**Reviewer notes to prepare:**
-- `<all_urls>` host permission is needed because the extension injects a content script on every page so users can annotate any website
-- The extension communicates only with `api.scholic.com`
-
-If the reviewer asks for source code (common for minified bundles), upload a separate zip of just the `src/` folder and `build.mjs` — do not include `node_modules`.
-
----
-
-## Versioning
-
-The version lives in two places — keep them in sync:
+Before building, update the version in **both** files (they must match):
 
 | File | Field |
 |------|-------|
-| `manifest.json` | `"version"` — this is what Chrome and the Web Store actually display |
-| `package.json` | `"version"` — npm convention, should match |
+| `manifest.json` | `"version"` |
+| `package.json` | `"version"` |
 
-Chrome Web Store requires the version to be strictly increasing with each submission. You cannot re-upload the same version number. Use `MAJOR.MINOR.PATCH` (e.g. `0.0.1` → `0.0.2` → `0.1.0`).
+Chrome Web Store requires the version to be strictly increasing. You cannot re-upload the same version. Use `MAJOR.MINOR.PATCH` (e.g. `0.0.1` → `0.0.2` → `0.1.0`).
 
-Current version: **0.0.1**
+### Step 1 — Run the release script
+
+```bash
+cd extension
+./release.sh
+```
+
+This will:
+1. Build with production URLs baked in (`https://api.scholic.com/api`, `https://scholic.com`)
+2. Verify `api.scholic.com` is present in the output (fails loudly if env vars were missing)
+3. Zip only the files needed at runtime — no source, no node_modules
+4. Output `scholic-extension-vX.Y.Z.zip` named after the version in `package.json`
+
+### Step 2 — Upload to the Chrome Web Store
+
+1. Go to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
+2. Select the Scholic listing
+3. Click **Package** → **Upload new package**
+4. Upload the zip produced in step 1
+5. Submit for review
+
+**If the reviewer asks for source code** (common for minified bundles), upload a separate zip of just the `src/` folder and `build.mjs` — do not include `node_modules`.
+
+**Reviewer notes:**
+- `<all_urls>` host permission is needed because the extension injects a content script on every page so users can annotate any website
+- The extension communicates only with `api.scholic.com`
 
 ---
 

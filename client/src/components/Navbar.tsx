@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SearchModal from './SearchModal';
 
 const Navbar: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -106,7 +106,7 @@ const Navbar: React.FC = () => {
           )}
           {!user && (
             <button
-              onClick={() => navigate('/')}
+              onClick={login}
               className="text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
               style={{ color: '#6EB781', border: '1px solid rgba(110,183,129,0.3)' }}
             >
