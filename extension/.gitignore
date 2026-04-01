@@ -17,6 +17,9 @@ content.js.map
 .env
 .env.local
 
+# Release zips
+*.zip
+
 # OS files
 .DS_Store
 Thumbs.db
