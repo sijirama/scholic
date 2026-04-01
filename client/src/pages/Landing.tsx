@@ -461,7 +461,7 @@ const Landing: React.FC = () => {
             <ChevronRight size={16} />
           </button>
           <a
-            href="https://chrome.google.com/webstore"
+            href="https://chromewebstore.google.com/detail/scholic/ifclgaggdfhkikngibajdloglpaplkda"
             target="_blank"
             rel="noreferrer"
             style={{
@@ -656,7 +656,7 @@ const Landing: React.FC = () => {
             <ChevronRight size={15} />
           </button>
           <a
-            href="https://chrome.google.com/webstore"
+            href="https://chromewebstore.google.com/detail/scholic/ifclgaggdfhkikngibajdloglpaplkda"
             target="_blank"
             rel="noreferrer"
             style={{
