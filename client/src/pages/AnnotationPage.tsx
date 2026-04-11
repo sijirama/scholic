@@ -384,6 +384,8 @@ const AnnotationPage: React.FC = () => {
                   WebkitLineClamp: 10,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
                 }}>
                   <mark style={{
                     background: hexToRgba(editing ? editColor : (annotation.highlightColor || '#A8D5B5'), 0.35),
@@ -477,6 +479,8 @@ const AnnotationPage: React.FC = () => {
                       WebkitLineClamp: 6,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
                     }}>
                       {annotation.text}
                     </p>

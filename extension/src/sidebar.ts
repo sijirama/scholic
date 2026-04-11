@@ -124,8 +124,10 @@ export class Sidebar {
   /** Current user data */
   private userData: any = null;
   private isRendering: boolean = false;
+  /** Queued render — flushed after the current render finishes */
+  private pendingRender: { annotations: AnnotationData[]; hasMore: boolean } | null = null;
   /** Active tab: 'mine' | 'community' | 'all' */
-  private activeTab: 'mine' | 'community' | 'all' = 'mine';
+  private activeTab: 'mine' | 'community' | 'all' = 'community';
   private isAuthenticated: boolean = false;
   /** Stored document click handler for cleanup */
   private menuCloseHandler: (() => void) | null = null;
@@ -133,6 +135,7 @@ export class Sidebar {
   constructor(callbacks: SidebarCallbacks) {
     this.callbacks = callbacks;
     this.fetchUserData();
+    this.loadPersistedTab();
 
     // Create shadow host — lives at the edge of <body>
     this.host = document.createElement('scholic-sidebar-host');
@@ -188,6 +191,31 @@ export class Sidebar {
         this.fetchUserData();
       }
     });
+  }
+
+  /**
+   * Load the last-used tab from chrome.storage.local.
+   * Falls back to 'community' for logged-in users, 'all' for guests.
+   * This runs async at construction — first render uses the field default
+   * then re-renders if the stored value differs.
+   */
+  private async loadPersistedTab(): Promise<void> {
+    const result = await chrome.storage.local.get(['scholicActiveTab', 'scholicToken']);
+    const stored = result.scholicActiveTab as 'mine' | 'community' | 'all' | undefined;
+    const isAuth = !!result.scholicToken;
+
+    if (!isAuth) {
+      this.activeTab = 'all';
+      return;
+    }
+
+    // Use stored value if present, otherwise default to 'community' (Following)
+    this.activeTab = stored ?? 'community';
+  }
+
+  /** Persist the active tab to chrome.storage.local. */
+  private saveActiveTab(tab: 'mine' | 'community' | 'all'): void {
+    chrome.storage.local.set({ scholicActiveTab: tab });
   }
 
   /** Fetch current user data from the backend.
@@ -340,7 +368,7 @@ export class Sidebar {
         const tab = target.dataset.tab as 'mine' | 'community' | 'all';
         if (this.activeTab !== tab) {
           this.activeTab = tab;
-          this.isRendering = false;
+          this.saveActiveTab(tab);
           this.renderAnnotationList(this.lastAnnotations);
           this.callbacks.onTabChange(tab);
         }
@@ -1156,6 +1184,17 @@ export class Sidebar {
     const textarea = form.querySelector('.note-input') as HTMLTextAreaElement;
     setTimeout(() => textarea?.focus(), 100);
 
+    // Auto-grow: expand vertically as the user types
+    if (textarea) {
+      textarea.style.resize = 'none';
+      textarea.style.overflow = 'hidden';
+      const autoGrow = () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      };
+      textarea.addEventListener('input', autoGrow);
+    }
+
     // Privacy toggle
     const toggle = form.querySelector('#privacy-switch') as HTMLElement;
     const label = form.querySelector('#privacy-label') as HTMLElement;
@@ -1204,11 +1243,21 @@ export class Sidebar {
 
   /**
    * Render the list of existing annotations in the sidebar.
-   * Guarded against concurrent/duplicate renders.
+   *
+   * Uses a queue so that optimistic updates fired mid-render are never dropped:
+   * if a render is already running, the latest call is stored and flushed the
+   * moment the current render finishes. This means the sidebar always ends up
+   * showing the most recent data without blocking the caller.
    */
   async renderAnnotationList(annotations: AnnotationData[], hasMore = false): Promise<void> {
-    // Guard against duplicate renders
-    if (this.isRendering) return;
+    // Guard against non-array input (e.g. API returning an object on tab switch)
+    if (!Array.isArray(annotations)) annotations = [];
+
+    if (this.isRendering) {
+      // Queue the latest request — older queued ones are overwritten (only latest matters)
+      this.pendingRender = { annotations, hasMore };
+      return;
+    }
     this.isRendering = true;
 
     try {
@@ -1268,9 +1317,9 @@ export class Sidebar {
         : annotations.filter((a) => !a.isPrivate);
 
       if (this.activeTab === 'mine') {
-        displayAnnotations = displayAnnotations.filter((a) => String(a.userId) === String(myUserId));
+        displayAnnotations = displayAnnotations.filter((a) => a._isPending || String(a.userId) === String(myUserId));
       } else if (this.activeTab === 'community') {
-        displayAnnotations = displayAnnotations.filter((a) => String(a.userId) !== String(myUserId));
+        displayAnnotations = displayAnnotations.filter((a) => a._isPending || String(a.userId) !== String(myUserId));
       }
       // 'all' tab uses all annotations (no filter)
 
@@ -1356,9 +1405,9 @@ export class Sidebar {
                     Sign in to join the conversation
                   </div>
                 `}
-                ${annotation.comments && annotation.comments.length > 0 ? `
+                ${Array.isArray(annotation.comments) && annotation.comments.length > 0 ? `
                   <div class="annotation-comments-list">
-                    ${annotation.comments.map((c: any) => {
+                    ${(annotation.comments as any[]).map((c: any) => {
             const cname = c.user?.username || c.user?.emailSlice || 'User';
             const cinit = cname[0].toUpperCase();
             const cavatar = c.user?.profilePicture
@@ -1476,9 +1525,15 @@ export class Sidebar {
       // Automatically scroll to the top to see new/optimistic updates
       const contentLayer = this.panel.querySelector('.sidebar-content');
       if (contentLayer) contentLayer.scrollTop = 0;
-      
+
     } finally {
       this.isRendering = false;
+      // Flush any render that was queued while we were busy
+      if (this.pendingRender) {
+        const { annotations: a, hasMore: h } = this.pendingRender;
+        this.pendingRender = null;
+        await this.renderAnnotationList(a, h);
+      }
     }
   }
 

@@ -173,7 +173,7 @@ const TruncatedText: React.FC<{ text: string }> = ({ text }) => {
 
   return (
     <div>
-      <p style={{ fontSize: '14px', color: '#ccc', lineHeight: 1.65, margin: '0 0 12px 0' }}>
+      <p style={{ fontSize: '14px', color: '#ccc', lineHeight: 1.65, margin: '0 0 12px 0', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
         {displayText}
       </p>
       {isTruncated && (
@@ -339,6 +339,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
               WebkitLineClamp: 5,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
             }}>
               <mark style={{
                 background: hexToRgba(annotation.highlightColor || '#A8D5B5', 0.2),

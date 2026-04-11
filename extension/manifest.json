@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scholic",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A social annotation platform for the web.",
   "permissions": [
     "storage",
@@ -51,7 +51,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["viewer.html", "viewer.js", "viewer.css", "content.css", "pdf.worker.min.mjs", "pdf_viewer.css"],
+      "resources": ["viewer.html", "viewer.js", "viewer.css", "content.css", "pdf.worker.min.mjs", "pdf_viewer.css", "icons/icon16_grey.png", "icons/icon48_grey.png", "icons/icon128_grey.png"],
       "matches": ["<all_urls>"]
     }
   ]

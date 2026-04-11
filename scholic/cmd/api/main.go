@@ -40,6 +40,7 @@ func buildAllowedOrigins() map[string]struct{} {
 func main() {
 	initializers.InitializeEnv()
 	database.InitializeDatabase()
+	database.InitializeRedis()
 	initializers.InitGothic()
 	jwt.InitJWT()
 
@@ -109,6 +110,7 @@ func main() {
 		api.GET("/users/:username", middleware.OptionalAuthMiddleware(), endpoints.GetUserProfile)
 		api.GET("/users/:username/followers", middleware.OptionalAuthMiddleware(), endpoints.GetFollowers)
 		api.GET("/users/:username/following", middleware.OptionalAuthMiddleware(), endpoints.GetFollowing)
+		api.GET("/users/:username/recently-read", middleware.OptionalAuthMiddleware(), endpoints.GetRecentlyRead)
 		api.POST("/users/:username/follow", middleware.AuthMiddleware(), endpoints.ToggleFollow)
 
 		// ── Search ──

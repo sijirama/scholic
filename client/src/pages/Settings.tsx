@@ -9,7 +9,6 @@ const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState('Profile');
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
@@ -91,8 +90,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const tabs = ['Profile', 'Privacy', 'Integrations', 'Security'];
-
   const initial = user?.username?.[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || '?';
 
   return (
@@ -136,32 +133,7 @@ const Settings: React.FC = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '28px' }}>
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className="transition-colors cursor-pointer"
-              style={{
-                padding: '10px 16px',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: activeTab === tab ? '#6EB781' : '#666',
-                background: 'none',
-                border: 'none',
-                borderBottom: activeTab === tab ? '2px solid #6EB781' : '2px solid transparent',
-                marginBottom: '-1px',
-              }}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
-        {/* Profile Tab Content */}
-        {activeTab === 'Profile' && (
-          <div>
+        <div>
             {/* Avatar */}
             <div className="flex items-center gap-4" style={{ marginBottom: '28px' }}>
               <div
@@ -377,14 +349,7 @@ const Settings: React.FC = () => {
               />
             </div>
           </div>
-        )}
 
-        {/* Other tabs — coming soon */}
-        {activeTab !== 'Profile' && (
-          <div className="flex items-center justify-center" style={{ padding: '60px 0', color: '#444' }}>
-            <p style={{ fontSize: '14px' }}>{activeTab} settings coming soon</p>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -14,6 +14,7 @@
 
 /** Backend API base URL — updated to 8081 to match turva dev env */
 import { CONFIG } from './config';
+import { isBlockedUrl } from './blocked-urls';
 
 const API_BASE = CONFIG.API_BASE;
 
@@ -55,6 +56,28 @@ chrome.webRequest.onHeadersReceived.addListener(
 );
 
 /**
+ * Grey out the icon as soon as a tab navigates to a blocked URL.
+ * This fires before the content script loads, so the icon is never briefly active.
+ */
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status !== 'loading') return;
+  const url = tab.url || changeInfo.url;
+  if (!url) return;
+  try {
+    if (isBlockedUrl(url)) {
+      chrome.action.setIcon({ tabId, path: ICON_GREY });
+      chrome.action.setBadgeText({ text: '', tabId });
+      chrome.action.disable(tabId);
+    } else {
+      chrome.action.setIcon({ tabId, path: ICON_DEFAULT });
+      chrome.action.enable(tabId);
+    }
+  } catch {
+    // ignore — tab may already be closed
+  }
+});
+
+/**
  * Handle messages from content scripts or the PDF viewer.
  */
 chrome.action.onClicked.addListener(async (tab) => {
@@ -63,6 +86,14 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     const url = new URL(tab.url);
     if (url.protocol.startsWith('chrome') || url.protocol.startsWith('about')) return;
+
+    // Never enable Scholic on blocked pages — the icon should stay greyed out
+    if (isBlockedUrl(tab.url)) {
+      await chrome.action.setIcon({ tabId: tab.id, path: ICON_GREY });
+      await chrome.action.setBadgeText({ text: '', tabId: tab.id });
+      await chrome.action.disable(tab.id);
+      return;
+    }
 
     const domain = url.hostname;
     const result = await chrome.storage.local.get('enabledDomains');
@@ -109,6 +140,33 @@ async function updateBadge(tabId: number, count: number): Promise<void> {
   await chrome.action.setBadgeBackgroundColor({ color: '#6EB781', tabId });
 }
 
+/**
+ * Grey out the extension icon for a specific tab (blocked page).
+ * Uses chrome.action.disable() which dims the icon natively.
+ */
+const ICON_GREY = {
+  '16': 'icons/icon16_grey.png',
+  '48': 'icons/icon48_grey.png',
+  '128': 'icons/icon128_grey.png',
+};
+
+const ICON_DEFAULT = {
+  '16': 'icons/icon16.png',
+  '48': 'icons/icon48.png',
+  '128': 'icons/icon128.png',
+};
+
+async function setPageBlocked(tabId: number, blocked: boolean): Promise<void> {
+  if (blocked) {
+    await chrome.action.setIcon({ tabId, path: ICON_GREY });
+    await chrome.action.setBadgeText({ text: '', tabId });
+    await chrome.action.disable(tabId);
+  } else {
+    await chrome.action.setIcon({ tabId, path: ICON_DEFAULT });
+    await chrome.action.enable(tabId);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Message Listener — API Proxy
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +184,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'UPDATE_BADGE') {
     if (sender.tab?.id) {
       updateBadge(sender.tab.id, message.data?.count || 0);
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  // Handle blocked page — dim/restore the extension icon for this tab
+  if (message.type === 'SET_PAGE_BLOCKED') {
+    if (sender.tab?.id) {
+      setPageBlocked(sender.tab.id, !!message.blocked);
     }
     sendResponse({ ok: true });
     return true;

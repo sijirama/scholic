@@ -56,6 +56,23 @@ const Profile: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState('Annotations');
 
+  // Recently Read state
+  interface RecentSite {
+    url: string;
+    title: string;
+    favicon: string;
+    domain: string;
+    description: string;
+    image: string;
+    lastRead: string;
+  }
+  const [recentlyRead, setRecentlyRead] = useState<RecentSite[]>([]);
+  const [recentlyReadLoading, setRecentlyReadLoading] = useState(false);
+  const [recentlyReadFetchingMore, setRecentlyReadFetchingMore] = useState(false);
+  const [recentlyReadHasMore, setRecentlyReadHasMore] = useState(false);
+  const [recentlyReadOffset, setRecentlyReadOffset] = useState(0);
+  const RECENTLY_READ_LIMIT = 20;
+
   // Pagination state
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -187,6 +204,11 @@ const Profile: React.FC = () => {
     setActivity([]);
     setPage(0);
     setHasMore(true);
+    // Reset recently-read when navigating to a different profile
+    setRecentlyRead([]);
+    setRecentlyReadOffset(0);
+    setRecentlyReadHasMore(false);
+    setActiveTab('Annotations');
     fetchProfile(0, true);
   }, [username, fetchProfile]);
 
@@ -207,7 +229,37 @@ const Profile: React.FC = () => {
   }, [hasMore, fetchingMore, loading, page, username, activeTab, fetchProfile]);
 
   const isOwnProfile = currentUser?.username === username;
-  const tabs = ['Annotations'];
+  const tabs = ['Annotations', 'Recently Read'];
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // Lazy-fetch recently read on first switch to that tab
+    if (tab === 'Recently Read' && recentlyRead.length === 0 && !recentlyReadLoading) {
+      setRecentlyReadLoading(true);
+      api.get(`/users/${username}/recently-read?limit=${RECENTLY_READ_LIMIT}&offset=0`)
+        .then(res => {
+          setRecentlyRead(res.data.sites || []);
+          setRecentlyReadHasMore(res.data.hasMore ?? false);
+          setRecentlyReadOffset(res.data.sites?.length ?? 0);
+        })
+        .catch(() => toast.error('Failed to load recently read'))
+        .finally(() => setRecentlyReadLoading(false));
+    }
+  };
+
+  const loadMoreRecentlyRead = () => {
+    if (recentlyReadFetchingMore || !recentlyReadHasMore) return;
+    setRecentlyReadFetchingMore(true);
+    api.get(`/users/${username}/recently-read?limit=${RECENTLY_READ_LIMIT}&offset=${recentlyReadOffset}`)
+      .then(res => {
+        const newSites = res.data.sites || [];
+        setRecentlyRead(prev => [...prev, ...newSites]);
+        setRecentlyReadHasMore(res.data.hasMore ?? false);
+        setRecentlyReadOffset(prev => prev + newSites.length);
+      })
+      .catch(() => toast.error('Failed to load more'))
+      .finally(() => setRecentlyReadFetchingMore(false));
+  };
 
 
   const renderAnnotationAction = useCallback((annotation: Annotation) => {
@@ -425,7 +477,7 @@ const Profile: React.FC = () => {
           {tabs.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
               className="transition-colors cursor-pointer"
               style={{
                 padding: '10px 0',
@@ -491,10 +543,124 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-        {/* Other tabs — coming soon */}
-        {activeTab !== 'Annotations' && (
-          <div className="flex items-center justify-center" style={{ padding: '60px 0', color: '#444' }}>
-            <p style={{ fontSize: '14px' }}>{activeTab} coming soon</p>
+        {/* Recently Read tab */}
+        {activeTab === 'Recently Read' && (
+          <div>
+            {recentlyReadLoading ? (
+              /* Skeleton */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)', padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} className="pulse" />
+                      <div style={{ width: '80px', height: '11px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)' }} className="pulse" />
+                    </div>
+                    <div style={{ width: '75%', height: '13px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', marginBottom: '6px' }} className="pulse" />
+                    <div style={{ width: '55%', height: '11px', borderRadius: '3px', background: 'rgba(255,255,255,0.04)' }} className="pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : recentlyRead.length === 0 ? (
+              <div className="text-center" style={{ padding: '60px 0', color: '#555' }}>
+                <p style={{ fontSize: '14px', marginBottom: '6px' }}>
+                  {isOwnProfile ? "You haven't annotated any pages yet" : 'No public annotations yet'}
+                </p>
+                {isOwnProfile && (
+                  <p style={{ fontSize: '12px', color: '#444' }}>Install the Scholic extension to start annotating the web</p>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {recentlyRead.map((site, idx) => {
+                  let displayDomain = site.domain;
+                  if (!displayDomain) {
+                    try { displayDomain = new URL(site.url).hostname.replace('www.', ''); } catch { displayDomain = site.url; }
+                  }
+                  const displayTitle = site.title || displayDomain;
+                  const sitePageUrl = `/page?url=${encodeURIComponent(site.url)}&author=${encodeURIComponent(username || '')}`;
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{ border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}
+                    >
+                      {/* Mini preview card */}
+                      <a
+                        href={site.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: 'flex', alignItems: 'stretch', gap: '0', textDecoration: 'none', color: 'inherit' }}
+                        className="hover:bg-white/[0.03] transition-colors"
+                      >
+                        {/* Text content */}
+                        <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
+                          {/* Favicon + domain */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                            {site.favicon ? (
+                              <img
+                                src={site.favicon}
+                                alt=""
+                                style={{ width: '13px', height: '13px', borderRadius: '2px', objectFit: 'contain', flexShrink: 0 }}
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div style={{ width: '13px', height: '13px', borderRadius: '2px', background: 'rgba(110,183,129,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#6EB781', fontWeight: 700 }}>
+                                {displayDomain[0]?.toUpperCase() || '?'}
+                              </div>
+                            )}
+                            <span style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {displayDomain}
+                            </span>
+                          </div>
+                          {/* Title */}
+                          <div style={{ fontSize: '13px', fontWeight: 500, color: '#d0d0d0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
+                            {displayTitle}
+                          </div>
+                          {/* Description */}
+                          {site.description && (
+                            <div style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {site.description}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Thumbnail — only rendered if we have a preview image */}
+                        {site.image && (
+                          <div style={{ width: '72px', flexShrink: 0, background: `url(${site.image}) center/cover no-repeat`, borderLeft: '1px solid rgba(255,255,255,0.05)' }} />
+                        )}
+                      </a>
+
+                      {/* Footer: link to filtered site page */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '7px 14px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
+                        <a
+                          href={sitePageUrl}
+                          style={{ fontSize: '11px', color: '#6EB781', textDecoration: 'none', fontWeight: 500 }}
+                          className="hover:underline"
+                        >
+                          see all notes →
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Load more */}
+                {recentlyReadHasMore && (
+                  <div style={{ paddingTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={loadMoreRecentlyRead}
+                      disabled={recentlyReadFetchingMore}
+                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, background: 'rgba(110,183,129,0.08)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.2)', borderRadius: '20px', cursor: recentlyReadFetchingMore ? 'not-allowed' : 'pointer', opacity: recentlyReadFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
+                    >
+                      {recentlyReadFetchingMore ? 'Loading...' : 'Load more'}
+                    </button>
+                  </div>
+                )}
+                {!recentlyReadHasMore && recentlyRead.length > 0 && (
+                  <p style={{ fontSize: '12px', color: '#444', textAlign: 'center', paddingTop: '20px' }}>You've reached the end</p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

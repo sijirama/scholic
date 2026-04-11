@@ -260,6 +260,8 @@ const SitePage: React.FC = () => {
                               WebkitLineClamp: 5,
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
                             }}>
                               <mark style={{
                                 background: isSelected
@@ -290,6 +292,8 @@ const SitePage: React.FC = () => {
                               WebkitLineClamp: 3,
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
                             }}>
                               {annotation.text}
                             </p>
@@ -309,6 +313,8 @@ const SitePage: React.FC = () => {
                               WebkitLineClamp: 3,
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
                             }}>
                               {annotation.text}
                             </p>

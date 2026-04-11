@@ -1,0 +1,15 @@
+current bugs i've been seeing since the release of v0.0.1 
+
+
+1. when i create an annnotation, it takes time before i see it in the extension sidebar - can't we have very fast optimistic update on that extension sidebar, because it's kinda fast for the highlight on the page, just not the sidebar
+2. can we save state for when a tab between min/following/all is picked, i kinda want following to be selected default
+	- but if i change to mine and close and enter the page again, mine should be default, you get, with the state
+3. disable scholic for some too dynamic pages like x.com/home - we can leave for tweet pages though, not just the homepage, othewr pages too like this need to go, most feed pages ig, pinterest, facebook, anything that's too dynamic
+4. tab for recently read in profile page, just takes the data from what user has annotated for now - intelligently cachedddd
+5. in the sidebar as i add my annotation in the textbox, let it grow kinda, as the text is added
+
+
+
+
+
+------------- at the end we move from 0.0.1 -> 0.0.2

@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"context"
 	"encoding/base64"
 	"net/http"
 	"net/url"
@@ -127,6 +128,23 @@ func CreateAnnotation(c *gin.Context) {
 		return
 	}
 
+	// Invalidate caches — annotations for this URL, and (only for public annotations)
+	// ALL recently-read pages for this user and all feed caches.
+	// Private annotations never affect the recently-read or feed surfaces.
+	username := annotation.User.Username
+	annotationURL := req.URL
+	isPublic := !annotation.IsPrivate
+	go func() {
+		ctx := context.Background()
+		database.CacheDelete(ctx, database.AnnotationsURLKey(annotationURL))
+		if isPublic {
+			if username != "" {
+				database.CacheDeletePattern(ctx, database.RecentlyReadKeyPattern(username))
+			}
+			database.CacheDeletePattern(ctx, database.FeedKeyPattern())
+		}
+	}()
+
 	c.JSON(http.StatusCreated, annotation)
 }
 
@@ -218,6 +236,24 @@ func DeleteAnnotation(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete annotation"})
 		return
 	}
+
+	// Invalidate caches — same surfaces as CreateAnnotation.
+	// Only public annotation deletions affect recently-read and feed caches.
+	// Capture needed values before the goroutine runs (annotation may be GC'd).
+	deletedURL := annotation.URL
+	deletedUserID := annotation.UserID
+	deletedIsPublic := !annotation.IsPrivate
+	go func() {
+		ctx := context.Background()
+		database.CacheDelete(ctx, database.AnnotationsURLKey(deletedURL))
+		if deletedIsPublic {
+			var user models.User
+			if err := database.DB.Select("username").First(&user, deletedUserID).Error; err == nil && user.Username != "" {
+				database.CacheDeletePattern(ctx, database.RecentlyReadKeyPattern(user.Username))
+			}
+			database.CacheDeletePattern(ctx, database.FeedKeyPattern())
+		}
+	}()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Annotation deleted"})
 }

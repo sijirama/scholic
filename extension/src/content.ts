@@ -20,6 +20,7 @@ import { Sidebar } from './sidebar';
 import type { AnnotationData } from './sidebar';
 import { HighlightPopup } from './highlight-popup';
 import { Snipper, Area } from './snipper';
+import { isBlockedUrl } from './blocked-urls';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Iframe guard: skip content script in iframes to avoid duplicate sidebars
@@ -207,10 +208,24 @@ async function syncHighlights(): Promise<void> {
  * If enabled, initialize components and show the "peek" sidebar.
  */
 async function bootstrap(): Promise<void> {
+  // Blocked URL check runs first — before any storage reads.
+  // On blocked pages Scholic is completely invisible and the icon is greyed out.
+  if (isBlockedUrl(window.location.href)) {
+    console.log(`[Scholic] Blocked URL — staying fully hidden: ${window.location.href}`);
+    sidebar.hideCompletely();
+    removeListeners();
+    stopHighlightSync();
+    chrome.runtime.sendMessage({ type: 'SET_PAGE_BLOCKED', blocked: true });
+    return;
+  }
+
+  // Signal background that this page is not blocked (restore icon if it was greyed)
+  chrome.runtime.sendMessage({ type: 'SET_PAGE_BLOCKED', blocked: false });
+
   const domain = window.location.hostname;
   const result = await chrome.storage.local.get('enabledDomains');
   const enabledDomains = result.enabledDomains || {};
-  
+
   const authResult = await chrome.storage.local.get('scholicToken');
   if (!authResult.scholicToken) {
     currentActiveTab = 'all';
@@ -254,6 +269,12 @@ function removeListeners(): void {
  */
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'SET_ENABLED') {
+    // Ignore enable requests on blocked URLs — the sidebar must stay hidden
+    if (message.enabled && isBlockedUrl(window.location.href)) {
+      chrome.runtime.sendMessage({ type: 'SET_PAGE_BLOCKED', blocked: true });
+      sendResponse({ ok: true });
+      return true;
+    }
     isEnabled = message.enabled;
     if (isEnabled) {
       sidebar.showPeek();

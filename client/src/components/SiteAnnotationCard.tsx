@@ -68,6 +68,8 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           fontFamily: '"Georgia", serif',
+          overflowWrap: 'break-word',
+          wordBreak: 'break-word',
         }}>
           "{annotation.quoteText}"
         </p>
@@ -85,6 +87,8 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           fontFamily: '"Caveat", cursive',
+          overflowWrap: 'break-word',
+          wordBreak: 'break-word',
         }}>
           {annotation.text}
         </p>

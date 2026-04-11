@@ -1,9 +1,12 @@
 package endpoints
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"scholic/internal/database"
 	"scholic/internal/models"
@@ -81,6 +84,10 @@ func UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Profile updated but failed to reload"})
 		return
 	}
+
+	// Invalidate the public profile cache for this user
+	go database.CacheDelete(context.Background(), database.UserProfileKey(user.Username))
+
 	c.JSON(http.StatusOK, user)
 }
 
@@ -221,6 +228,116 @@ func GetUserProfile(c *gin.Context) {
 		"activity":     annotations,
 		"totalActivity": totalActivity,
 	})
+}
+
+// RecentSite is a single entry in the recently-read list.
+type RecentSite struct {
+	URL         string    `json:"url"`
+	Title       string    `json:"title"`
+	Favicon     string    `json:"favicon"`
+	Domain      string    `json:"domain"`
+	Description string    `json:"description"`
+	Image       string    `json:"image"`
+	LastRead    time.Time `json:"lastRead"`
+}
+
+// GetRecentlyRead handles GET /api/users/:username/recently-read
+//
+// Returns the distinct pages a user has publicly annotated, ordered by most
+// recently annotated, paginated via ?limit= and ?offset=.
+// Each page is independently cached in Redis for TTLRecentlyRead (5 minutes).
+// Cache is invalidated (pattern delete) whenever the user creates or deletes
+// an annotation.
+func GetRecentlyRead(c *gin.Context) {
+	username := c.Param("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username parameter is required"})
+		return
+	}
+
+	// Pagination params
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if err != nil || limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	ctx := context.Background()
+	cacheKey := database.RecentlyReadPageKey(username, limit, offset)
+
+	// Attempt cache hit first — each page is keyed separately
+	cached, _ := database.CacheGet(ctx, cacheKey)
+	if cached != "" {
+		c.Header("X-Cache", "HIT")
+		c.Data(http.StatusOK, "application/json; charset=utf-8", []byte(cached))
+		return
+	}
+
+	// Resolve user
+	var user models.User
+	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Count total distinct URLs for pagination metadata.
+	// Uses the partial index (user_id, url, created_at DESC WHERE is_private=false AND deleted_at IS NULL).
+	var totalDistinct int64
+	database.DB.Model(&models.Annotation{}).
+		Where("user_id = ? AND is_private = false AND deleted_at IS NULL", user.ID).
+		Distinct("url").
+		Count(&totalDistinct)
+
+	// Fetch one page of recently-read sites.
+	//
+	// DISTINCT ON (url) picks the most-recent annotation's metadata for each URL
+	// (correct title/favicon/etc) without a GROUP BY + MAX() pass.
+	// The partial index on (user_id, url, created_at DESC) covers this query.
+	var sites []RecentSite
+	rawSQL := `
+		SELECT url, link_title AS title, link_favicon AS favicon, link_domain AS domain,
+		       link_description AS description, link_image AS image,
+		       created_at AS last_read
+		FROM (
+			SELECT DISTINCT ON (url)
+				url, link_title, link_favicon, link_domain, link_description, link_image, created_at
+			FROM annotations
+			WHERE user_id = ? AND is_private = false AND deleted_at IS NULL
+			ORDER BY url, created_at DESC
+		) latest
+		ORDER BY last_read DESC
+		LIMIT ? OFFSET ?
+	`
+	result := database.DB.Raw(rawSQL, user.ID, limit, offset).Scan(&sites)
+	if result.Error != nil {
+		log.Printf("[Profile] GetRecentlyRead DB error for %s: %v", username, result.Error)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load recently read"})
+		return
+	}
+
+	if sites == nil {
+		sites = []RecentSite{}
+	}
+
+	hasMore := int64(offset+len(sites)) < totalDistinct
+
+	// Serialise, cache this page, and respond
+	payload := gin.H{
+		"sites":   sites,
+		"total":   totalDistinct,
+		"limit":   limit,
+		"offset":  offset,
+		"hasMore": hasMore,
+	}
+	if payloadBytes, marshalErr := json.Marshal(payload); marshalErr == nil {
+		database.CacheSet(ctx, cacheKey, string(payloadBytes), database.TTLRecentlyRead)
+	}
+
+	c.Header("X-Cache", "MISS")
+	c.JSON(http.StatusOK, payload)
 }
 
 // SearchUsers handles GET /api/users/search?q=...&limit=...&offset=...

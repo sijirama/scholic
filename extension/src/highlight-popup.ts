@@ -403,6 +403,8 @@ export class HighlightPopup {
         color: #999;
         line-height: 1.6;
         border-bottom: 1px solid rgba(255,255,255,0.05);
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
 
       .popup-actions {
@@ -509,7 +511,7 @@ export class HighlightPopup {
         margin-right: 5px;
       }
 
-      .popup-comment-text { color: #777; }
+      .popup-comment-text { color: #777; overflow-wrap: break-word; word-break: break-word; }
 
       .popup-reply-section {
         padding: 8px 10px 10px;

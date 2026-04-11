@@ -29437,14 +29437,17 @@
         /** Current user data */
         userData = null;
         isRendering = false;
+        /** Queued render — flushed after the current render finishes */
+        pendingRender = null;
         /** Active tab: 'mine' | 'community' | 'all' */
-        activeTab = "mine";
+        activeTab = "community";
         isAuthenticated = false;
         /** Stored document click handler for cleanup */
         menuCloseHandler = null;
         constructor(callbacks) {
           this.callbacks = callbacks;
           this.fetchUserData();
+          this.loadPersistedTab();
           this.host = document.createElement("scholic-sidebar-host");
           this.host.style.cssText = `
       position: fixed;
@@ -29487,6 +29490,26 @@
               this.fetchUserData();
             }
           });
+        }
+        /**
+         * Load the last-used tab from chrome.storage.local.
+         * Falls back to 'community' for logged-in users, 'all' for guests.
+         * This runs async at construction — first render uses the field default
+         * then re-renders if the stored value differs.
+         */
+        async loadPersistedTab() {
+          const result = await chrome.storage.local.get(["scholicActiveTab", "scholicToken"]);
+          const stored = result.scholicActiveTab;
+          const isAuth = !!result.scholicToken;
+          if (!isAuth) {
+            this.activeTab = "all";
+            return;
+          }
+          this.activeTab = stored ?? "community";
+        }
+        /** Persist the active tab to chrome.storage.local. */
+        saveActiveTab(tab) {
+          chrome.storage.local.set({ scholicActiveTab: tab });
         }
         /** Fetch current user data from the backend.
          * Also sets isAuthenticated so that the first renderAnnotationList call
@@ -29611,7 +29634,7 @@
               const tab = target.dataset.tab;
               if (this.activeTab !== tab) {
                 this.activeTab = tab;
-                this.isRendering = false;
+                this.saveActiveTab(tab);
                 this.renderAnnotationList(this.lastAnnotations);
                 this.callbacks.onTabChange(tab);
               }
@@ -30399,6 +30422,15 @@
           container.appendChild(form);
           const textarea = form.querySelector(".note-input");
           setTimeout(() => textarea?.focus(), 100);
+          if (textarea) {
+            textarea.style.resize = "none";
+            textarea.style.overflow = "hidden";
+            const autoGrow = () => {
+              textarea.style.height = "auto";
+              textarea.style.height = `${textarea.scrollHeight}px`;
+            };
+            textarea.addEventListener("input", autoGrow);
+          }
           const toggle = form.querySelector("#privacy-switch");
           const label = form.querySelector("#privacy-label");
           toggle?.addEventListener("click", () => {
@@ -30437,10 +30469,18 @@
         }
         /**
          * Render the list of existing annotations in the sidebar.
-         * Guarded against concurrent/duplicate renders.
+         *
+         * Uses a queue so that optimistic updates fired mid-render are never dropped:
+         * if a render is already running, the latest call is stored and flushed the
+         * moment the current render finishes. This means the sidebar always ends up
+         * showing the most recent data without blocking the caller.
          */
         async renderAnnotationList(annotations, hasMore = false) {
-          if (this.isRendering) return;
+          if (!Array.isArray(annotations)) annotations = [];
+          if (this.isRendering) {
+            this.pendingRender = { annotations, hasMore };
+            return;
+          }
           this.isRendering = true;
           try {
             this.lastAnnotations = annotations;
@@ -30481,9 +30521,9 @@
             const myUserId = this.userData?.id;
             let displayAnnotations = this.isAuthenticated ? annotations : annotations.filter((a) => !a.isPrivate);
             if (this.activeTab === "mine") {
-              displayAnnotations = displayAnnotations.filter((a) => String(a.userId) === String(myUserId));
+              displayAnnotations = displayAnnotations.filter((a) => a._isPending || String(a.userId) === String(myUserId));
             } else if (this.activeTab === "community") {
-              displayAnnotations = displayAnnotations.filter((a) => String(a.userId) !== String(myUserId));
+              displayAnnotations = displayAnnotations.filter((a) => a._isPending || String(a.userId) !== String(myUserId));
             }
             if (displayAnnotations.length === 0) {
               let msg = this.activeTab === "mine" ? "You haven't made any highlights here yet." : this.activeTab === "community" ? "No one else has annotated this page yet." : "No annotations on this page yet.";
@@ -30555,7 +30595,7 @@
                     Sign in to join the conversation
                   </div>
                 `}
-                ${annotation.comments && annotation.comments.length > 0 ? `
+                ${Array.isArray(annotation.comments) && annotation.comments.length > 0 ? `
                   <div class="annotation-comments-list">
                     ${annotation.comments.map((c) => {
                   const cname = c.user?.username || c.user?.emailSlice || "User";
@@ -30655,6 +30695,11 @@
             if (contentLayer) contentLayer.scrollTop = 0;
           } finally {
             this.isRendering = false;
+            if (this.pendingRender) {
+              const { annotations: a, hasMore: h } = this.pendingRender;
+              this.pendingRender = null;
+              await this.renderAnnotationList(a, h);
+            }
           }
         }
         /** Escape a value for safe use inside an HTML attribute (e.g. src="...") */
@@ -32169,6 +32214,8 @@
         color: #999;
         line-height: 1.6;
         border-bottom: 1px solid rgba(255,255,255,0.05);
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
 
       .popup-actions {
@@ -32275,7 +32322,7 @@
         margin-right: 5px;
       }
 
-      .popup-comment-text { color: #777; }
+      .popup-comment-text { color: #777; overflow-wrap: break-word; word-break: break-word; }
 
       .popup-reply-section {
         padding: 8px 10px 10px;
