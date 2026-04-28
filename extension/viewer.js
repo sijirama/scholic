@@ -29369,9 +29369,9 @@
       "use strict";
       CONFIG = {
         // The backend API endpoint
-        API_BASE: "https://api.scholic.com/api",
+        API_BASE: "http://localhost:8081/api",
         // The frontend web application URL (for profile links and login)
-        WEB_URL: "https://scholic.com"
+        WEB_URL: "http://localhost:5173"
       };
     }
   });
@@ -30445,10 +30445,19 @@
               selectedColor = btn.dataset.color || HIGHLIGHT_COLORS[0].hex;
             });
           });
-          form.querySelector(".cancel-btn")?.addEventListener("click", () => {
+          const discard = () => {
             form.remove();
             this.pendingQuoteText = "";
             this.pendingSelectors = [];
+            this.callbacks.onDiscard?.();
+          };
+          form.querySelector(".cancel-btn")?.addEventListener("click", discard);
+          textarea?.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              discard();
+            }
           });
           form.querySelector(".save-btn")?.addEventListener("click", () => {
             const note = textarea?.value || "";
@@ -32552,7 +32561,8 @@
             onTabChange: (tab) => {
               this.currentTab = tab;
               this.filterHighlights();
-            }
+            },
+            onDiscard: () => this.discardPendingAnnotation()
           });
           this.popover = new SelectionPopover({
             onAnnotate: (range, quoteText) => {
@@ -32588,7 +32598,9 @@
             }
           });
           this.highlightPopup = new HighlightPopup(
-            (id) => this.annotations.find((a) => a.id === id),
+            // String() both sides — listeners may capture either a numeric server ID
+            // (from restoreHighlightsForPage) or a stringified ID (from handleSave).
+            (id) => this.annotations.find((a) => String(a.id) === String(id)),
             (id, text) => this.handleComment(id, text)
           );
           this.snipper = new Snipper(
@@ -32823,9 +32835,16 @@
             });
           });
         }
+        /** User dismissed the form (Cancel / Esc) — strip the optimistic highlight. */
+        discardPendingAnnotation() {
+          if (this.pendingHighlightElements.length === 0) return;
+          removeHighlights(this.pendingHighlightElements);
+          this.pendingHighlightElements = [];
+          this.pendingSelectors = null;
+        }
         async handleDelete(id) {
           await chrome.runtime.sendMessage({ type: "DELETE_ANNOTATION", data: { id } });
-          this.annotations = this.annotations.filter((a) => a.id !== id);
+          this.annotations = this.annotations.filter((a) => String(a.id) !== String(id));
           this.sidebar.renderAnnotationList(this.annotations);
           document.querySelectorAll(`.scholic-highlight[data-annotation-id="${id}"]`).forEach((el) => {
             const parent = el.parentNode;

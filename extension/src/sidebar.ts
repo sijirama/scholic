@@ -68,6 +68,8 @@ export interface SidebarCallbacks {
   onTabChange: (tab: 'mine' | 'community' | 'all') => void;
   /** Load next page of annotations */
   onLoadMore?: () => void;
+  /** Annotation form was dismissed without saving — clear pending highlight on the page */
+  onDiscard?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1215,11 +1217,24 @@ export class Sidebar {
       });
     });
 
-    // Cancel button
-    form.querySelector('.cancel-btn')?.addEventListener('click', () => {
+    const discard = () => {
       form.remove();
       this.pendingQuoteText = '';
       this.pendingSelectors = [];
+      this.callbacks.onDiscard?.();
+    };
+
+    // Cancel button
+    form.querySelector('.cancel-btn')?.addEventListener('click', discard);
+
+    // Esc inside the form discards. Stop propagation so the document-level
+    // Esc handler in content.ts doesn't double-fire.
+    textarea?.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        discard();
+      }
     });
 
     // Save button

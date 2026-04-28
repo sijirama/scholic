@@ -69,6 +69,7 @@ class ScholicPdfViewer {
         this.currentTab = tab;
         this.filterHighlights();
       },
+      onDiscard: () => this.discardPendingAnnotation(),
     });
 
     this.popover = new SelectionPopover({
@@ -112,7 +113,9 @@ class ScholicPdfViewer {
     });
 
     this.highlightPopup = new HighlightPopup(
-      (id: string) => this.annotations.find(a => a.id === id),
+      // String() both sides — listeners may capture either a numeric server ID
+      // (from restoreHighlightsForPage) or a stringified ID (from handleSave).
+      (id: string) => this.annotations.find(a => String(a.id) === String(id)),
       (id: string, text: string) => this.handleComment(id, text)
     );
 
@@ -424,9 +427,17 @@ class ScholicPdfViewer {
     });
   }
 
+  /** User dismissed the form (Cancel / Esc) — strip the optimistic highlight. */
+  private discardPendingAnnotation(): void {
+    if (this.pendingHighlightElements.length === 0) return;
+    removeHighlights(this.pendingHighlightElements);
+    this.pendingHighlightElements = [];
+    this.pendingSelectors = null;
+  }
+
   async handleDelete(id: string) {
     await chrome.runtime.sendMessage({ type: 'DELETE_ANNOTATION', data: { id } });
-    this.annotations = this.annotations.filter(a => a.id !== id);
+    this.annotations = this.annotations.filter(a => String(a.id) !== String(id));
     this.sidebar.renderAnnotationList(this.annotations);
     
     // Remove highlights from DOM

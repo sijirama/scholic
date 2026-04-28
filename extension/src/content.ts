@@ -115,6 +115,7 @@ const sidebar = new Sidebar({
   onRefresh: () => loadAnnotations(),
   onTabChange: (tab) => handleTabChange(tab),
   onLoadMore: () => loadMoreAnnotations(),
+  onDiscard: () => discardPendingAnnotation(),
 });
 
 /**
@@ -397,6 +398,12 @@ function handleKeyDown(e: KeyboardEvent): void {
 
   if (e.key === 'Escape') {
     popover.hide();
+    // If a pending optimistic highlight is on the page, the user is mid-annotate.
+    // Esc should clear it just like clicking Cancel. (When Esc fires inside the
+    // sidebar form's textarea, the form's own handler intercepts it first.)
+    if (pendingHighlightElements.length > 0) {
+      discardPendingAnnotation();
+    }
   }
 }
 
@@ -942,6 +949,66 @@ function removePendingHighlights(): void {
   parentsToNormalize.forEach((parent) => parent.normalize());
 }
 
+/**
+ * User dismissed the annotation form (Cancel / Esc) without saving.
+ * Strip the optimistic highlight so the page returns to its pre-Annotate state.
+ */
+function discardPendingAnnotation(): void {
+  if (pendingHighlightElements.length === 0) {
+    // Form may have been opened without an optimistic highlight — still clean up
+    // any orphaned pending elements left in the DOM just in case.
+    removePendingHighlights();
+    return;
+  }
+  suppressSync = true;
+  removeHighlights(pendingHighlightElements);
+  suppressSync = false;
+  pendingHighlightElements = [];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPA URL change monitoring
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * SPA navigations (history.pushState / replaceState / popstate) keep the same
+ * content-script context, so bootstrap() never re-fires. Without this hook, a
+ * user navigating from an allowed URL into a blocked one keeps the sidebar
+ * visible until they reload.
+ *
+ * On any URL change, re-run the bootstrap-relevant logic so the sidebar +
+ * annotation list always matches the current page.
+ */
+let lastUrl = window.location.href;
+
+function handleUrlChange(): void {
+  const currentUrl = window.location.href;
+  if (currentUrl === lastUrl) return;
+  lastUrl = currentUrl;
+  console.log(`[Scholic] URL changed → ${currentUrl}`);
+  // bootstrap() handles both blocked and unblocked transitions, including
+  // re-fetching annotations and updating the icon.
+  bootstrap();
+}
+
+function installUrlChangeWatchers(): void {
+  window.addEventListener('popstate', handleUrlChange);
+  window.addEventListener('hashchange', handleUrlChange);
+
+  const origPushState = history.pushState;
+  history.pushState = function (...args: Parameters<typeof history.pushState>) {
+    const ret = origPushState.apply(this, args);
+    handleUrlChange();
+    return ret;
+  };
+  const origReplaceState = history.replaceState;
+  history.replaceState = function (...args: Parameters<typeof history.replaceState>) {
+    const ret = origReplaceState.apply(this, args);
+    handleUrlChange();
+    return ret;
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Boot
 // ─────────────────────────────────────────────────────────────────────────────
@@ -951,6 +1018,7 @@ function removePendingHighlights(): void {
  * Wait for the DOM to be ready, then fetch and restore annotations.
  */
 if (!IS_IFRAME) {
+  installUrlChangeWatchers();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => bootstrap());
   } else {

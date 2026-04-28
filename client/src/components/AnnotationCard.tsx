@@ -228,6 +228,19 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   const [editingCommentId, setEditingCommentId] = React.useState<number | null>(null);
   const [editCommentText, setEditCommentText] = React.useState('');
 
+  // Preflight the link-preview image. Some sources (arxiv, etc.) advertise an
+  // og:image that 404s — without this check the card reserves a 180px-tall slot
+  // for an image that never paints. Mark failed so we skip the slot entirely.
+  const [linkImageFailed, setLinkImageFailed] = React.useState(false);
+  React.useEffect(() => {
+    if (!annotation.linkImage) return;
+    setLinkImageFailed(false);
+    const img = new Image();
+    img.onload = () => setLinkImageFailed(false);
+    img.onerror = () => setLinkImageFailed(true);
+    img.src = annotation.linkImage;
+  }, [annotation.linkImage]);
+
   const isFetching = fetchingComments?.[annotation.id];
   const hasMore = (annotation.commentCount || 0) > (annotation.comments?.length || 0);
 
@@ -422,7 +435,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
 
           {/* Link Card */}
           <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)', margin: '0 0 16px 0' }}>
-            {annotation.linkImage && (
+            {annotation.linkImage && !linkImageFailed && (
               <a href={annotation.url} target="_blank" rel="noreferrer">
                 <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
               </a>

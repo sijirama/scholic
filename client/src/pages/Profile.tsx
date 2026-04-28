@@ -10,6 +10,22 @@ import FollowersModal from '../components/FollowersModal';
 import Avatar from '../components/Avatar';
 import { toast } from 'sonner';
 
+function timeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const diffMs = Date.now() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay === 1) return 'yesterday';
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 interface ProfileUser extends BaseUser {
   bio: string;
   memberNumber: number;
@@ -571,6 +587,23 @@ const Profile: React.FC = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                    color: '#666',
+                    padding: '0 2px 4px',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span>Sorted by most recent visit</span>
+                </div>
                 {recentlyRead.map((site, idx) => {
                   let displayDomain = site.domain;
                   if (!displayDomain) {
@@ -611,6 +644,14 @@ const Profile: React.FC = () => {
                             <span style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {displayDomain}
                             </span>
+                            {site.lastRead && (
+                              <>
+                                <span style={{ fontSize: '11px', color: '#444', flexShrink: 0 }}>·</span>
+                                <span style={{ fontSize: '11px', color: '#555', flexShrink: 0 }} title={new Date(site.lastRead).toLocaleString()}>
+                                  {timeAgo(site.lastRead)}
+                                </span>
+                              </>
+                            )}
                           </div>
                           {/* Title */}
                           <div style={{ fontSize: '13px', fontWeight: 500, color: '#d0d0d0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
