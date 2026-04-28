@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
+import ReactionStrip from '../components/ReactionStrip';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,8 @@ interface SearchAnnotation {
   imageUrl?: string;
   createdAt: string;
   commentCount?: number;
+  reactionCounts?: Record<string, number>;
+  myReaction?: string;
   user: { id: number; username: string; firstName?: string; lastName?: string; profilePicture?: string };
 }
 
@@ -136,11 +139,17 @@ const AnnotationResultCard: React.FC<{ annotation: SearchAnnotation }> = ({ anno
             )}
 
             {/* Footer */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
               {annotation.commentCount !== undefined && annotation.commentCount > 0 && (
                 <span style={{ fontSize: 11, color: '#444' }}>{annotation.commentCount} comment{annotation.commentCount !== 1 ? 's' : ''}</span>
               )}
+              <ReactionStrip
+                annotationId={annotation.id}
+                reactionCounts={annotation.reactionCounts}
+                myReaction={annotation.myReaction}
+                canReact={false}
+              />
               <span style={{ fontSize: 11, color: hovered ? '#666' : '#444', marginLeft: 'auto', transition: 'color 0.1s' }}>View →</span>
             </div>
           </div>

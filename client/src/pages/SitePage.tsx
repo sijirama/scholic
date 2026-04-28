@@ -58,7 +58,7 @@ const PaperSkeleton: React.FC = () => (
 
 const SitePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  useAuth();
+  const { user: currentUser } = useAuth();
 
   const siteUrl = searchParams.get('url') || '';
   const authorParams = searchParams.getAll('author');
@@ -435,6 +435,7 @@ const SitePage: React.FC = () => {
                       annotation={annotation}
                       isSelected={selectedId === annotation.id}
                       onClick={() => handleSelectAnnotation(annotation)}
+                      canReact={!!currentUser}
                     />
                   </div>
                 ))}

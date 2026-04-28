@@ -138,6 +138,9 @@ func main() {
 			annotationsProtected.GET("/:id/comments", endpoints.GetComments)
 			annotationsProtected.PUT("/:id/comments/:commentId", endpoints.UpdateComment)
 			annotationsProtected.DELETE("/:id/comments/:commentId", endpoints.DeleteComment)
+
+			annotationsProtected.POST("/:id/reactions", endpoints.ToggleReaction)
+			annotationsProtected.DELETE("/:id/reactions", endpoints.ClearReaction)
 		}
 
 		// ── Upload Routes ──

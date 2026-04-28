@@ -242,6 +242,10 @@ async function handleMessage(message: any): Promise<any> {
       return deleteAnnotation(message.data.id);
     case 'CREATE_COMMENT':
       return createComment(message.data.annotationId, message.data.text);
+    case 'TOGGLE_REACTION':
+      return toggleReaction(message.data.annotationId, message.data.emoji);
+    case 'CLEAR_REACTION':
+      return clearReaction(message.data.annotationId);
     case 'FETCH_ME':
       return apiRequest('/auth/me');
     case 'CAPTURE_TAB':
@@ -249,6 +253,30 @@ async function handleMessage(message: any): Promise<any> {
     default:
       return { error: `Unknown message type: ${message.type}` };
   }
+}
+
+/**
+ * Toggle a reaction on an annotation. Mirrors the web client.
+ * Server resolves: insert / replace / toggle-off based on existing state.
+ *
+ * POST /api/annotations/:id/reactions
+ */
+async function toggleReaction(annotationId: string | number, emoji: string): Promise<any> {
+  return apiRequest(`/annotations/${annotationId}/reactions`, {
+    method: 'POST',
+    body: JSON.stringify({ emoji }),
+  });
+}
+
+/**
+ * Clear the user's reaction outright (idempotent).
+ *
+ * DELETE /api/annotations/:id/reactions
+ */
+async function clearReaction(annotationId: string | number): Promise<any> {
+  return apiRequest(`/annotations/${annotationId}/reactions`, {
+    method: 'DELETE',
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

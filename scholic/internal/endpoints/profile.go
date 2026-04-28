@@ -203,6 +203,8 @@ func GetUserProfile(c *gin.Context) {
 		annotations[i].CommentCount = commentCounts[annotations[i].ID]
 	}
 
+	populateReactions(c, annotations)
+
 	// Fetch follower counts
 	var followersCount, followingCount int64
 	database.DB.Model(&models.Follow{}).Where("following_id = ?", user.ID).Count(&followersCount)

@@ -2,6 +2,7 @@ import React from 'react';
 import { MessageCircle, Lock, Send, Trash2, Pencil, MoreHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageLightbox from './ImageLightbox';
+import ReactionStrip from './ReactionStrip';
 
 function timeAgo(dateStr: string): string {
   const now = new Date();
@@ -62,6 +63,8 @@ export interface Annotation {
   commentCount?: number;
   comments?: Comment[];
   isPrivate?: boolean;
+  reactionCounts?: Record<string, number>;
+  myReaction?: string;
 }
 
 interface AnnotationCardProps {
@@ -240,6 +243,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
     img.onerror = () => setLinkImageFailed(true);
     img.src = annotation.linkImage;
   }, [annotation.linkImage]);
+
 
   const isFetching = fetchingComments?.[annotation.id];
   const hasMore = (annotation.commentCount || 0) > (annotation.comments?.length || 0);
@@ -435,7 +439,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
 
           {/* Link Card */}
           <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)', margin: '0 0 16px 0' }}>
-            {annotation.linkImage && !linkImageFailed && (
+            {annotation.linkImage && !linkImageFailed && annotation.type !== 'image' && (
               <a href={annotation.url} target="_blank" rel="noreferrer">
                 <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
               </a>
@@ -460,14 +464,14 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             </div>
           </div>
 
-          {/* Bottom bar: comment toggle + navigation links */}
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          {/* Bottom bar: comment toggle + reactions + navigation links */}
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '18px' }}>
             <button
               onClick={() => toggleComments(annotation.id)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '4px',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -482,24 +486,34 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
               <span>{annotation.commentCount || 0}</span>
             </button>
 
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <a
-                href={`/annotation/${annotation.id}`}
-                style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#444'; }}
-              >
-                view annotation →
-              </a>
-              <a
-                href={`/page?url=${encodeURIComponent(annotation.url)}`}
-                style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#444'; }}
-              >
-                all on {(() => { try { return annotation.linkDomain || new URL(annotation.url).hostname.replace('www.', ''); } catch { return 'site'; } })()} →
-              </a>
+            <div style={{ marginLeft: 'auto' }}>
+              <ReactionStrip
+                annotationId={annotation.id}
+                reactionCounts={annotation.reactionCounts}
+                myReaction={annotation.myReaction}
+                canReact={!!currentUser}
+              />
             </div>
+          </div>
+
+          {/* Navigation links — own row, right-aligned */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 14 }}>
+            <a
+              href={`/annotation/${annotation.id}`}
+              style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#444'; }}
+            >
+              view annotation →
+            </a>
+            <a
+              href={`/page?url=${encodeURIComponent(annotation.url)}`}
+              style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#444'; }}
+            >
+              all on {(() => { try { return annotation.linkDomain || new URL(annotation.url).hostname.replace('www.', ''); } catch { return 'site'; } })()} →
+            </a>
           </div>
 
           {/* Comments section */}

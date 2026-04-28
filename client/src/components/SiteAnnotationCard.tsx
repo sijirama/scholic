@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import Avatar from './Avatar';
+import ReactionStrip from './ReactionStrip';
 import type { Annotation, User as AnnotationUser } from './AnnotationCard';
 
 function timeAgo(dateStr: string): string {
@@ -24,9 +25,11 @@ interface SiteAnnotationCardProps {
   annotation: Annotation;
   isSelected: boolean;
   onClick: () => void;
+  /** Pass the signed-in user so reactions can decide whether to enable input. */
+  canReact?: boolean;
 }
 
-const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isSelected, onClick }) => {
+const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isSelected, onClick, canReact = false }) => {
   return (
     <div
       onClick={onClick}
@@ -95,21 +98,28 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
       )}
 
       {/* Footer */}
-      <div style={{ display: 'flex', alignItems: 'center', marginTop: 10, gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: 10, gap: 12, flexWrap: 'wrap' }}>
         {(annotation.commentCount || 0) > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555' }}>
             <MessageCircle style={{ width: 12, height: 12 }} />
             <span style={{ fontSize: 11 }}>{annotation.commentCount}</span>
           </div>
         )}
-        <a
-          href={`/annotation/${annotation.id}`}
-          onClick={e => e.stopPropagation()}
-          style={{ fontSize: 11, color: '#555', textDecoration: 'none', marginLeft: 'auto' }}
-          className="hover:text-green-400"
-        >
-          view →
-        </a>
+        <div onClick={e => e.stopPropagation()} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <ReactionStrip
+            annotationId={annotation.id}
+            reactionCounts={annotation.reactionCounts}
+            myReaction={annotation.myReaction}
+            canReact={canReact && !annotation.isPrivate}
+          />
+          <a
+            href={`/annotation/${annotation.id}`}
+            style={{ fontSize: 11, color: '#555', textDecoration: 'none' }}
+            className="hover:text-green-400"
+          >
+            view →
+          </a>
+        </div>
       </div>
     </div>
   );

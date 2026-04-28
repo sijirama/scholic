@@ -116,6 +116,7 @@ const sidebar = new Sidebar({
   onTabChange: (tab) => handleTabChange(tab),
   onLoadMore: () => loadMoreAnnotations(),
   onDiscard: () => discardPendingAnnotation(),
+  onReact: (annotationId, emoji) => handleReact(annotationId, emoji),
 });
 
 /**
@@ -125,7 +126,8 @@ const highlightPopup = new HighlightPopup(
   (id: string) => {
     return pageAnnotations.find((a) => String(a.id) === id);
   },
-  (id: string, text: string) => handleComment(id, text)
+  (id: string, text: string) => handleComment(id, text),
+  (id, emoji) => handleReact(id, emoji)
 );
 
 /**
@@ -659,6 +661,59 @@ async function handleDeleteAnnotation(annotationId: string): Promise<void> {
       updateBadgeCount();
     }
   }
+}
+
+/**
+ * Toggle a reaction on an annotation. Drives optimistic UI for both the
+ * sidebar list and any open highlight popup, then reconciles with the
+ * server response (or rolls back on error).
+ */
+async function handleReact(annotationId: string | number, emoji: string): Promise<void> {
+  const target = pageAnnotations.find((a) => String(a.id) === String(annotationId));
+  if (!target) return;
+
+  const prevCounts = { ...(target.reactionCounts || {}) };
+  const prevMine = target.myReaction || '';
+
+  // Optimistic update
+  const next = { ...prevCounts };
+  if (prevMine && prevMine !== emoji) {
+    next[prevMine] = Math.max(0, (next[prevMine] || 1) - 1);
+    if (next[prevMine] === 0) delete next[prevMine];
+  }
+  if (prevMine === emoji) {
+    next[emoji] = Math.max(0, (next[emoji] || 1) - 1);
+    if (next[emoji] === 0) delete next[emoji];
+    target.myReaction = '';
+  } else {
+    next[emoji] = (next[emoji] || 0) + 1;
+    target.myReaction = emoji;
+  }
+  target.reactionCounts = next;
+
+  // Refresh both surfaces immediately
+  sidebar.renderAnnotationList(pageAnnotations, annotationsOffset < annotationsTotal);
+  highlightPopup.updateReactions();
+
+  try {
+    const res: any = await chrome.runtime.sendMessage({
+      type: 'TOGGLE_REACTION',
+      data: { annotationId, emoji },
+    });
+    if (res && !res.error) {
+      target.reactionCounts = res.counts || {};
+      target.myReaction = res.mine || '';
+    } else {
+      target.reactionCounts = prevCounts;
+      target.myReaction = prevMine;
+    }
+  } catch {
+    target.reactionCounts = prevCounts;
+    target.myReaction = prevMine;
+  }
+
+  sidebar.renderAnnotationList(pageAnnotations, annotationsOffset < annotationsTotal);
+  highlightPopup.updateReactions();
 }
 
 /**

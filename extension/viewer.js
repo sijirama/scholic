@@ -29392,11 +29392,12 @@
     if (diffDay < 7) return `${diffDay}d ago`;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
-  var HIGHLIGHT_COLORS, ICONS, Sidebar;
+  var REACTION_EMOJIS, HIGHLIGHT_COLORS, ICONS, Sidebar;
   var init_sidebar = __esm({
     "src/sidebar.ts"() {
       "use strict";
       init_config();
+      REACTION_EMOJIS = ["\u{1F44D}", "\u2764\uFE0F", "\u{1F525}", "\u{1F4A1}", "\u{1F914}", "\u{1F602}", "\u{1F4DD}", "\u{1F480}", "\u{1F440}", "\u{1F92F}"];
       HIGHLIGHT_COLORS = [
         // Pastels (light backgrounds)
         { name: "Sage", hex: "#A8D5B5" },
@@ -30584,16 +30585,17 @@
                 })()}
               </div>
             ` : ""}
-            <div class="annotation-meta">
+            <div class="annotation-meta" style="display:flex; flex-wrap:wrap; align-items:center; gap:14px;">
               ${timeStr ? `<span>${timeStr}</span>` : ""}
               ${annotation.id ? `
-                <button class="toggle-comments-btn" data-id="${annotation.id}" style="background:none; border:none; color:#555; cursor:pointer; font-size:12px; margin-left:12px; display:flex; align-items:center; gap:4px; padding:0;">
+                <button class="toggle-comments-btn" data-id="${annotation.id}" style="background:none; border:none; color:#555; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:3px; padding:0;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
                   <span>${annotation.comments?.length || 0}</span>
                 </button>
               ` : ""}
+              ${annotation.id ? this.renderReactionStrip(annotation) : ""}
             </div>
             ${annotation.id && this.openComments[annotation.id] ? `
               <div class="annotation-comments">
@@ -30674,6 +30676,26 @@
                     this.callbacks.onDelete(id);
                   }
                 });
+                item.querySelectorAll(".reaction-chip").forEach((btn) => {
+                  btn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const emoji = btn.dataset.emoji;
+                    if (emoji && annotation.id) this.handleReactionClick(annotation, emoji);
+                  });
+                });
+                const pickerToggle = item.querySelector(".reaction-add-btn");
+                const picker = item.querySelector(".reaction-picker");
+                pickerToggle?.addEventListener("click", (e) => {
+                  e.stopPropagation();
+                  if (picker) picker.style.display = picker.style.display === "flex" ? "none" : "flex";
+                });
+                item.querySelectorAll(".reaction-picker-btn").forEach((btn) => {
+                  btn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const emoji = btn.dataset.emoji;
+                    if (emoji && annotation.id) this.handleReactionClick(annotation, emoji);
+                  });
+                });
                 const replyInput = item.querySelector(".sidebar-reply-input");
                 replyInput?.addEventListener("keydown", (e) => {
                   if (e.key === "Enter") {
@@ -30710,6 +30732,86 @@
               await this.renderAnnotationList(a, h);
             }
           }
+        }
+        /**
+         * Render the compact reactions strip for a single annotation.
+         *
+         * Compact display rules:
+         *   - Show a chip for each emoji with count > 0.
+         *   - Always show a chip for the user's active reaction (count of 1 = just them).
+         *   - Show a "+" picker button after the chips (auth-only).
+         *   - Picker is sibling, hidden by default — toggled inline via JS.
+         *
+         * Chips and picker entries get data-emoji so the click handler can route
+         * to the same toggle path. The annotation id is on the wrapper so the
+         * handler doesn't need a closure capture.
+         */
+        renderReactionStrip(annotation) {
+          const counts = annotation.reactionCounts || {};
+          const mine = annotation.myReaction || "";
+          const visibleSet = new Set(Object.keys(counts));
+          if (mine) visibleSet.add(mine);
+          const visible = REACTION_EMOJIS.filter((e) => visibleSet.has(e));
+          const chipStyle = (active) => `
+      display:inline-flex; align-items:center; gap:4px; padding:3px 8px;
+      font-size:12px; line-height:1.2;
+      background:${active ? "rgba(110,183,129,0.18)" : "rgba(255,255,255,0.04)"};
+      border:1px solid ${active ? "rgba(110,183,129,0.35)" : "rgba(255,255,255,0.08)"};
+      border-radius:999px; color:#ccc; cursor:pointer; font-family:inherit;
+    `.trim().replace(/\s+/g, " ");
+          const chipsHtml = visible.map((emoji) => {
+            const count = counts[emoji] || 0;
+            const active = mine === emoji;
+            return `
+        <button class="reaction-chip" data-emoji="${this.escapeAttr(emoji)}" style="${chipStyle(active)}">
+          <span>${emoji}</span>
+          ${count > 0 ? `<span style="font-size:10px; color:${active ? "#6EB781" : "#888"}; font-weight:600;">${count}</span>` : ""}
+        </button>
+      `;
+          }).join("");
+          const addBtnHtml = this.isAuthenticated ? `
+      <button class="reaction-add-btn" title="Add a reaction" style="
+        display:inline-flex; align-items:center; justify-content:center;
+        width:22px; height:22px; padding:0;
+        background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+        border-radius:999px; color:#888; cursor:pointer; font-family:inherit;
+      ">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    ` : "";
+          const pickerHtml = this.isAuthenticated ? `
+      <div class="reaction-picker" style="
+        display:none; position:absolute; bottom:calc(100% + 4px); left:0; z-index:5;
+        gap:1px; padding:5px 6px;
+        background:#1a1a1a; border:1px solid rgba(255,255,255,0.1);
+        border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.5);
+      ">
+        ${REACTION_EMOJIS.map((emoji) => `
+          <button class="reaction-picker-btn" data-emoji="${this.escapeAttr(emoji)}" style="
+            font-size:16px; background:${mine === emoji ? "rgba(110,183,129,0.18)" : "none"};
+            border:none; border-radius:5px; padding:3px 5px; cursor:pointer;
+            line-height:1; font-family:inherit;
+          ">${emoji}</button>
+        `).join("")}
+      </div>
+    ` : "";
+          if (!chipsHtml && !this.isAuthenticated) return "";
+          return `
+      <span class="annotation-reactions" style="position:relative; display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px; margin-left:auto;">
+        ${chipsHtml}
+        ${addBtnHtml}
+        ${pickerHtml}
+      </span>
+    `;
+        }
+        /**
+         * Delegate reaction click to the content script via onReact callback.
+         * Content script owns pageAnnotations and drives optimistic update + API call,
+         * then refreshes the sidebar (and any open highlight popup) in lockstep.
+         */
+        handleReactionClick(annotation, emoji) {
+          if (!this.isAuthenticated || !annotation.id) return;
+          this.callbacks.onReact?.(annotation.id, emoji);
         }
         /** Escape a value for safe use inside an HTML attribute (e.g. src="...") */
         escapeAttr(value) {
@@ -31893,6 +31995,7 @@
   var init_highlight_popup = __esm({
     "src/highlight-popup.ts"() {
       "use strict";
+      init_sidebar();
       init_config();
       HighlightPopup = class {
         host = null;
@@ -31903,9 +32006,11 @@
         getAnnotation;
         hideTimer = null;
         onComment;
-        constructor(getAnnotation, onComment) {
+        onReact;
+        constructor(getAnnotation, onComment, onReact) {
           this.getAnnotation = getAnnotation;
           this.onComment = onComment;
+          this.onReact = onReact;
         }
         show(annotationId, highlightEl, force = false) {
           if (!force && this.currentAnnotationId === annotationId && this.host) {
@@ -31978,6 +32083,7 @@
           ${msgSvg}
           <span class="comment-count">${commentCount}</span>
         </button>
+        ${this.renderReactionStrip(annotation)}
       </div>
 
       <div class="popup-comments-drawer">
@@ -32078,6 +32184,7 @@
             sendBtn?.classList.toggle("has-text", !!replyInput.value.trim());
           });
           sendBtn?.addEventListener("click", submitReply);
+          this.attachReactionHandlers(popup, annotationId);
           this.shadow.appendChild(popup);
           const rect = highlightEl.getBoundingClientRect();
           const scrollX = window.scrollX;
@@ -32096,6 +32203,87 @@
           if (this.currentAnnotationId && this.currentHighlightEl) {
             this.show(this.currentAnnotationId, this.currentHighlightEl);
           }
+        }
+        /**
+         * Patch just the reactions strip without tearing down the popup. Called by
+         * the content script after an optimistic react / server reconcile so the
+         * comments drawer state, scroll position, and reply input value all survive.
+         */
+        updateReactions() {
+          if (!this.shadow || !this.currentAnnotationId) return;
+          const annotation = this.getAnnotation(this.currentAnnotationId);
+          if (!annotation) return;
+          const existing = this.shadow.querySelector(".popup-reactions");
+          if (!existing || !existing.parentElement) return;
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = this.renderReactionStrip(annotation).trim();
+          const replacement = wrapper.firstElementChild;
+          if (!replacement) return;
+          existing.parentElement.replaceChild(replacement, existing);
+          const popup = this.shadow.querySelector(".scholic-popup");
+          if (popup) this.attachReactionHandlers(popup, this.currentAnnotationId);
+        }
+        /**
+         * Build the reactions strip HTML. Compact display: chip per visible emoji
+         * (count > 0 OR user's active), plus a "+" button that toggles a picker.
+         */
+        renderReactionStrip(annotation) {
+          const counts = annotation.reactionCounts || {};
+          const mine = annotation.myReaction || "";
+          const visibleSet = new Set(Object.keys(counts));
+          if (mine) visibleSet.add(mine);
+          const visible = REACTION_EMOJIS.filter((e) => visibleSet.has(e));
+          const chipsHtml = visible.map((emoji) => {
+            const count = counts[emoji] || 0;
+            const active = mine === emoji;
+            return `
+        <button class="popup-reaction-chip ${active ? "active" : ""}" data-emoji="${emoji}">
+          <span>${emoji}</span>
+          ${count > 0 ? `<span class="popup-reaction-count">${count}</span>` : ""}
+        </button>`;
+          }).join("");
+          const pickerHtml = REACTION_EMOJIS.map((emoji) => `
+      <button class="popup-reaction-picker-btn ${mine === emoji ? "active" : ""}" data-emoji="${emoji}">${emoji}</button>
+    `).join("");
+          return `
+      <span class="popup-reactions">
+        ${chipsHtml}
+        <button class="popup-reaction-add" title="Add a reaction">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <span class="popup-reactions-picker" style="display:none;">
+          ${pickerHtml}
+        </span>
+      </span>`;
+        }
+        /**
+         * Wire chip / +-button / picker click handlers. Called on initial popup
+         * construction and again after updateReactions() replaces the strip DOM.
+         */
+        attachReactionHandlers(popup, annotationId) {
+          popup.querySelectorAll(".popup-reaction-chip").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const emoji = btn.dataset.emoji;
+              if (emoji) this.onReact?.(annotationId, emoji);
+            });
+          });
+          const addBtn = popup.querySelector(".popup-reaction-add");
+          const picker = popup.querySelector(".popup-reactions-picker");
+          addBtn?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (picker) picker.style.display = picker.style.display === "flex" ? "none" : "flex";
+          });
+          popup.querySelectorAll(".popup-reaction-picker-btn").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const emoji = btn.dataset.emoji;
+              if (emoji) {
+                if (picker) picker.style.display = "none";
+                this.onReact?.(annotationId, emoji);
+              }
+            });
+          });
         }
         scheduleHide() {
           this.cancelHide();
@@ -32138,7 +32326,9 @@
           inset 0 1px 0 rgba(255,255,255,0.04);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         color: #e0e0e0;
-        overflow: hidden;
+        /* overflow stays visible so the reaction picker can pop above the
+           popup without being clipped. The drawer keeps its own
+           overflow:hidden for the open/close animation. */
         animation: popup-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
       }
 
@@ -32227,16 +32417,93 @@
         word-break: break-word;
       }
 
+      .popup-reactions {
+        position: relative;
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+      }
+
+      .popup-reaction-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        font-size: 12px;
+        line-height: 1.2;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 999px;
+        color: #ccc;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.15s, border-color 0.15s;
+      }
+      .popup-reaction-chip:hover { background: rgba(255,255,255,0.08); }
+      .popup-reaction-chip.active {
+        background: rgba(110,183,129,0.18);
+        border-color: rgba(110,183,129,0.35);
+      }
+      .popup-reaction-count { font-size: 10px; color: #888; font-weight: 600; }
+      .popup-reaction-chip.active .popup-reaction-count { color: #6EB781; }
+
+      .popup-reaction-add {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 999px;
+        color: #888;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.15s;
+      }
+      .popup-reaction-add:hover { background: rgba(255,255,255,0.08); color: #ccc; }
+
+      .popup-reactions-picker {
+        position: absolute;
+        bottom: calc(100% + 6px);
+        right: 0;
+        z-index: 5;
+        gap: 1px;
+        padding: 5px 6px;
+        background: #0e0e0e;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      }
+      .popup-reaction-picker-btn {
+        font-size: 16px;
+        background: none;
+        border: none;
+        border-radius: 5px;
+        padding: 3px 5px;
+        cursor: pointer;
+        line-height: 1;
+        font-family: inherit;
+        transition: background 0.1s;
+      }
+      .popup-reaction-picker-btn:hover { background: rgba(255,255,255,0.06); }
+      .popup-reaction-picker-btn.active { background: rgba(110,183,129,0.18); }
+
       .popup-actions {
         padding: 8px 14px;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
+        gap: 14px;
       }
 
       .popup-toggle-comments {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 3px;
         background: none;
         border: none;
         cursor: pointer;
@@ -32562,7 +32829,8 @@
               this.currentTab = tab;
               this.filterHighlights();
             },
-            onDiscard: () => this.discardPendingAnnotation()
+            onDiscard: () => this.discardPendingAnnotation(),
+            onReact: (id, emoji) => this.handleReact(id, emoji)
           });
           this.popover = new SelectionPopover({
             onAnnotate: (range, quoteText) => {
@@ -32601,7 +32869,8 @@
             // String() both sides — listeners may capture either a numeric server ID
             // (from restoreHighlightsForPage) or a stringified ID (from handleSave).
             (id) => this.annotations.find((a) => String(a.id) === String(id)),
-            (id, text) => this.handleComment(id, text)
+            (id, text) => this.handleComment(id, text),
+            (id, emoji) => this.handleReact(id, emoji)
           );
           this.snipper = new Snipper(
             (area) => this.handleAreaSelected(area),
@@ -32868,6 +33137,51 @@
           }
           const el = document.querySelector(`[data-annotation-id="${id}"]`);
           if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        /**
+         * Toggle a reaction on an annotation. Mirrors content.ts handleReact —
+         * drives optimistic update on this.annotations + sidebar + popup, then
+         * reconciles with the server response.
+         */
+        async handleReact(annotationId, emoji) {
+          const target = this.annotations.find((a) => String(a.id) === String(annotationId));
+          if (!target) return;
+          const prevCounts = { ...target.reactionCounts || {} };
+          const prevMine = target.myReaction || "";
+          const next = { ...prevCounts };
+          if (prevMine && prevMine !== emoji) {
+            next[prevMine] = Math.max(0, (next[prevMine] || 1) - 1);
+            if (next[prevMine] === 0) delete next[prevMine];
+          }
+          if (prevMine === emoji) {
+            next[emoji] = Math.max(0, (next[emoji] || 1) - 1);
+            if (next[emoji] === 0) delete next[emoji];
+            target.myReaction = "";
+          } else {
+            next[emoji] = (next[emoji] || 0) + 1;
+            target.myReaction = emoji;
+          }
+          target.reactionCounts = next;
+          this.sidebar.renderAnnotationList(this.annotations);
+          this.highlightPopup.updateReactions();
+          try {
+            const res = await chrome.runtime.sendMessage({
+              type: "TOGGLE_REACTION",
+              data: { annotationId, emoji }
+            });
+            if (res && !res.error) {
+              target.reactionCounts = res.counts || {};
+              target.myReaction = res.mine || "";
+            } else {
+              target.reactionCounts = prevCounts;
+              target.myReaction = prevMine;
+            }
+          } catch {
+            target.reactionCounts = prevCounts;
+            target.myReaction = prevMine;
+          }
+          this.sidebar.renderAnnotationList(this.annotations);
+          this.highlightPopup.updateReactions();
         }
         async handleComment(id, text) {
           const response = await chrome.runtime.sendMessage({

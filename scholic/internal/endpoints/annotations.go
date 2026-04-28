@@ -192,6 +192,8 @@ func GetAnnotations(c *gin.Context) {
 	query.Preload("User").Preload("Comments").Preload("Comments.User").
 		Order("created_at DESC").Limit(limit).Offset(offset).Find(&annotations)
 
+	populateReactions(c, annotations)
+
 	c.JSON(http.StatusOK, gin.H{
 		"annotations": annotations,
 		"total":       total,
@@ -343,6 +345,12 @@ func GetAnnotation(c *gin.Context) {
 	database.DB.Model(&models.Comment{}).Where("annotation_id = ?", annotation.ID).Count(&commentCount)
 	annotation.CommentCount = commentCount
 
+	// Reuse the slice helper on a one-element slice so single-fetch reads
+	// surface the same shape as list reads.
+	one := []models.Annotation{annotation}
+	populateReactions(c, one)
+	annotation = one[0]
+
 	c.JSON(http.StatusOK, annotation)
 }
 
@@ -400,6 +408,8 @@ func GetFeed(c *gin.Context) {
 	for i := range annotations {
 		annotations[i].CommentCount = commentCounts[annotations[i].ID]
 	}
+
+	populateReactions(c, annotations)
 
 	c.JSON(http.StatusOK, gin.H{
 		"annotations": annotations,
@@ -486,6 +496,8 @@ func GetSitePage(c *gin.Context) {
 	for i := range annotations {
 		annotations[i].CommentCount = commentCounts[annotations[i].ID]
 	}
+
+	populateReactions(c, annotations)
 
 	c.JSON(http.StatusOK, gin.H{
 		"annotations": annotations,

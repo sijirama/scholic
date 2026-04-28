@@ -4,17 +4,17 @@ Order of attack for the items in `TODO`. Phases are ordered by dependency + risk
 
 ---
 
-## Phase 1 — Bug sweep
+## Phase 1 — Bug sweep — DONE (commit `9e50952`)
 Clear v0.0.2 cruft before adding new surface area.
 
-**Cluster A — extension state hygiene** (likely share a root cause)
-- #1 PDF view: annotation popup on highlight-hover only appears after reload
-- #4 Sidebar doesn't close when navigating to a blocked site (icon greys out, sidebar stays)
-- #6 Cancelling an annotation (incl. via Esc) leaves the highlight in place
+**Cluster A — extension state hygiene**
+- [x] #1 PDF view: annotation popup on highlight-hover only appears after reload
+- [x] #4 Sidebar doesn't close when navigating to a blocked site
+- [x] #6 Cancelling an annotation (incl. via Esc) leaves the highlight in place
 
 **Cluster B — frontend polish**
-- #3 Link-preview image fallback (e.g. arxiv leaves a giant empty image slot)
-- #5 "Recently read" sorted by last-read time + label
+- [x] #3 Link-preview image fallback (arxiv leaves a giant empty image slot)
+- [x] #5 "Recently read" sorted by last-read time + label
 
 ---
 

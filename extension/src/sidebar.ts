@@ -32,8 +32,13 @@ export interface AnnotationData {
   imageUrl?: string;
   image?: string; // base64 data for creation
   highlightColor?: string; // user-chosen pastel hex color
+  reactionCounts?: Record<string, number>;
+  myReaction?: string;
   _isPending?: boolean; // optimistic: not yet saved to backend
 }
+
+/** Curated reaction set — must match the web client's REACTION_EMOJIS list. */
+export const REACTION_EMOJIS = ['👍', '❤️', '🔥', '💡', '🤔', '😂', '📝', '💀', '👀', '🤯'];
 
 const HIGHLIGHT_COLORS = [
   // Pastels (light backgrounds)
@@ -70,6 +75,8 @@ export interface SidebarCallbacks {
   onLoadMore?: () => void;
   /** Annotation form was dismissed without saving — clear pending highlight on the page */
   onDiscard?: () => void;
+  /** User clicked a reaction emoji. Content script handles API call + state. */
+  onReact?: (annotationId: string | number, emoji: string) => Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1400,16 +1407,17 @@ export class Sidebar {
           })()}
               </div>
             ` : ''}
-            <div class="annotation-meta">
+            <div class="annotation-meta" style="display:flex; flex-wrap:wrap; align-items:center; gap:14px;">
               ${timeStr ? `<span>${timeStr}</span>` : ''}
               ${annotation.id ? `
-                <button class="toggle-comments-btn" data-id="${annotation.id}" style="background:none; border:none; color:#555; cursor:pointer; font-size:12px; margin-left:12px; display:flex; align-items:center; gap:4px; padding:0;">
+                <button class="toggle-comments-btn" data-id="${annotation.id}" style="background:none; border:none; color:#555; cursor:pointer; font-size:12px; display:flex; align-items:center; gap:3px; padding:0;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
                   <span>${annotation.comments?.length || 0}</span>
                 </button>
               ` : ''}
+              ${annotation.id ? this.renderReactionStrip(annotation) : ''}
             </div>
             ${annotation.id && this.openComments[annotation.id] ? `
               <div class="annotation-comments">
@@ -1505,6 +1513,28 @@ export class Sidebar {
             }
           });
 
+          // Reaction chip + picker handlers
+          item.querySelectorAll<HTMLElement>('.reaction-chip').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const emoji = btn.dataset.emoji;
+              if (emoji && annotation.id) this.handleReactionClick(annotation, emoji);
+            });
+          });
+          const pickerToggle = item.querySelector<HTMLElement>('.reaction-add-btn');
+          const picker = item.querySelector<HTMLElement>('.reaction-picker');
+          pickerToggle?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (picker) picker.style.display = picker.style.display === 'flex' ? 'none' : 'flex';
+          });
+          item.querySelectorAll<HTMLElement>('.reaction-picker-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const emoji = btn.dataset.emoji;
+              if (emoji && annotation.id) this.handleReactionClick(annotation, emoji);
+            });
+          });
+
           // Reply input enter handling
           const replyInput = item.querySelector('.sidebar-reply-input') as HTMLInputElement;
           replyInput?.addEventListener('keydown', (e) => {
@@ -1550,6 +1580,94 @@ export class Sidebar {
         await this.renderAnnotationList(a, h);
       }
     }
+  }
+
+  /**
+   * Render the compact reactions strip for a single annotation.
+   *
+   * Compact display rules:
+   *   - Show a chip for each emoji with count > 0.
+   *   - Always show a chip for the user's active reaction (count of 1 = just them).
+   *   - Show a "+" picker button after the chips (auth-only).
+   *   - Picker is sibling, hidden by default — toggled inline via JS.
+   *
+   * Chips and picker entries get data-emoji so the click handler can route
+   * to the same toggle path. The annotation id is on the wrapper so the
+   * handler doesn't need a closure capture.
+   */
+  private renderReactionStrip(annotation: AnnotationData): string {
+    const counts = annotation.reactionCounts || {};
+    const mine = annotation.myReaction || '';
+    const visibleSet = new Set<string>(Object.keys(counts));
+    if (mine) visibleSet.add(mine);
+    const visible = REACTION_EMOJIS.filter((e) => visibleSet.has(e));
+
+    const chipStyle = (active: boolean) => `
+      display:inline-flex; align-items:center; gap:4px; padding:3px 8px;
+      font-size:12px; line-height:1.2;
+      background:${active ? 'rgba(110,183,129,0.18)' : 'rgba(255,255,255,0.04)'};
+      border:1px solid ${active ? 'rgba(110,183,129,0.35)' : 'rgba(255,255,255,0.08)'};
+      border-radius:999px; color:#ccc; cursor:pointer; font-family:inherit;
+    `.trim().replace(/\s+/g, ' ');
+
+    const chipsHtml = visible.map((emoji) => {
+      const count = counts[emoji] || 0;
+      const active = mine === emoji;
+      return `
+        <button class="reaction-chip" data-emoji="${this.escapeAttr(emoji)}" style="${chipStyle(active)}">
+          <span>${emoji}</span>
+          ${count > 0 ? `<span style="font-size:10px; color:${active ? '#6EB781' : '#888'}; font-weight:600;">${count}</span>` : ''}
+        </button>
+      `;
+    }).join('');
+
+    const addBtnHtml = this.isAuthenticated ? `
+      <button class="reaction-add-btn" title="Add a reaction" style="
+        display:inline-flex; align-items:center; justify-content:center;
+        width:22px; height:22px; padding:0;
+        background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+        border-radius:999px; color:#888; cursor:pointer; font-family:inherit;
+      ">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    ` : '';
+
+    const pickerHtml = this.isAuthenticated ? `
+      <div class="reaction-picker" style="
+        display:none; position:absolute; bottom:calc(100% + 4px); left:0; z-index:5;
+        gap:1px; padding:5px 6px;
+        background:#1a1a1a; border:1px solid rgba(255,255,255,0.1);
+        border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.5);
+      ">
+        ${REACTION_EMOJIS.map((emoji) => `
+          <button class="reaction-picker-btn" data-emoji="${this.escapeAttr(emoji)}" style="
+            font-size:16px; background:${mine === emoji ? 'rgba(110,183,129,0.18)' : 'none'};
+            border:none; border-radius:5px; padding:3px 5px; cursor:pointer;
+            line-height:1; font-family:inherit;
+          ">${emoji}</button>
+        `).join('')}
+      </div>
+    ` : '';
+
+    if (!chipsHtml && !this.isAuthenticated) return '';
+
+    return `
+      <span class="annotation-reactions" style="position:relative; display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px; margin-left:auto;">
+        ${chipsHtml}
+        ${addBtnHtml}
+        ${pickerHtml}
+      </span>
+    `;
+  }
+
+  /**
+   * Delegate reaction click to the content script via onReact callback.
+   * Content script owns pageAnnotations and drives optimistic update + API call,
+   * then refreshes the sidebar (and any open highlight popup) in lockstep.
+   */
+  private handleReactionClick(annotation: AnnotationData, emoji: string): void {
+    if (!this.isAuthenticated || !annotation.id) return;
+    this.callbacks.onReact?.(annotation.id, emoji);
   }
 
   /** Escape a value for safe use inside an HTML attribute (e.g. src="...") */

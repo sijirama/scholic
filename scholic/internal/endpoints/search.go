@@ -142,6 +142,14 @@ func doAnnotationSearch(
 		results[i].CommentCount = counts[results[i].ID]
 	}
 
+	var viewerID uint
+	if authed {
+		if u, ok := authedUserID.(uint); ok {
+			viewerID = u
+		}
+	}
+	populateReactionsForUser(viewerID, results)
+
 	return results, total
 }
 

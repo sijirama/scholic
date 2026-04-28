@@ -8,6 +8,7 @@ import Avatar from '../components/Avatar';
 import { toast } from 'sonner';
 import type { Annotation, Comment, User as AnnotationUser } from '../components/AnnotationCard';
 import ImageLightbox from '../components/ImageLightbox';
+import ReactionStrip from '../components/ReactionStrip';
 
 const HIGHLIGHT_COLORS = [
   { name: 'Sage',    hex: '#A8D5B5' },
@@ -576,18 +577,30 @@ const AnnotationPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Comments toggle */}
+        {/* Comments toggle + reactions row */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 20 }}>
-          <button
-            onClick={() => setShowComments(p => !p)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: showComments ? '#6EB781' : '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit', transition: 'color 0.15s' }}
-          >
-            <MessageCircle style={{ width: 16, height: 16 }} />
-            {commentTotal} {commentTotal === 1 ? 'comment' : 'comments'}
-            {showComments
-              ? <ChevronUp style={{ width: 13, height: 13 }} />
-              : <ChevronDown style={{ width: 13, height: 13 }} />}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <button
+              onClick={() => setShowComments(p => !p)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: showComments ? '#6EB781' : '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit', transition: 'color 0.15s' }}
+            >
+              <MessageCircle style={{ width: 16, height: 16 }} />
+              {commentTotal} {commentTotal === 1 ? 'comment' : 'comments'}
+              {showComments
+                ? <ChevronUp style={{ width: 13, height: 13 }} />
+                : <ChevronDown style={{ width: 13, height: 13 }} />}
+            </button>
+            {annotation && (
+              <div style={{ marginLeft: 'auto' }}>
+                <ReactionStrip
+                  annotationId={annotation.id}
+                  reactionCounts={annotation.reactionCounts}
+                  myReaction={annotation.myReaction}
+                  canReact={!!currentUser && !annotation.isPrivate}
+                />
+              </div>
+            )}
+          </div>
 
           {showComments && (
             <div style={{ marginTop: 20 }}>

@@ -65,4 +65,12 @@ type Annotation struct {
 
 	// CommentCount is a virtual field showing the total number of comments
 	CommentCount int64 `gorm:"-" json:"commentCount"`
+
+	// ReactionCounts is a virtual map[emoji]count populated on read paths.
+	// Empty/nil if the annotation has no reactions.
+	ReactionCounts map[string]int64 `gorm:"-" json:"reactionCounts"`
+
+	// MyReaction is the current viewer's active emoji on this annotation,
+	// or "" if they haven't reacted (or aren't signed in).
+	MyReaction string `gorm:"-" json:"myReaction,omitempty"`
 }

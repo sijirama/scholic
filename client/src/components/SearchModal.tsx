@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import api from '../lib/api';
 import UserRow from './UserRow';
 import type { UserRowData } from './UserRow';
+import ReactionStrip from './ReactionStrip';
 
 interface SearchAnnotation {
   id: number;
@@ -19,6 +20,8 @@ interface SearchAnnotation {
   type?: string;
   imageUrl?: string;
   createdAt: string;
+  reactionCounts?: Record<string, number>;
+  myReaction?: string;
   user: { id: number; username: string; firstName?: string; lastName?: string; profilePicture?: string };
 }
 
@@ -97,12 +100,20 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
           </p>
         )}
 
-        {/* Page title or raw URL */}
-        <div style={{ display:'flex', alignItems:'center', gap:5, overflow:'hidden' }}>
-          {ann.linkFavicon && <img src={ann.linkFavicon} alt="" style={{ width:11, height:11, borderRadius:2, flexShrink:0 }} />}
-          <span style={{ fontSize:11, color:'#666', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-            {ann.linkTitle || domain || ann.url}
-          </span>
+        {/* Page title or raw URL + reactions (read-only here) */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, overflow:'hidden', flexWrap:'wrap' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:5, overflow:'hidden', flex:1, minWidth:0 }}>
+            {ann.linkFavicon && <img src={ann.linkFavicon} alt="" style={{ width:11, height:11, borderRadius:2, flexShrink:0 }} />}
+            <span style={{ fontSize:11, color:'#666', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+              {ann.linkTitle || domain || ann.url}
+            </span>
+          </div>
+          <ReactionStrip
+            annotationId={ann.id}
+            reactionCounts={ann.reactionCounts}
+            myReaction={ann.myReaction}
+            canReact={false}
+          />
         </div>
       </div>
     </div>

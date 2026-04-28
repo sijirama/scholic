@@ -70,6 +70,7 @@ class ScholicPdfViewer {
         this.filterHighlights();
       },
       onDiscard: () => this.discardPendingAnnotation(),
+      onReact: (id, emoji) => this.handleReact(id, emoji),
     });
 
     this.popover = new SelectionPopover({
@@ -116,7 +117,8 @@ class ScholicPdfViewer {
       // String() both sides — listeners may capture either a numeric server ID
       // (from restoreHighlightsForPage) or a stringified ID (from handleSave).
       (id: string) => this.annotations.find(a => String(a.id) === String(id)),
-      (id: string, text: string) => this.handleComment(id, text)
+      (id: string, text: string) => this.handleComment(id, text),
+      (id, emoji) => this.handleReact(id, emoji)
     );
 
     this.snipper = new Snipper(
@@ -468,6 +470,57 @@ class ScholicPdfViewer {
     // Page already loaded or no page metadata
     const el = document.querySelector(`[data-annotation-id="${id}"]`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  /**
+   * Toggle a reaction on an annotation. Mirrors content.ts handleReact —
+   * drives optimistic update on this.annotations + sidebar + popup, then
+   * reconciles with the server response.
+   */
+  async handleReact(annotationId: string | number, emoji: string): Promise<void> {
+    const target = this.annotations.find((a) => String(a.id) === String(annotationId));
+    if (!target) return;
+
+    const prevCounts = { ...(target.reactionCounts || {}) };
+    const prevMine = target.myReaction || '';
+
+    const next = { ...prevCounts };
+    if (prevMine && prevMine !== emoji) {
+      next[prevMine] = Math.max(0, (next[prevMine] || 1) - 1);
+      if (next[prevMine] === 0) delete next[prevMine];
+    }
+    if (prevMine === emoji) {
+      next[emoji] = Math.max(0, (next[emoji] || 1) - 1);
+      if (next[emoji] === 0) delete next[emoji];
+      target.myReaction = '';
+    } else {
+      next[emoji] = (next[emoji] || 0) + 1;
+      target.myReaction = emoji;
+    }
+    target.reactionCounts = next;
+
+    this.sidebar.renderAnnotationList(this.annotations);
+    this.highlightPopup.updateReactions();
+
+    try {
+      const res: any = await chrome.runtime.sendMessage({
+        type: 'TOGGLE_REACTION',
+        data: { annotationId, emoji },
+      });
+      if (res && !res.error) {
+        target.reactionCounts = res.counts || {};
+        target.myReaction = res.mine || '';
+      } else {
+        target.reactionCounts = prevCounts;
+        target.myReaction = prevMine;
+      }
+    } catch {
+      target.reactionCounts = prevCounts;
+      target.myReaction = prevMine;
+    }
+
+    this.sidebar.renderAnnotationList(this.annotations);
+    this.highlightPopup.updateReactions();
   }
 
   async handleComment(id: string, text: string) {

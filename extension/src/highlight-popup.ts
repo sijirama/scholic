@@ -11,6 +11,7 @@
  */
 
 import type { AnnotationData } from './sidebar';
+import { REACTION_EMOJIS } from './sidebar';
 import { CONFIG } from './config';
 
 export class HighlightPopup {
@@ -22,13 +23,16 @@ export class HighlightPopup {
   private getAnnotation: (id: string) => AnnotationData | undefined;
   private hideTimer: number | null = null;
   private onComment: (id: string, text: string) => Promise<void>;
+  private onReact?: (id: string | number, emoji: string) => Promise<void>;
 
   constructor(
     getAnnotation: (id: string) => AnnotationData | undefined,
-    onComment: (id: string, text: string) => Promise<void>
+    onComment: (id: string, text: string) => Promise<void>,
+    onReact?: (id: string | number, emoji: string) => Promise<void>
   ) {
     this.getAnnotation = getAnnotation;
     this.onComment = onComment;
+    this.onReact = onReact;
   }
 
   show(annotationId: string, highlightEl: HTMLElement, force: boolean = false): void {
@@ -120,6 +124,7 @@ export class HighlightPopup {
           ${msgSvg}
           <span class="comment-count">${commentCount}</span>
         </button>
+        ${this.renderReactionStrip(annotation)}
       </div>
 
       <div class="popup-comments-drawer">
@@ -239,6 +244,8 @@ export class HighlightPopup {
     });
     sendBtn?.addEventListener('click', submitReply);
 
+    this.attachReactionHandlers(popup, annotationId);
+
     this.shadow.appendChild(popup);
 
     // ── Position ──────────────────────────────────────────────────
@@ -265,6 +272,98 @@ export class HighlightPopup {
     if (this.currentAnnotationId && this.currentHighlightEl) {
       this.show(this.currentAnnotationId, this.currentHighlightEl);
     }
+  }
+
+  /**
+   * Patch just the reactions strip without tearing down the popup. Called by
+   * the content script after an optimistic react / server reconcile so the
+   * comments drawer state, scroll position, and reply input value all survive.
+   */
+  updateReactions(): void {
+    if (!this.shadow || !this.currentAnnotationId) return;
+    const annotation = this.getAnnotation(this.currentAnnotationId);
+    if (!annotation) return;
+    const existing = this.shadow.querySelector('.popup-reactions');
+    if (!existing || !existing.parentElement) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = this.renderReactionStrip(annotation).trim();
+    const replacement = wrapper.firstElementChild as HTMLElement | null;
+    if (!replacement) return;
+    existing.parentElement.replaceChild(replacement, existing);
+
+    // Re-attach handlers — easiest to just re-walk the whole popup
+    const popup = this.shadow.querySelector('.scholic-popup') as HTMLElement | null;
+    if (popup) this.attachReactionHandlers(popup, this.currentAnnotationId);
+  }
+
+  /**
+   * Build the reactions strip HTML. Compact display: chip per visible emoji
+   * (count > 0 OR user's active), plus a "+" button that toggles a picker.
+   */
+  private renderReactionStrip(annotation: AnnotationData): string {
+    const counts = annotation.reactionCounts || {};
+    const mine = annotation.myReaction || '';
+    const visibleSet = new Set<string>(Object.keys(counts));
+    if (mine) visibleSet.add(mine);
+    const visible = REACTION_EMOJIS.filter((e) => visibleSet.has(e));
+
+    const chipsHtml = visible.map((emoji) => {
+      const count = counts[emoji] || 0;
+      const active = mine === emoji;
+      return `
+        <button class="popup-reaction-chip ${active ? 'active' : ''}" data-emoji="${emoji}">
+          <span>${emoji}</span>
+          ${count > 0 ? `<span class="popup-reaction-count">${count}</span>` : ''}
+        </button>`;
+    }).join('');
+
+    const pickerHtml = REACTION_EMOJIS.map((emoji) => `
+      <button class="popup-reaction-picker-btn ${mine === emoji ? 'active' : ''}" data-emoji="${emoji}">${emoji}</button>
+    `).join('');
+
+    return `
+      <span class="popup-reactions">
+        ${chipsHtml}
+        <button class="popup-reaction-add" title="Add a reaction">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <span class="popup-reactions-picker" style="display:none;">
+          ${pickerHtml}
+        </span>
+      </span>`;
+  }
+
+  /**
+   * Wire chip / +-button / picker click handlers. Called on initial popup
+   * construction and again after updateReactions() replaces the strip DOM.
+   */
+  private attachReactionHandlers(popup: HTMLElement, annotationId: string): void {
+    popup.querySelectorAll<HTMLElement>('.popup-reaction-chip').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const emoji = btn.dataset.emoji;
+        if (emoji) this.onReact?.(annotationId, emoji);
+      });
+    });
+
+    const addBtn = popup.querySelector<HTMLElement>('.popup-reaction-add');
+    const picker = popup.querySelector<HTMLElement>('.popup-reactions-picker');
+    addBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (picker) picker.style.display = picker.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    popup.querySelectorAll<HTMLElement>('.popup-reaction-picker-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const emoji = btn.dataset.emoji;
+        if (emoji) {
+          if (picker) picker.style.display = 'none';
+          this.onReact?.(annotationId, emoji);
+        }
+      });
+    });
   }
 
   scheduleHide(): void {
@@ -318,7 +417,9 @@ export class HighlightPopup {
           inset 0 1px 0 rgba(255,255,255,0.04);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         color: #e0e0e0;
-        overflow: hidden;
+        /* overflow stays visible so the reaction picker can pop above the
+           popup without being clipped. The drawer keeps its own
+           overflow:hidden for the open/close animation. */
         animation: popup-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
       }
 
@@ -407,16 +508,93 @@ export class HighlightPopup {
         word-break: break-word;
       }
 
+      .popup-reactions {
+        position: relative;
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+      }
+
+      .popup-reaction-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        font-size: 12px;
+        line-height: 1.2;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 999px;
+        color: #ccc;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.15s, border-color 0.15s;
+      }
+      .popup-reaction-chip:hover { background: rgba(255,255,255,0.08); }
+      .popup-reaction-chip.active {
+        background: rgba(110,183,129,0.18);
+        border-color: rgba(110,183,129,0.35);
+      }
+      .popup-reaction-count { font-size: 10px; color: #888; font-weight: 600; }
+      .popup-reaction-chip.active .popup-reaction-count { color: #6EB781; }
+
+      .popup-reaction-add {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 999px;
+        color: #888;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.15s;
+      }
+      .popup-reaction-add:hover { background: rgba(255,255,255,0.08); color: #ccc; }
+
+      .popup-reactions-picker {
+        position: absolute;
+        bottom: calc(100% + 6px);
+        right: 0;
+        z-index: 5;
+        gap: 1px;
+        padding: 5px 6px;
+        background: #0e0e0e;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      }
+      .popup-reaction-picker-btn {
+        font-size: 16px;
+        background: none;
+        border: none;
+        border-radius: 5px;
+        padding: 3px 5px;
+        cursor: pointer;
+        line-height: 1;
+        font-family: inherit;
+        transition: background 0.1s;
+      }
+      .popup-reaction-picker-btn:hover { background: rgba(255,255,255,0.06); }
+      .popup-reaction-picker-btn.active { background: rgba(110,183,129,0.18); }
+
       .popup-actions {
         padding: 8px 14px;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
+        gap: 14px;
       }
 
       .popup-toggle-comments {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 3px;
         background: none;
         border: none;
         cursor: pointer;

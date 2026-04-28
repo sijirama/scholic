@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight } from 'lucide-react';
 import api from '../lib/api';
 import Navbar from '../components/Navbar';
+import ReactionStrip from '../components/ReactionStrip';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,8 @@ interface LandingAnnotation {
   imageUrl?: string;
   isPrivate?: boolean;
   createdAt: string;
+  reactionCounts?: Record<string, number>;
+  myReaction?: string;
   user: {
     id: number;
     username: string;
@@ -286,6 +289,17 @@ const CarouselCard: React.FC<{ annotation: LandingAnnotation; isFake: boolean }>
           {/* Highlight color dot */}
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: accentColor, flexShrink: 0, opacity: 0.75 }} />
         </div>
+        {/* Reactions — read-only on Landing (visitors aren't authed). Hidden when none. */}
+        {annotation.reactionCounts && Object.keys(annotation.reactionCounts).length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <ReactionStrip
+              annotationId={annotation.id}
+              reactionCounts={annotation.reactionCounts}
+              myReaction={annotation.myReaction}
+              canReact={false}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
