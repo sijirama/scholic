@@ -8,6 +8,7 @@ import (
 
 	"scholic/internal/blocklist"
 	"scholic/internal/database"
+	"scholic/internal/discover"
 	"scholic/internal/endpoints"
 	"scholic/internal/initializers"
 	"scholic/internal/middleware"
@@ -51,6 +52,9 @@ func main() {
 		log.Printf("[Warning] R2 not initialized: %v", err)
 		log.Println("[Warning] File upload features will be unavailable")
 	}
+
+	// Discover precompute job — runs an immediate warm-up tick then every 3h.
+	go discover.Run(3 * time.Hour)
 
 	r := gin.Default()
 
@@ -120,6 +124,10 @@ func main() {
 
 		// ── Feed ──
 		api.GET("/feed", middleware.OptionalAuthMiddleware(), endpoints.GetFeed)
+
+		// ── Discover ──
+		api.GET("/discover", middleware.OptionalAuthMiddleware(), endpoints.GetDiscover)
+		api.POST("/admin/discover/refresh", endpoints.RefreshDiscover)
 
 		// ── Blocklist (extension fetches this; public, no auth) ──
 		api.GET("/blocklist", endpoints.GetBlocklist)

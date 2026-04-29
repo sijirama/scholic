@@ -5,6 +5,8 @@ import api from '../lib/api';
 import AnnotationCard from '../components/AnnotationCard';
 import type { Annotation, User as AnnotationUser, Comment } from '../components/AnnotationCard';
 import Avatar from '../components/Avatar';
+import UserCard from '../components/discover/UserCard';
+import type { DiscoverAuthor } from '../components/discover/UserCard';
 import { toast } from 'sonner';
 
 const FeedSkeleton: React.FC = () => (
@@ -33,22 +35,21 @@ const Feed: React.FC = () => {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedError, setFeedError] = useState(false);
-  const [tab, setTab] = useState<'global' | 'following'>('global');
+  const [suggestions, setSuggestions] = useState<DiscoverAuthor[]>([]);
+  const [tab, setTab] = useState<'following' | 'mine'>('following');
 
   // Pagination state
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
   const [commentOffsets, setCommentOffsets] = useState<Record<number, number>>({});
   const [fetchingComments, setFetchingComments] = useState<Record<number, boolean>>({});
 
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
-
-  // AbortController for cancelling in-flight requests on tab switch
-  const abortRef = useRef<AbortController | null>(null);
 
   const toggleComments = (annotationId: number) => {
     setOpenComments(prev => {
@@ -192,7 +193,7 @@ const Feed: React.FC = () => {
     }
   }, [tab]);
 
-  // Reset when tab changes — cancel any in-flight request
+  // Reset on tab change. Cancel any in-flight request to avoid stale results.
   useEffect(() => {
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -205,6 +206,16 @@ const Feed: React.FC = () => {
 
     return () => controller.abort();
   }, [tab, fetchFeed]);
+
+  // Lazy-load people-to-follow suggestions only when the Following feed
+  // turns out empty (Mine should never need them).
+  useEffect(() => {
+    if (loading || feedError || annotations.length > 0 || suggestions.length > 0) return;
+    if (tab !== 'following') return;
+    api.get('/discover')
+      .then(r => setSuggestions((r.data?.peopleToFollow || []).slice(0, 6)))
+      .catch(() => { /* non-blocking */ });
+  }, [loading, feedError, annotations.length, suggestions.length, tab]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -261,26 +272,27 @@ const Feed: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        {user && (
-          <div style={{
-            display: 'flex', gap: '20px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px'
-          }}>
+        <div style={{
+          display: 'flex', gap: 20, marginBottom: 24,
+          borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12,
+        }}>
+          {(['following', 'mine'] as const).map(t => (
             <button
-              onClick={() => setTab('global')}
-              style={{ background: 'none', border: 'none', color: tab === 'global' ? '#fff' : '#666', fontSize: '15px', fontWeight: tab === 'global' ? 600 : 500, cursor: 'pointer', position: 'relative', padding: '0 4px', fontFamily: 'inherit' }}
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                background: 'none', border: 'none',
+                color: tab === t ? '#fff' : '#666',
+                fontSize: 15, fontWeight: tab === t ? 600 : 500,
+                cursor: 'pointer', position: 'relative', padding: '0 4px',
+                fontFamily: 'inherit', textTransform: 'capitalize',
+              }}
             >
-              Global
-              {tab === 'global' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: '#6EB781', borderRadius: '2px' }} />}
+              {t}
+              {tab === t && <div style={{ position: 'absolute', bottom: -13, left: 0, right: 0, height: 2, background: '#6EB781', borderRadius: 2 }} />}
             </button>
-            <button
-              onClick={() => setTab('following')}
-              style={{ background: 'none', border: 'none', color: tab === 'following' ? '#fff' : '#666', fontSize: '15px', fontWeight: tab === 'following' ? 600 : 500, cursor: 'pointer', position: 'relative', padding: '0 4px', fontFamily: 'inherit' }}
-            >
-              Following
-              {tab === 'following' && <div style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: '#6EB781', borderRadius: '2px' }} />}
-            </button>
-          </div>
-        )}
+          ))}
+        </div>
 
         {/* States */}
         {loading ? (
@@ -296,19 +308,34 @@ const Feed: React.FC = () => {
             </button>
           </div>
         ) : annotations.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>
-            {tab === 'following' ? (
-              <>
-                <p style={{ fontSize: '14px', marginBottom: '6px' }}>Your feed is empty</p>
-                <p style={{ fontSize: '12px', color: '#444' }}>Follow other scholars to see their annotations here</p>
-              </>
-            ) : (
-              <>
-                <p style={{ fontSize: '14px', marginBottom: '6px' }}>No annotations yet</p>
-                <p style={{ fontSize: '12px', color: '#444' }}>Start annotating the web with the Scholic extension!</p>
-              </>
-            )}
-          </div>
+          tab === 'mine' ? (
+            <div style={{ padding: '40px 0', color: '#888' }}>
+              <p style={{ fontSize: 14, marginBottom: 6, color: '#aaa' }}>You haven't annotated anything yet</p>
+              <p style={{ fontSize: 12, color: '#555' }}>
+                Install the Scholic extension and start highlighting on the web.
+              </p>
+            </div>
+          ) : (
+            <div style={{ padding: '40px 0', color: '#888' }}>
+              <p style={{ fontSize: 14, marginBottom: 6, color: '#aaa' }}>Your feed is empty</p>
+              <p style={{ fontSize: 12, color: '#555', marginBottom: 24 }}>
+                Follow other scholars to see their annotations here, or
+                {' '}<a href="/discover" style={{ color: '#6EB781', textDecoration: 'none' }}>browse Discover →</a>
+              </p>
+              {suggestions.length > 0 && (
+                <>
+                  <p style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+                    Suggested scholars
+                  </p>
+                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, margin: '0 -20px', padding: '0 20px 8px' }}>
+                    {suggestions.map(s => (
+                      <UserCard key={s.id} user={s} currentUserId={user?.id} isAuthed={!!user} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {annotations.map((annotation) => (

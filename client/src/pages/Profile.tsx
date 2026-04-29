@@ -539,7 +539,6 @@ const Profile: React.FC = () => {
                     fetchMoreComments={fetchMoreComments}
                     fetchingComments={fetchingComments}
                     currentUser={currentUser as BaseUser | null}
-                    isProfile={true}
                     onDeleteAnnotation={deleteAnnotation}
                     onEditAnnotation={editAnnotation}
                     onDeleteComment={deleteComment}

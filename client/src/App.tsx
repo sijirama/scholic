@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 import Onboarding from './pages/Onboarding';
 import ExtensionLogin from './pages/ExtensionLogin';
 import Feed from './pages/Feed';
+import Discover from './pages/Discover';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import AnnotationPage from './pages/AnnotationPage';
@@ -44,6 +45,7 @@ function App() {
                 <Feed />
               </ProtectedRoute>
             } />
+            <Route path="discover" element={<Discover />} />
             <Route path="settings" element={
               <ProtectedRoute>
                 <Settings />

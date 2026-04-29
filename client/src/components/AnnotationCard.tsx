@@ -79,7 +79,6 @@ interface AnnotationCardProps {
   fetchMoreComments?: (id: number) => void;
   fetchingComments?: { [key: number]: boolean };
   currentUser?: User | null;
-  isProfile?: boolean;
   onDeleteAnnotation?: (id: number) => void;
   onEditAnnotation?: (id: number, text: string) => void;
   onDeleteComment?: (annotationId: number, commentId: number) => void;
@@ -218,7 +217,6 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   fetchMoreComments,
   fetchingComments,
   currentUser,
-  isProfile = false,
   onDeleteAnnotation,
   onEditAnnotation,
   onDeleteComment,
@@ -254,9 +252,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
 
   return (
     <div
-      style={{ 
-        padding: isProfile ? '20px 0' : '20px 0', 
-        borderBottom: '1px solid rgba(255,255,255,0.05)' 
+      style={{
+        padding: '20px 0',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>

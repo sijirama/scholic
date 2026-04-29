@@ -365,12 +365,13 @@ func GetAnnotation(c *gin.Context) {
 
 // GetFeed handles GET /api/feed
 //
-// Returns all public annotations across all URLs, paginated.
-// Includes user data for each annotation.
+// tab=following (default): public annotations from authors the viewer follows.
+// tab=mine: the viewer's own annotations (public + private).
+// Auth is required either way — anonymous viewers are pointed at /discover.
 func GetFeed(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
-	tab := c.DefaultQuery("tab", "global")
+	tab := c.DefaultQuery("tab", "following")
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 || limit > 50 {
@@ -381,19 +382,23 @@ func GetFeed(c *gin.Context) {
 		offset = 0
 	}
 
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Sign in to view your feed"})
+		return
+	}
+
 	var annotations []models.Annotation
 	var total int64
 
-	query := database.DB.Model(&models.Annotation{}).Where("annotations.is_private = ?", false)
-
-	if tab == "following" {
-		userID, exists := c.Get("userID")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized to view following feed"})
-			return
-		}
-		// Filter to only authors the current user follows
-		query = query.Joins("JOIN follows ON follows.following_id = annotations.user_id").
+	var query *gorm.DB
+	if tab == "mine" {
+		query = database.DB.Model(&models.Annotation{}).
+			Where("annotations.user_id = ?", userID)
+	} else {
+		query = database.DB.Model(&models.Annotation{}).
+			Where("annotations.is_private = ?", false).
+			Joins("JOIN follows ON follows.following_id = annotations.user_id").
 			Where("follows.follower_id = ?", userID)
 	}
 

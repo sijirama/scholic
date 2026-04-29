@@ -328,14 +328,15 @@ const Landing: React.FC = () => {
   const animRef = useRef<number | null>(null);
   const pausedRef = useRef(false);
 
-  // Fetch public annotations for carousel
+  // Source carousel from precomputed Discover rails. Falls back to the canned
+  // FAKE_ANNOTATIONS when the cache is cold or the response is too thin.
   useEffect(() => {
     let cancelled = false;
     api
-      .get('/feed?type=global&limit=20&offset=0')
+      .get('/discover')
       .then((res) => {
         if (cancelled) return;
-        const items: LandingAnnotation[] = (res.data.annotations || res.data || []).filter(
+        const items: LandingAnnotation[] = (res.data?.trendingAnnotations || []).filter(
           (a: LandingAnnotation) =>
             !a.isPrivate &&
             a.text &&

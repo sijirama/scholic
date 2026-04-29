@@ -41,6 +41,21 @@ const Navbar: React.FC = () => {
       >
         {/* Center: brand + search */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/discover')}
+            className="cursor-pointer transition-colors"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: location.pathname === '/discover' ? '#fff' : '#777',
+              fontSize: '13px',
+              fontWeight: location.pathname === '/discover' ? 600 : 500,
+              fontFamily: 'inherit',
+              padding: '4px 6px',
+            }}
+          >
+            Discover
+          </button>
           <span
             className="font-semibold cursor-pointer"
             style={{ ...brandFont, fontSize: '18px', color: '#fff', letterSpacing: '-0.3px' }}
