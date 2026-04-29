@@ -58,6 +58,7 @@ func CreateComment(c *gin.Context) {
 		actorID := userID.(uint)
 		createNotification(annotation.UserID, actorID, NotificationComment, uintPtr(annotation.ID), uintPtr(comment.ID))
 		notifyMentionedUsers(actorID, comment.Text, uintPtr(annotation.ID), uintPtr(comment.ID), "", annotation.UserID)
+		notifyThreadParticipants(actorID, annotation.UserID, annotation.ID, comment.ID, comment.Text)
 	}
 
 	c.JSON(http.StatusCreated, comment)

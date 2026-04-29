@@ -14,9 +14,34 @@
 
 /** Backend API base URL — updated to 8081 to match turva dev env */
 import { CONFIG } from './config';
-import { isBlockedUrl } from './blocked-urls';
+import { hydrateBlocklist, isBlockedUrl, refreshBlocklist, watchBlocklistStorage } from './blocklist';
 
 const API_BASE = CONFIG.API_BASE;
+
+// Defensive init: any throw at the top level would unregister the rest of the
+// SW's listeners (icon click, header interception). Each block is isolated so
+// a failure in blocklist setup never breaks PDF interception or the toggle.
+try {
+  hydrateBlocklist();
+  watchBlocklistStorage();
+} catch (err) {
+  console.warn('[Scholic] Blocklist hydration failed at SW init:', err);
+}
+
+try {
+  chrome.runtime.onInstalled.addListener(() => { refreshBlocklist(); });
+  chrome.runtime.onStartup.addListener(() => { refreshBlocklist(); });
+  if (chrome.alarms?.create) {
+    chrome.alarms.create('blocklist-refresh', { periodInMinutes: 30 });
+    chrome.alarms.onAlarm.addListener((alarm) => {
+      if (alarm.name === 'blocklist-refresh') refreshBlocklist();
+    });
+  } else {
+    console.warn('[Scholic] chrome.alarms unavailable — manifest missing "alarms" permission?');
+  }
+} catch (err) {
+  console.warn('[Scholic] Blocklist refresh setup failed:', err);
+}
 
 /**
  * PDF Interception via HTTP Headers
@@ -36,9 +61,24 @@ chrome.webRequest.onHeadersReceived.addListener(
     const isPdf = contentType.includes('application/pdf') ||
                   (contentType.includes('application/octet-stream') && url.toLowerCase().endsWith('.pdf'));
 
+    // Per-tab PDF flag: written here on every main-frame response so the
+    // icon-click toggle has ground truth when deciding whether to swap to
+    // Scholic's viewer. Necessary because Chrome 118+ runs content scripts on
+    // the native PDF viewer, so a successful sendMessage no longer means
+    // "regular HTML page". Setting on PDF / removing on non-PDF here (rather
+    // than cleaning up in tabs.onUpdated) avoids a race with Chrome's internal
+    // navigation to its built-in PDF viewer, which fires onUpdated with a
+    // changeInfo.url and would otherwise wipe the mark we just set.
+    if (details.tabId >= 0) {
+      if (isPdf) {
+        chrome.storage.session.set({ [`pdfTab:${details.tabId}`]: url }).catch(() => {});
+      } else {
+        chrome.storage.session.remove(`pdfTab:${details.tabId}`).catch(() => {});
+      }
+    }
+
     if (!isPdf) return;
 
-    // Only redirect if the extension is enabled for this domain
     try {
       const domain = new URL(url).hostname;
       const result = await chrome.storage.local.get('enabledDomains');
@@ -77,6 +117,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
+chrome.tabs.onRemoved.addListener((tabId) => {
+  chrome.storage.session.remove(`pdfTab:${tabId}`).catch(() => {});
+});
+
 /**
  * Handle messages from content scripts or the PDF viewer.
  */
@@ -84,6 +128,28 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.id || !tab.url) return;
 
   try {
+    // Special case: tab is already on Scholic's PDF viewer.
+    // tab.url here is chrome-extension://<id>/viewer.html?url=<original>;
+    // toggle uses the underlying PDF's domain, and disabling navigates the
+    // tab back to the original PDF (Chrome's native viewer takes over since
+    // onHeadersReceived will skip the redirect now that the domain is off).
+    const viewerPrefix = chrome.runtime.getURL('viewer.html');
+    if (tab.url.startsWith(viewerPrefix)) {
+      const originalUrl = new URL(tab.url).searchParams.get('url');
+      if (!originalUrl) return;
+      const originalDomain = new URL(originalUrl).hostname;
+      const stored = await chrome.storage.local.get('enabledDomains');
+      const enabledDomains = stored.enabledDomains || {};
+      const isEnabled = !enabledDomains[originalDomain];
+      enabledDomains[originalDomain] = isEnabled;
+      await chrome.storage.local.set({ enabledDomains });
+      console.log(`[Scholic] ${originalDomain} (PDF) is now ${isEnabled ? 'enabled' : 'disabled'}`);
+      if (!isEnabled) {
+        chrome.tabs.update(tab.id, { url: originalUrl });
+      }
+      return;
+    }
+
     const url = new URL(tab.url);
     if (url.protocol.startsWith('chrome') || url.protocol.startsWith('about')) return;
 
@@ -106,15 +172,26 @@ chrome.action.onClicked.addListener(async (tab) => {
     console.log(`[Scholic] ${domain} is now ${isEnabled ? 'enabled' : 'disabled'}`);
 
     if (isEnabled) {
-      // Try to notify the content script. Content scripts run on regular web pages
-      // but NOT in PDF viewer contexts (Chrome's built-in PDF viewer, arxiv-style
-      // PDFs without .pdf extension, etc.). If sendMessage fails, the tab is
-      // likely showing a PDF — reload so onHeadersReceived can intercept it.
+      // First check if onHeadersReceived flagged this tab as a PDF. Chrome 118+
+      // injects content scripts onto its native PDF viewer, so sendMessage
+      // succeeds there even though the content script can't swap viewers.
+      // The session-storage flag is the only reliable "this is a PDF" signal.
+      const pdfMark = await chrome.storage.session.get(`pdfTab:${tab.id}`);
+      if (pdfMark[`pdfTab:${tab.id}`]) {
+        const viewerUrl = chrome.runtime.getURL(`viewer.html?url=${encodeURIComponent(tab.url)}`);
+        chrome.tabs.update(tab.id, { url: viewerUrl });
+        return;
+      }
+
+      // Regular page path: notify the content script. If there's no listener
+      // (some non-content-script page that escaped manifest matches), fall
+      // back to assuming PDF and swapping anyway.
       const sent = await chrome.tabs.sendMessage(tab.id, { type: 'SET_ENABLED', enabled: true })
         .catch(() => null);
-      if (!sent) {
-        chrome.tabs.reload(tab.id);
-      }
+      if (sent) return;
+
+      const viewerUrl = chrome.runtime.getURL(`viewer.html?url=${encodeURIComponent(tab.url)}`);
+      chrome.tabs.update(tab.id, { url: viewerUrl });
       return;
     }
 

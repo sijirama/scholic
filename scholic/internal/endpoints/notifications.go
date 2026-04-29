@@ -15,10 +15,12 @@ import (
 )
 
 const (
-	NotificationFollow   = "follow"
-	NotificationComment  = "comment"
-	NotificationReaction = "reaction"
-	NotificationMention  = "mention"
+	NotificationFollow    = "follow"
+	NotificationComment   = "comment"
+	NotificationReaction  = "reaction"
+	NotificationMention   = "mention"
+	NotificationReply     = "reply"
+	NotificationSharedDoc = "shared_doc"
 )
 
 var mentionPattern = regexp.MustCompile(`(^|[^A-Za-z0-9_])@([A-Za-z0-9_]{3,30})`)
@@ -107,6 +109,81 @@ func notifyMentionedUsers(actorID uint, text string, annotationID, commentID *ui
 			continue
 		}
 		createNotification(user.ID, actorID, NotificationMention, annotationID, commentID)
+	}
+}
+
+// mentionedUserIDSet resolves @mention tokens in `text` to a set of user IDs.
+// Used by reply / shared-doc helpers to suppress duplicate notifications when
+// a user is already getting a (more specific) mention notification.
+func mentionedUserIDSet(text string) map[uint]bool {
+	usernames := extractMentionUsernames(text)
+	if len(usernames) == 0 {
+		return nil
+	}
+	var ids []uint
+	if err := database.DB.Model(&models.User{}).
+		Where("LOWER(username) IN ?", usernames).
+		Pluck("id", &ids).Error; err != nil {
+		return nil
+	}
+	set := make(map[uint]bool, len(ids))
+	for _, id := range ids {
+		set[id] = true
+	}
+	return set
+}
+
+// notifyThreadParticipants notifies users who already commented on the same
+// annotation that there's a new comment in the thread. Skips the actor, the
+// annotation owner (they get NotificationComment), and anyone @mentioned in
+// the new comment (they get NotificationMention).
+func notifyThreadParticipants(actorID, annotationOwnerID, annotationID, commentID uint, commentText string) {
+	var participantIDs []uint
+	if err := database.DB.Model(&models.Comment{}).
+		Distinct("user_id").
+		Where("annotation_id = ? AND user_id != ? AND user_id != ?", annotationID, actorID, annotationOwnerID).
+		Pluck("user_id", &participantIDs).Error; err != nil {
+		return
+	}
+	if len(participantIDs) == 0 {
+		return
+	}
+
+	skip := mentionedUserIDSet(commentText)
+	for _, userID := range participantIDs {
+		if skip[userID] {
+			continue
+		}
+		createNotification(userID, actorID, NotificationReply, uintPtr(annotationID), uintPtr(commentID))
+	}
+}
+
+// notifySharedDocAnnotators notifies followers of the actor who've also
+// publicly annotated the same URL that the actor just annotated it. Skips
+// users @mentioned in the new annotation (they get NotificationMention).
+func notifySharedDocAnnotators(actorID, annotationID uint, url, annotationText string) {
+	if url == "" {
+		return
+	}
+	var recipientIDs []uint
+	if err := database.DB.
+		Table("annotations a").
+		Distinct("a.user_id").
+		Joins("JOIN follows f ON f.follower_id = a.user_id AND f.following_id = ?", actorID).
+		Where("a.url = ? AND a.is_private = ? AND a.user_id != ? AND a.id != ? AND a.deleted_at IS NULL", url, false, actorID, annotationID).
+		Pluck("a.user_id", &recipientIDs).Error; err != nil {
+		return
+	}
+	if len(recipientIDs) == 0 {
+		return
+	}
+
+	skip := mentionedUserIDSet(annotationText)
+	for _, userID := range recipientIDs {
+		if skip[userID] {
+			continue
+		}
+		createNotification(userID, actorID, NotificationSharedDoc, uintPtr(annotationID), nil)
 	}
 }
 

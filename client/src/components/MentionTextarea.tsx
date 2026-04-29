@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { CSSProperties, KeyboardEvent, TextareaHTMLAttributes } from 'react';
 import api from '../lib/api';
 import Avatar from './Avatar';
@@ -48,12 +49,16 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
   const { user: currentUser } = useAuth();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const [users, setUsers] = useState<MentionUser[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
   const [query, setQuery] = useState('');
+  // Popover anchored to the textarea via fixed coords + portal so an ancestor
+  // overflow:hidden (e.g. the framer-motion comment drawer) cannot clip it.
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number; width: number; placeAbove: boolean } | null>(null);
 
   const updateMentionState = (nextValue: string, cursor: number) => {
     const current = mentionAtCursor(nextValue, cursor);
@@ -109,6 +114,33 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
       controller.abort();
     };
   }, [currentUser?.username, mentionRange, query]);
+
+  const recomputePopoverPos = () => {
+    if (!textareaRef.current) return;
+    const rect = textareaRef.current.getBoundingClientRect();
+    const estimatedHeight = popoverRef.current?.getBoundingClientRect().height ?? 220;
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placeAbove = spaceAbove >= estimatedHeight + 12 || spaceAbove >= spaceBelow;
+    setPopoverPos({
+      top: placeAbove ? rect.top - 6 : rect.bottom + 6,
+      left: rect.left,
+      width: rect.width,
+      placeAbove,
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    recomputePopoverPos();
+    const handler = () => recomputePopoverPos();
+    window.addEventListener('scroll', handler, true);
+    window.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('scroll', handler, true);
+      window.removeEventListener('resize', handler);
+    };
+  }, [open, users.length, loading]);
 
   const insertUser = (user: MentionUser) => {
     if (!mentionRange) return;
@@ -245,18 +277,21 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
           zIndex: 1,
         }}
       />
-      {open && (users.length > 0 || loading || query.length === 0) && (
+      {open && popoverPos && (users.length > 0 || loading || query.length === 0) && createPortal(
         <div
+          ref={popoverRef}
           style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 'calc(100% + 6px)',
+            position: 'fixed',
+            left: popoverPos.left,
+            width: popoverPos.width,
+            ...(popoverPos.placeAbove
+              ? { bottom: window.innerHeight - popoverPos.top }
+              : { top: popoverPos.top }),
             background: '#1a1a1a',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '8px',
             padding: '6px',
-            zIndex: 80,
+            zIndex: 9999,
             boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
           }}
         >
@@ -305,7 +340,8 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

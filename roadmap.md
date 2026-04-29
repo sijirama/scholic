@@ -19,11 +19,8 @@ Clear v0.0.2 cruft before adding new surface area.
 ---
 
 ## Phase 2 — Settings foundation (the unlock) (SKIPPED)
-A `user_settings` table + Redis read cache. Build infra once, ship four features on top.
 
-- Default highlight color (currently hardcoded green)
 - Blocklist moved to backend (#2) with regex support (#2b)
-- "Hotkey-only popup" mode (no auto-popup on highlight)
 - PDF native-viewer ↔ Scholic viewer toggle without reload
 
 ---
@@ -49,14 +46,15 @@ Tags were on the original plan as Phase 3b but got cut — see "Cut from v0.0.3"
 
 ---
 
-## Phase 5 — Notifications + @mentions
+## Phase 5 — Notifications + @mentions — DONE
 Biggest surface area; saved for last so it can hook into reactions, follows, comments, and mentions cleanly.
 
-- `notifications` table (type, actorID, targetID, read status)
-- Triggers: follow, comment, reaction, mention, shared-doc activity
-- Badge in navbar, dropdown or dedicated page
-- Mark as read (individual + bulk)
-- @mention parsing in annotation creation
+- [x] `notifications` table (type, actorID, targetID, read status)
+- [x] Triggers: follow, comment, reaction, mention, reply (thread participants), shared-doc (followers who also annotated the URL)
+- [x] Badge in navbar, dropdown or dedicated page
+- [x] Mark as read (individual + bulk)
+- [x] @mention parsing in annotation + comment creation, with edit-aware re-notify suppression
+- [x] Mention autocomplete on web (portaled past overflow:hidden) + extension sidebar
 
 ---
 

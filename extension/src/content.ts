@@ -20,7 +20,13 @@ import { Sidebar } from './sidebar';
 import type { AnnotationData } from './sidebar';
 import { HighlightPopup } from './highlight-popup';
 import { Snipper, Area } from './snipper';
-import { isBlockedUrl } from './blocked-urls';
+import { hydrateBlocklist, isBlockedUrl, watchBlocklistStorage } from './blocklist';
+
+// Hydrate the in-memory blocklist from chrome.storage.local (populated by the
+// background SW). Watch for live updates so a fresh blocklist landing in
+// storage takes effect without a page reload.
+hydrateBlocklist();
+watchBlocklistStorage();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Iframe guard: skip content script in iframes to avoid duplicate sidebars

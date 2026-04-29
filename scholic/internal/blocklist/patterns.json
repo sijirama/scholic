@@ -1,0 +1,162 @@
+[
+  {
+    "hostname": "x.com",
+    "blockPath": "^/(home|explore|notifications?|messages?|i/|bookmarks|communities|premium|search|compose|settings|connect_people|following_suggestions|who_to_follow)(/|$)",
+    "reason": "X.com dynamic feed / system pages"
+  },
+  {
+    "hostname": "twitter.com",
+    "blockPath": "^/(home|explore|notifications?|messages?|i/|bookmarks|communities|premium|search|compose|settings|connect_people|following_suggestions|who_to_follow)(/|$)",
+    "reason": "Twitter.com dynamic feed / system pages"
+  },
+  {
+    "hostname": "pinterest.com",
+    "allowPath": "^/(pin/|[^/]+/[^/]+/|[^/]+/boards/)",
+    "reason": "Pinterest — home feed and explore are too dynamic"
+  },
+  {
+    "hostnameRegex": "^[a-z]{2}\\.pinterest\\.com$",
+    "allowPath": "^/(pin/|[^/]+/[^/]+/|[^/]+/boards/)",
+    "reason": "Pinterest regional domains (e.g. uk.pinterest.com)"
+  },
+  {
+    "hostname": "facebook.com",
+    "blockPath": "^/(|watch/?|gaming/?|marketplace/?|groups/?$|reels/?|memories/?|friends/?|notifications/?|videos/?$|stories/?)(/|$)?$",
+    "reason": "Facebook dynamic feed pages"
+  },
+  {
+    "hostname": "www.facebook.com",
+    "blockPath": "^/(|watch/?|gaming/?|marketplace/?|groups/?$|reels/?|memories/?|friends/?|notifications/?|videos/?$|stories/?)(/|$)?$",
+    "reason": "Facebook dynamic feed pages"
+  },
+  {
+    "hostname": "instagram.com",
+    "blockPath": "^/(|explore/?|reels/?$|direct/|accounts/)(/|$)?$",
+    "reason": "Instagram dynamic feed and explore"
+  },
+  {
+    "hostname": "www.instagram.com",
+    "blockPath": "^/(|explore/?|reels/?$|direct/|accounts/)(/|$)?$",
+    "reason": "Instagram dynamic feed and explore"
+  },
+  {
+    "hostname": "tiktok.com",
+    "allowPath": "^/@[^/]+/video/",
+    "reason": "TikTok — only specific video pages are stable enough"
+  },
+  {
+    "hostname": "www.tiktok.com",
+    "allowPath": "^/@[^/]+/video/",
+    "reason": "TikTok — only specific video pages are stable enough"
+  },
+  {
+    "hostname": "linkedin.com",
+    "blockPath": "^/(feed/?|notifications/?|messaging/?|jobs/?$|events/?$|mynetwork/?|learning/?)(/|$)?$",
+    "reason": "LinkedIn dynamic feed pages"
+  },
+  {
+    "hostname": "www.linkedin.com",
+    "blockPath": "^/(feed/?|notifications/?|messaging/?|jobs/?$|events/?$|mynetwork/?|learning/?)(/|$)?$",
+    "reason": "LinkedIn dynamic feed pages"
+  },
+  {
+    "hostname": "reddit.com",
+    "blockPath": "^/(|r/popular/?|r/all/?|r/home/?)(/|$)?$",
+    "reason": "Reddit home/popular/all feeds"
+  },
+  {
+    "hostname": "www.reddit.com",
+    "blockPath": "^/(|r/popular/?|r/all/?|r/home/?)(/|$)?$",
+    "reason": "Reddit home/popular/all feeds"
+  },
+  {
+    "hostname": "old.reddit.com",
+    "blockPath": "^/(|r/popular/?|r/all/?|r/home/?)(/|$)?$",
+    "reason": "Old Reddit home/popular/all feeds"
+  },
+  {
+    "hostname": "youtube.com",
+    "blockPath": "^/(|shorts/?$|gaming/?|explore/?|trending/?)(/|$)?$",
+    "reason": "YouTube home feed and shorts index"
+  },
+  {
+    "hostname": "www.youtube.com",
+    "blockPath": "^/(|shorts/?$|gaming/?|explore/?|trending/?)(/|$)?$",
+    "reason": "YouTube home feed and shorts index"
+  },
+  {
+    "hostname": "twitch.tv",
+    "blockPath": "^/(directory|p/|subscriptions|drops|friends|messages)(/|$)",
+    "reason": "Twitch dynamic directory and browse pages"
+  },
+  {
+    "hostname": "www.twitch.tv",
+    "blockPath": "^/(directory|p/|subscriptions|drops|friends|messages)(/|$)",
+    "reason": "Twitch dynamic directory and browse pages"
+  },
+  {
+    "hostname": "web.snapchat.com",
+    "reason": "Snapchat web — entirely dynamic messaging/stories UI"
+  },
+  {
+    "hostname": "web.whatsapp.com",
+    "reason": "WhatsApp Web — real-time messaging, DOM thrash"
+  },
+  {
+    "hostname": "discord.com",
+    "blockPath": "^/(channels|activity|store|guild-discovery)(/|$)",
+    "reason": "Discord — highly dynamic chat and activity feeds"
+  },
+  {
+    "hostname": "app.slack.com",
+    "reason": "Slack — real-time messaging, DOM thrash"
+  },
+  {
+    "hostname": "mail.google.com",
+    "reason": "Gmail — highly dynamic email client"
+  },
+  {
+    "hostname": "calendar.google.com",
+    "reason": "Google Calendar — dynamic calendar interface"
+  },
+  {
+    "hostname": "docs.google.com",
+    "blockPath": "^/(spreadsheets|presentation)(/|$)",
+    "reason": "Google Sheets and Slides — dynamic canvas rendering"
+  },
+  {
+    "hostname": "notion.so",
+    "reason": "Notion — block-based editor with heavy DOM mutation"
+  },
+  {
+    "hostname": "www.notion.so",
+    "reason": "Notion — block-based editor with heavy DOM mutation"
+  },
+  {
+    "hostname": "figma.com",
+    "blockPath": "^/(file|proto|design|board)(/|$)",
+    "reason": "Figma canvas — WebGL / canvas rendering, no DOM text"
+  },
+  {
+    "hostname": "www.figma.com",
+    "blockPath": "^/(file|proto|design|board)(/|$)",
+    "reason": "Figma canvas — WebGL / canvas rendering, no DOM text"
+  },
+  {
+    "hostname": "google.com",
+    "blockPath": "^/maps(/|$)",
+    "reason": "Google Maps — canvas-based, no stable DOM text"
+  },
+  {
+    "hostname": "maps.google.com",
+    "reason": "Google Maps — canvas-based, no stable DOM text"
+  },
+  {
+    "hostname": "scholic.com",
+    "reason": "Scholic web app — native annotation views, no extension needed"
+  },
+  {
+    "hostname": "www.scholic.com",
+    "reason": "Scholic web app — native annotation views, no extension needed"
+  }
+]

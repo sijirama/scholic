@@ -136,6 +136,7 @@ func CreateAnnotation(c *gin.Context) {
 	isPublic := !annotation.IsPrivate
 	if isPublic {
 		notifyMentionedUsers(annotation.UserID, annotation.Text, uintPtr(annotation.ID), nil, "")
+		notifySharedDocAnnotators(annotation.UserID, annotation.ID, annotation.URL, annotation.Text)
 	}
 	go func() {
 		ctx := context.Background()

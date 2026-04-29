@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AtSign, Bell, CheckCheck, MessageCircle, SmilePlus, UserPlus } from 'lucide-react';
+import { AtSign, Bell, BookOpen, CheckCheck, MessageCircle, Reply, SmilePlus, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import Avatar from './Avatar';
@@ -22,7 +22,7 @@ interface NotificationAnnotation {
 
 interface NotificationItem {
   id: number;
-  type: 'follow' | 'comment' | 'reaction' | 'mention';
+  type: 'follow' | 'comment' | 'reaction' | 'mention' | 'reply' | 'shared_doc';
   actor: NotificationUser;
   annotation?: NotificationAnnotation;
   comment?: { text?: string };
@@ -53,6 +53,10 @@ const iconFor = (type: NotificationItem['type']) => {
       return SmilePlus;
     case 'mention':
       return AtSign;
+    case 'reply':
+      return Reply;
+    case 'shared_doc':
+      return BookOpen;
   }
 };
 
@@ -67,6 +71,10 @@ const textFor = (notification: NotificationItem) => {
       return `${actor} reacted to your annotation`;
     case 'mention':
       return `${actor} mentioned you`;
+    case 'reply':
+      return `${actor} replied in a thread you're in`;
+    case 'shared_doc':
+      return `${actor} annotated a page you've annotated`;
   }
 };
 

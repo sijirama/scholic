@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"scholic/internal/blocklist"
 	"scholic/internal/database"
 	"scholic/internal/endpoints"
 	"scholic/internal/initializers"
@@ -43,6 +44,7 @@ func main() {
 	database.InitializeRedis()
 	initializers.InitGothic()
 	jwt.InitJWT()
+	blocklist.LoadAndCache()
 
 	// Initialize R2 (optional — server works without it, just can't upload files)
 	if err := media.InitializeR2(); err != nil {
@@ -118,6 +120,9 @@ func main() {
 
 		// ── Feed ──
 		api.GET("/feed", middleware.OptionalAuthMiddleware(), endpoints.GetFeed)
+
+		// ── Blocklist (extension fetches this; public, no auth) ──
+		api.GET("/blocklist", endpoints.GetBlocklist)
 
 		// ── Notifications ──
 		notificationsProtected := api.Group("/notifications")
