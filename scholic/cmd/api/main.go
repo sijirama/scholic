@@ -119,6 +119,16 @@ func main() {
 		// ── Feed ──
 		api.GET("/feed", middleware.OptionalAuthMiddleware(), endpoints.GetFeed)
 
+		// ── Notifications ──
+		notificationsProtected := api.Group("/notifications")
+		notificationsProtected.Use(middleware.AuthMiddleware())
+		{
+			notificationsProtected.GET("", endpoints.GetNotifications)
+			notificationsProtected.GET("/unread-count", endpoints.GetUnreadNotificationCount)
+			notificationsProtected.POST("/read-all", endpoints.MarkAllNotificationsRead)
+			notificationsProtected.POST("/:id/read", endpoints.MarkNotificationRead)
+		}
+
 		// ── Site Page ──
 		api.GET("/site", middleware.OptionalAuthMiddleware(), endpoints.GetSitePage)
 

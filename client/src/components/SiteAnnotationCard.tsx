@@ -2,6 +2,7 @@ import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import Avatar from './Avatar';
 import ReactionStrip from './ReactionStrip';
+import MentionText from './MentionText';
 import type { Annotation, User as AnnotationUser } from './AnnotationCard';
 
 function timeAgo(dateStr: string): string {
@@ -93,7 +94,7 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
           overflowWrap: 'break-word',
           wordBreak: 'break-word',
         }}>
-          {annotation.text}
+          <MentionText text={annotation.text} />
         </p>
       )}
 

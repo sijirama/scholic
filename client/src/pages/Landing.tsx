@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import api from '../lib/api';
 import Navbar from '../components/Navbar';
 import ReactionStrip from '../components/ReactionStrip';
+import MentionText from '../components/MentionText';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -265,7 +266,7 @@ const CarouselCard: React.FC<{ annotation: LandingAnnotation; isFake: boolean }>
               flexShrink: 0,
             }}
           >
-            {annotation.text}
+            <MentionText text={annotation.text} />
           </p>
         )}
 

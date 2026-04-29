@@ -29512,6 +29512,218 @@
         saveActiveTab(tab) {
           chrome.storage.local.set({ scholicActiveTab: tab });
         }
+        getMentionAtCursor(input) {
+          const cursor = input.selectionStart ?? input.value.length;
+          const beforeCursor = input.value.slice(0, cursor);
+          const match2 = beforeCursor.match(/(^|\s)@([A-Za-z0-9_]{0,30})$/);
+          if (!match2) return null;
+          const query = match2[2] || "";
+          return {
+            query,
+            start: cursor - query.length - 1,
+            end: cursor
+          };
+        }
+        async searchMentionUsers(query) {
+          const response = await chrome.runtime.sendMessage({
+            type: "SEARCH_USERS",
+            data: { query, username: this.userData?.username }
+          });
+          return Array.isArray(response?.users) ? response.users : [];
+        }
+        renderMentionHighlightHtml(text) {
+          const mentionRegex = /@[A-Za-z0-9_]{3,30}/g;
+          let html = "";
+          let lastIndex = 0;
+          let match2;
+          while ((match2 = mentionRegex.exec(text)) !== null) {
+            html += this.escapeHtml(text.slice(lastIndex, match2.index));
+            html += `<span class="mention-highlight-token">${this.escapeHtml(match2[0])}</span>`;
+            lastIndex = match2.index + match2[0].length;
+          }
+          html += this.escapeHtml(text.slice(lastIndex));
+          if (text.endsWith("\n")) {
+            html += "&#8203;";
+          }
+          return html;
+        }
+        renderTextWithMentionLinks(text) {
+          const mentionRegex = /(^|[^A-Za-z0-9_])@([A-Za-z0-9_]{3,30})/g;
+          let html = "";
+          let lastIndex = 0;
+          let match2;
+          while ((match2 = mentionRegex.exec(text)) !== null) {
+            const prefix = match2[1] || "";
+            const username = match2[2];
+            const mentionStart = match2.index + prefix.length;
+            const mentionEnd = mentionStart + username.length + 1;
+            html += this.escapeHtml(text.slice(lastIndex, mentionStart));
+            html += `<a class="mention-inline" href="${CONFIG.WEB_URL}/u/${this.escapeAttr(username)}" target="_blank" rel="noopener noreferrer">@${this.escapeHtml(username)}</a>`;
+            lastIndex = mentionEnd;
+          }
+          html += this.escapeHtml(text.slice(lastIndex));
+          return html;
+        }
+        attachMentionAutocomplete(input) {
+          const parent = input.parentElement;
+          if (!parent) return;
+          const wrapper = document.createElement("div");
+          wrapper.className = "mention-autocomplete-wrapper";
+          wrapper.style.position = "relative";
+          wrapper.style.width = "100%";
+          parent.insertBefore(wrapper, input);
+          const overlay = document.createElement("div");
+          overlay.className = "mention-highlight-overlay";
+          wrapper.appendChild(overlay);
+          input.classList.add("mention-source-input");
+          wrapper.appendChild(input);
+          const dropdown = document.createElement("div");
+          dropdown.className = "mention-suggestions";
+          wrapper.appendChild(dropdown);
+          let users = [];
+          let activeIndex = 0;
+          let timer = null;
+          let activeRange = null;
+          let loading = false;
+          const syncOverlayStyles = () => {
+            const computed = getComputedStyle(input);
+            overlay.style.padding = computed.padding;
+            overlay.style.font = computed.font;
+            overlay.style.lineHeight = computed.lineHeight;
+            overlay.style.letterSpacing = computed.letterSpacing;
+            overlay.style.border = `${computed.borderTopWidth} solid transparent`;
+            overlay.style.borderRadius = computed.borderRadius;
+            overlay.style.boxSizing = computed.boxSizing;
+            overlay.style.whiteSpace = input instanceof HTMLTextAreaElement ? "pre-wrap" : "pre";
+          };
+          const syncOverlayScroll = () => {
+            overlay.scrollTop = input.scrollTop;
+            overlay.scrollLeft = input.scrollLeft;
+          };
+          const renderHighlights = () => {
+            overlay.innerHTML = input.value ? this.renderMentionHighlightHtml(input.value) : "";
+            syncOverlayScroll();
+          };
+          const hide = () => {
+            dropdown.classList.remove("show");
+            dropdown.innerHTML = "";
+            users = [];
+            activeIndex = 0;
+            activeRange = null;
+            loading = false;
+          };
+          const insertUser = (user) => {
+            if (!activeRange) return;
+            const nextValue = `${input.value.slice(0, activeRange.start)}@${user.username} ${input.value.slice(activeRange.end)}`;
+            const cursor = activeRange.start + user.username.length + 2;
+            input.value = nextValue;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            hide();
+            requestAnimationFrame(() => {
+              input.focus();
+              input.setSelectionRange(cursor, cursor);
+            });
+          };
+          const render = () => {
+            if (loading) {
+              dropdown.innerHTML = `<div class="mention-suggestion-empty">Finding people...</div>`;
+              dropdown.classList.add("show");
+              return;
+            }
+            if (users.length === 0) {
+              const text = activeRange?.query ? "No matching users" : this.userData?.username ? "No following yet. Type a name to search." : "Type a name to search people.";
+              dropdown.innerHTML = `<div class="mention-suggestion-empty">${this.escapeHtml(text)}</div>`;
+              dropdown.classList.add("show");
+              return;
+            }
+            dropdown.innerHTML = users.map((user, index) => {
+              const initial = (user.username || "?")[0].toUpperCase();
+              const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ");
+              const avatar = user.profilePicture ? `<img src="${this.escapeAttr(user.profilePicture)}" style="width:100%; height:100%; object-fit:cover;" />` : this.escapeHtml(initial);
+              return `
+          <button class="mention-suggestion${index === activeIndex ? " active" : ""}" data-index="${index}" type="button">
+            <span class="mention-suggestion-avatar">${avatar}</span>
+            <span style="min-width:0;">
+              <span class="mention-suggestion-main">@${this.escapeHtml(user.username)}</span>
+              ${displayName ? `<span class="mention-suggestion-sub">${this.escapeHtml(displayName)}</span>` : ""}
+            </span>
+          </button>
+        `;
+            }).join("");
+            dropdown.querySelectorAll(".mention-suggestion").forEach((btn) => {
+              btn.addEventListener("mousedown", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const index = Number(btn.dataset.index || 0);
+                const user = users[index];
+                if (user) insertUser(user);
+              });
+            });
+            dropdown.classList.add("show");
+          };
+          const refresh = () => {
+            const mention = this.getMentionAtCursor(input);
+            if (!mention) {
+              hide();
+              return;
+            }
+            activeRange = mention;
+            const requestedRange = mention;
+            loading = true;
+            users = [];
+            render();
+            if (timer) window.clearTimeout(timer);
+            timer = window.setTimeout(async () => {
+              try {
+                const nextUsers = await this.searchMentionUsers(mention.query);
+                if (activeRange !== requestedRange) return;
+                users = nextUsers;
+                activeIndex = 0;
+                loading = false;
+                render();
+              } catch {
+                if (activeRange !== requestedRange) return;
+                loading = false;
+                hide();
+              }
+            }, mention.query.trim() ? 180 : 0);
+          };
+          syncOverlayStyles();
+          renderHighlights();
+          input.addEventListener("input", () => {
+            renderHighlights();
+            refresh();
+          });
+          input.addEventListener("scroll", syncOverlayScroll);
+          input.addEventListener("click", refresh);
+          input.addEventListener("blur", () => window.setTimeout(hide, 140));
+          input.addEventListener("keydown", (event) => {
+            if (!dropdown.classList.contains("show") || users.length === 0) return;
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              activeIndex = (activeIndex + 1) % users.length;
+              render();
+              return;
+            }
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              activeIndex = (activeIndex - 1 + users.length) % users.length;
+              render();
+              return;
+            }
+            if (event.key === "Enter" || event.key === "Tab") {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              const user = users[activeIndex];
+              if (user) insertUser(user);
+              return;
+            }
+            if (event.key === "Escape") {
+              event.preventDefault();
+              hide();
+            }
+          });
+        }
         /** Fetch current user data from the backend.
          * Also sets isAuthenticated so that the first renderAnnotationList call
          * has the correct auth state (avoids the race where the sidebar banner
@@ -29960,6 +30172,96 @@
       }
       .note-input::placeholder { color: #555; }
 
+      .mention-autocomplete-wrapper {
+        position: relative;
+        width: 100%;
+      }
+      .mention-source-input {
+        position: relative;
+        z-index: 1;
+      }
+      .mention-highlight-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        color: transparent;
+        background: transparent;
+        z-index: 2;
+      }
+      .mention-highlight-token {
+        color: transparent;
+        background: rgba(110,183,129,0.13);
+        border-radius: 4px;
+        font-weight: inherit;
+      }
+
+      .mention-suggestions {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(100% + 6px);
+        background: #1a1a1a;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 6px;
+        z-index: 200;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+        display: none;
+      }
+      .mention-suggestions.show {
+        display: block;
+      }
+      .mention-suggestion {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 8px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: #ddd;
+        cursor: pointer;
+        font-family: inherit;
+        text-align: left;
+      }
+      .mention-suggestion.active {
+        background: rgba(110,183,129,0.12);
+      }
+      .mention-suggestion-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(110,183,129,0.35), rgba(71,163,232,0.35));
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      .mention-suggestion-main {
+        font-size: 12px;
+        font-weight: 700;
+        color: #ddd;
+      }
+      .mention-suggestion-sub {
+        font-size: 11px;
+        color: #666;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .mention-suggestion-empty {
+        padding: 9px 10px;
+        color: #777;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
       /* Color swatches */
       .color-swatches {
         display: flex;
@@ -30168,6 +30470,23 @@
         line-height: 1.5;
         margin-top: 6px;
         word-break: break-word;
+      }
+
+      .mention-inline {
+        color: #6EB781;
+        background: rgba(110,183,129,0.14);
+        border: 1px solid rgba(110,183,129,0.22);
+        border-radius: 4px;
+        padding: 0 4px;
+        font-weight: 700;
+        text-decoration: none;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+      }
+      .mention-inline:hover {
+        background: rgba(110,183,129,0.22);
+        border-color: rgba(110,183,129,0.36);
+        text-decoration: none;
       }
 
       .annotation-meta {
@@ -30431,6 +30750,7 @@
               textarea.style.height = `${textarea.scrollHeight}px`;
             };
             textarea.addEventListener("input", autoGrow);
+            this.attachMentionAutocomplete(textarea);
           }
           const toggle = form.querySelector("#privacy-switch");
           const label = form.querySelector("#privacy-label");
@@ -30577,9 +30897,9 @@
                 ${(() => {
                   const text = annotation.text || "";
                   const words = text.split(/\s+/);
-                  if (words.length <= 60) return this.escapeHtml(text);
+                  if (words.length <= 60) return this.renderTextWithMentionLinks(text);
                   return `
-                    <span class="note-text">${this.escapeHtml(words.slice(0, 60).join(" "))}...</span>
+                    <span class="note-text">${this.renderTextWithMentionLinks(words.slice(0, 60).join(" ") + "...")}</span>
                     <button class="read-more-btn" style="background:none; border:none; color:#6EB781; font-size:11px; font-weight:600; cursor:pointer; padding:0; margin-left:4px; font-family:inherit;">Read more</button>
                   `;
                 })()}
@@ -30621,7 +30941,7 @@
                             <a href="${CONFIG.WEB_URL}/u/${this.escapeHtml(cname)}" target="_blank" style="text-decoration:none; color:inherit;">
                               <strong style="color:#d0d0d0; display:block; margin-bottom:2px;">@${this.escapeHtml(cname)}</strong>
                             </a>
-                            <span style="color:#aaa;">${this.escapeHtml(c.text)}</span>
+                            <span style="color:#aaa;">${this.renderTextWithMentionLinks(c.text || "")}</span>
                           </div>
                         </div>
                       `;
@@ -30642,15 +30962,15 @@
                     const words = fullText.split(/\s+/);
                     currentLimit += 120;
                     if (currentLimit >= words.length) {
-                      noteTextEl.textContent = fullText;
+                      noteTextEl.innerHTML = this.renderTextWithMentionLinks(fullText);
                       readMoreBtn.remove();
                     } else {
-                      noteTextEl.textContent = words.slice(0, currentLimit).join(" ") + "...";
+                      noteTextEl.innerHTML = this.renderTextWithMentionLinks(words.slice(0, currentLimit).join(" ") + "...");
                     }
                   });
                 }
                 item.addEventListener("click", (e) => {
-                  if (e.target.closest(".annotation-delete") || e.target.closest(".annotation-view")) {
+                  if (e.target.closest(".annotation-delete, .annotation-view, a")) {
                     return;
                   }
                   if (annotation.id) {
@@ -30697,6 +31017,9 @@
                   });
                 });
                 const replyInput = item.querySelector(".sidebar-reply-input");
+                if (replyInput) {
+                  this.attachMentionAutocomplete(replyInput);
+                }
                 replyInput?.addEventListener("keydown", (e) => {
                   if (e.key === "Enter") {
                     const text = replyInput.value.trim();
@@ -30781,7 +31104,7 @@
     ` : "";
           const pickerHtml = this.isAuthenticated ? `
       <div class="reaction-picker" style="
-        display:none; position:absolute; bottom:calc(100% + 4px); left:0; z-index:5;
+        display:none; position:absolute; bottom:calc(100% + 4px); right:0; z-index:5;
         gap:1px; padding:5px 6px;
         background:#1a1a1a; border:1px solid rgba(255,255,255,0.1);
         border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.5);
@@ -32045,7 +32368,7 @@
           <div class="popup-comment-avatar">${cavatar}</div>
           <div class="popup-comment-content">
             <span class="popup-comment-author">@${this.escapeHtml(cname)}</span>
-            <span class="popup-comment-text">${this.escapeHtml(c.text)}</span>
+            <span class="popup-comment-text">${this.renderTextWithMentionLinks(c.text || "")}</span>
           </div>
         </div>`;
           }).join("");
@@ -32069,9 +32392,9 @@
         <div class="popup-note">
           ${(() => {
             const words = noteText.split(/\s+/);
-            if (words.length <= 60) return this.escapeHtml(noteText);
+            if (words.length <= 60) return this.renderTextWithMentionLinks(noteText);
             return `
-              <span class="note-text">${this.escapeHtml(words.slice(0, 60).join(" "))}...</span>
+              <span class="note-text">${this.renderTextWithMentionLinks(words.slice(0, 60).join(" ") + "...")}</span>
               <button class="read-more-btn" style="background:none; border:none; color:#6EB781; font-size:11px; font-weight:600; cursor:pointer; padding:0; margin-left:4px; font-family:inherit;">Read more</button>
             `;
           })()}
@@ -32110,10 +32433,10 @@
               const words = noteText.split(/\s+/);
               currentLimit += 120;
               if (currentLimit >= words.length) {
-                noteTextEl.textContent = noteText;
+                noteTextEl.innerHTML = this.renderTextWithMentionLinks(noteText);
                 readMoreBtn.remove();
               } else {
-                noteTextEl.textContent = words.slice(0, currentLimit).join(" ") + "...";
+                noteTextEl.innerHTML = this.renderTextWithMentionLinks(words.slice(0, currentLimit).join(" ") + "...");
               }
               if (this.host) {
                 this.host.style.top = "-10000px";
@@ -32161,7 +32484,7 @@
             <div class="popup-comment-avatar">${cavatar}</div>
             <div class="popup-comment-content">
               <span class="popup-comment-author">@${this.escapeHtml(cname)}</span>
-              <span class="popup-comment-text">${this.escapeHtml(newComment.text)}</span>
+              <span class="popup-comment-text">${this.renderTextWithMentionLinks(newComment.text || "")}</span>
             </div>`;
                 list.appendChild(item);
                 const countEl = popup.querySelector(".comment-count");
@@ -32311,6 +32634,23 @@
         escapeAttr(value) {
           return (value || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
+        renderTextWithMentionLinks(text) {
+          const mentionRegex = /(^|[^A-Za-z0-9_])@([A-Za-z0-9_]{3,30})/g;
+          let html = "";
+          let lastIndex = 0;
+          let match2;
+          while ((match2 = mentionRegex.exec(text)) !== null) {
+            const prefix = match2[1] || "";
+            const username = match2[2];
+            const mentionStart = match2.index + prefix.length;
+            const mentionEnd = mentionStart + username.length + 1;
+            html += this.escapeHtml(text.slice(lastIndex, mentionStart));
+            html += `<a class="mention-inline" href="${CONFIG.WEB_URL}/u/${this.escapeAttr(username)}" target="_blank" rel="noopener noreferrer">@${this.escapeHtml(username)}</a>`;
+            lastIndex = mentionEnd;
+          }
+          html += this.escapeHtml(text.slice(lastIndex));
+          return html;
+        }
         getStyles() {
           return `
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32415,6 +32755,23 @@
         border-bottom: 1px solid rgba(255,255,255,0.05);
         overflow-wrap: break-word;
         word-break: break-word;
+      }
+
+      .mention-inline {
+        color: #6EB781;
+        background: rgba(110,183,129,0.14);
+        border: 1px solid rgba(110,183,129,0.22);
+        border-radius: 4px;
+        padding: 0 4px;
+        font-weight: 700;
+        text-decoration: none;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+      }
+      .mention-inline:hover {
+        background: rgba(110,183,129,0.22);
+        border-color: rgba(110,183,129,0.36);
+        text-decoration: none;
       }
 
       .popup-reactions {

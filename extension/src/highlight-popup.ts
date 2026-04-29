@@ -84,7 +84,7 @@ export class HighlightPopup {
           <div class="popup-comment-avatar">${cavatar}</div>
           <div class="popup-comment-content">
             <span class="popup-comment-author">@${this.escapeHtml(cname)}</span>
-            <span class="popup-comment-text">${this.escapeHtml(c.text)}</span>
+            <span class="popup-comment-text">${this.renderTextWithMentionLinks(c.text || '')}</span>
           </div>
         </div>`;
     }).join('');
@@ -110,9 +110,9 @@ export class HighlightPopup {
         <div class="popup-note">
           ${(() => {
             const words = noteText.split(/\s+/);
-            if (words.length <= 60) return this.escapeHtml(noteText);
+            if (words.length <= 60) return this.renderTextWithMentionLinks(noteText);
             return `
-              <span class="note-text">${this.escapeHtml(words.slice(0, 60).join(' '))}...</span>
+              <span class="note-text">${this.renderTextWithMentionLinks(words.slice(0, 60).join(' ') + '...')}</span>
               <button class="read-more-btn" style="background:none; border:none; color:#6EB781; font-size:11px; font-weight:600; cursor:pointer; padding:0; margin-left:4px; font-family:inherit;">Read more</button>
             `;
           })()}
@@ -157,10 +157,10 @@ export class HighlightPopup {
         currentLimit += 120;
         
         if (currentLimit >= words.length) {
-          noteTextEl.textContent = noteText;
+          noteTextEl.innerHTML = this.renderTextWithMentionLinks(noteText);
           readMoreBtn.remove();
         } else {
-          noteTextEl.textContent = words.slice(0, currentLimit).join(' ') + '...';
+          noteTextEl.innerHTML = this.renderTextWithMentionLinks(words.slice(0, currentLimit).join(' ') + '...');
         }
         
         // Reposition after expansion
@@ -222,7 +222,7 @@ export class HighlightPopup {
             <div class="popup-comment-avatar">${cavatar}</div>
             <div class="popup-comment-content">
               <span class="popup-comment-author">@${this.escapeHtml(cname)}</span>
-              <span class="popup-comment-text">${this.escapeHtml(newComment.text)}</span>
+              <span class="popup-comment-text">${this.renderTextWithMentionLinks(newComment.text || '')}</span>
             </div>`;
           list.appendChild(item);
           const countEl = popup.querySelector('.comment-count');
@@ -402,6 +402,27 @@ export class HighlightPopup {
       .replace(/>/g, '&gt;');
   }
 
+  private renderTextWithMentionLinks(text: string): string {
+    const mentionRegex = /(^|[^A-Za-z0-9_])@([A-Za-z0-9_]{3,30})/g;
+    let html = '';
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const prefix = match[1] || '';
+      const username = match[2];
+      const mentionStart = match.index + prefix.length;
+      const mentionEnd = mentionStart + username.length + 1;
+
+      html += this.escapeHtml(text.slice(lastIndex, mentionStart));
+      html += `<a class="mention-inline" href="${CONFIG.WEB_URL}/u/${this.escapeAttr(username)}" target="_blank" rel="noopener noreferrer">@${this.escapeHtml(username)}</a>`;
+      lastIndex = mentionEnd;
+    }
+
+    html += this.escapeHtml(text.slice(lastIndex));
+    return html;
+  }
+
   private getStyles(): string {
     return `
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -506,6 +527,23 @@ export class HighlightPopup {
         border-bottom: 1px solid rgba(255,255,255,0.05);
         overflow-wrap: break-word;
         word-break: break-word;
+      }
+
+      .mention-inline {
+        color: #6EB781;
+        background: rgba(110,183,129,0.14);
+        border: 1px solid rgba(110,183,129,0.22);
+        border-radius: 4px;
+        padding: 0 4px;
+        font-weight: 700;
+        text-decoration: none;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+      }
+      .mention-inline:hover {
+        background: rgba(110,183,129,0.22);
+        border-color: rgba(110,183,129,0.36);
+        text-decoration: none;
       }
 
       .popup-reactions {

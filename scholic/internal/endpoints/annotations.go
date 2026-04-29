@@ -134,6 +134,9 @@ func CreateAnnotation(c *gin.Context) {
 	username := annotation.User.Username
 	annotationURL := req.URL
 	isPublic := !annotation.IsPrivate
+	if isPublic {
+		notifyMentionedUsers(annotation.UserID, annotation.Text, uintPtr(annotation.ID), nil, "")
+	}
 	go func() {
 		ctx := context.Background()
 		database.CacheDelete(ctx, database.AnnotationsURLKey(annotationURL))
@@ -290,6 +293,7 @@ func UpdateAnnotation(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only edit your own annotations"})
 		return
 	}
+	previousText := annotation.Text
 
 	var req UpdateAnnotationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -309,6 +313,10 @@ func UpdateAnnotation(c *gin.Context) {
 	if err := database.DB.Preload("User").First(&annotation, annotation.ID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Updated but failed to reload"})
 		return
+	}
+
+	if !annotation.IsPrivate {
+		notifyMentionedUsers(annotation.UserID, annotation.Text, uintPtr(annotation.ID), nil, previousText)
 	}
 
 	c.JSON(http.StatusOK, annotation)

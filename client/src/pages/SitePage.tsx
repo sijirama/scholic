@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import SiteAnnotationCard from '../components/SiteAnnotationCard';
+import MentionText from '../components/MentionText';
 import api from '../lib/api';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -295,7 +296,7 @@ const SitePage: React.FC = () => {
                               overflowWrap: 'break-word',
                               wordBreak: 'break-word',
                             }}>
-                              {annotation.text}
+                              <MentionText text={annotation.text} />
                             </p>
                           )}
 
@@ -316,7 +317,7 @@ const SitePage: React.FC = () => {
                               overflowWrap: 'break-word',
                               wordBreak: 'break-word',
                             }}>
-                              {annotation.text}
+                              <MentionText text={annotation.text} />
                             </p>
                           )}
 

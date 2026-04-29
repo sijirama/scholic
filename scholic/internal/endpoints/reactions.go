@@ -66,7 +66,7 @@ func ToggleReaction(c *gin.Context) {
 	}
 
 	var annotation models.Annotation
-	if err := database.DB.Select("id, is_private").First(&annotation, annotationID).Error; err != nil {
+	if err := database.DB.Select("id, user_id, is_private").First(&annotation, annotationID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Annotation not found"})
 		return
 	}
@@ -113,6 +113,9 @@ func ToggleReaction(c *gin.Context) {
 
 	counts := singleReactionCounts(uint(annotationID))
 	invalidateUserFeedCache(userID)
+	if mine != "" {
+		createNotification(annotation.UserID, userID, NotificationReaction, uintPtr(annotation.ID), nil)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"counts": counts,

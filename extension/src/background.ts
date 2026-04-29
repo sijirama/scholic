@@ -248,6 +248,8 @@ async function handleMessage(message: any): Promise<any> {
       return clearReaction(message.data.annotationId);
     case 'FETCH_ME':
       return apiRequest('/auth/me');
+    case 'SEARCH_USERS':
+      return searchUsers(message.data.query, message.data.username);
     case 'CAPTURE_TAB':
       return captureVisibleTab();
     default:
@@ -383,6 +385,22 @@ async function fetchAnnotations(url: string, limit = 50, offset = 0): Promise<an
   }));
 
   return { annotations: parsed, total };
+}
+
+/**
+ * Search users for mention autocomplete.
+ */
+async function searchUsers(query: string, username?: string): Promise<any> {
+  if (!query && username) {
+    const result = await apiRequest(`/users/${encodeURIComponent(username)}/following?limit=24&offset=0`);
+    const users = Array.isArray(result?.users)
+      ? [...result.users].sort(() => Math.random() - 0.5).slice(0, 6)
+      : [];
+    return { ...result, users };
+  }
+
+  const q = encodeURIComponent(query || '');
+  return apiRequest(`/users/search?q=${q}&limit=6`);
 }
 
 /**

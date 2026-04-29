@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Search } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SearchModal from './SearchModal';
+import NotificationsMenu from './NotificationsMenu';
 
 const Navbar: React.FC = () => {
   const { user, logout, login } = useAuth();
@@ -72,6 +73,7 @@ const Navbar: React.FC = () => {
         <div className="absolute right-10 flex items-center gap-4">
           {user && (
             <>
+              <NotificationsMenu />
               <button
                 onClick={logout}
                 className="text-xs transition-colors cursor-pointer hover:text-white"

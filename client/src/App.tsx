@@ -14,6 +14,7 @@ import AnnotationPage from './pages/AnnotationPage';
 import SitePage from './pages/SitePage';
 import SearchPage from './pages/Search';
 import Privacy from './pages/Privacy';
+import Notifications from './pages/Notifications';
 import { Toaster } from 'sonner';
 
 function App() {
@@ -46,6 +47,11 @@ function App() {
             <Route path="settings" element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="notifications" element={
+              <ProtectedRoute>
+                <Notifications />
               </ProtectedRoute>
             } />
           </Route>

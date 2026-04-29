@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import type { Annotation, Comment, User as AnnotationUser } from '../components/AnnotationCard';
 import ImageLightbox from '../components/ImageLightbox';
 import ReactionStrip from '../components/ReactionStrip';
+import MentionTextarea from '../components/MentionTextarea';
+import MentionText from '../components/MentionText';
 
 const HIGHLIGHT_COLORS = [
   { name: 'Sage',    hex: '#A8D5B5' },
@@ -427,12 +429,12 @@ const AnnotationPage: React.FC = () => {
                     ))}
                   </div>
                   {/* Text edit */}
-                  <textarea
+                  <MentionTextarea
                     value={editText}
-                    onChange={e => setEditText(e.target.value)}
+                    onChange={setEditText}
                     placeholder="Add a note..."
                     rows={4}
-                    style={{
+                    textareaStyle={{
                       width: '100%',
                       fontFamily: '"Caveat", cursive',
                       fontSize: 20,
@@ -483,7 +485,7 @@ const AnnotationPage: React.FC = () => {
                       overflowWrap: 'break-word',
                       wordBreak: 'break-word',
                     }}>
-                      {annotation.text}
+                      <MentionText text={annotation.text} />
                     </p>
                   </>
                 )
@@ -609,10 +611,10 @@ const AnnotationPage: React.FC = () => {
                 <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center' }}>
                   <Avatar user={currentUser as AnnotationUser} size={28} />
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '4px 4px 4px 14px', gap: 6 }}>
-                    <textarea
+                    <MentionTextarea
                       placeholder="Add a comment..."
                       value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
+                      onChange={setCommentText}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
                           e.preventDefault();
@@ -620,7 +622,8 @@ const AnnotationPage: React.FC = () => {
                         }
                       }}
                       rows={1}
-                      style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: '#fff', resize: 'none', fontFamily: 'inherit', lineHeight: 1.5, padding: '6px 0' }}
+                      wrapperStyle={{ flex: 1 }}
+                      textareaStyle={{ width: '100%', flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: '#fff', resize: 'none', fontFamily: 'inherit', lineHeight: 1.5, padding: '6px 0' }}
                     />
                     <button
                       onClick={submitComment}
@@ -651,7 +654,9 @@ const AnnotationPage: React.FC = () => {
                           </a>
                           <span style={{ fontSize: 11, color: '#444' }}>{timeAgo(comment.createdAt)}</span>
                         </div>
-                        <p style={{ fontSize: 13, color: '#bbb', margin: 0, lineHeight: 1.6 }}>{comment.text}</p>
+                        <p style={{ fontSize: 13, color: '#bbb', margin: 0, lineHeight: 1.6 }}>
+                          <MentionText text={comment.text} />
+                        </p>
                       </div>
                     </div>
                   ))}

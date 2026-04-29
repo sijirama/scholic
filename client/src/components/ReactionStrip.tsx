@@ -1,13 +1,7 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import api from '../lib/api';
-
-/**
- * Curated reaction set — keep in sync with the extension counterpart in
- * `extension/src/sidebar.ts`. Order here is the visual order we render chips
- * in, regardless of which were reacted-with first.
- */
-export const REACTION_EMOJIS = ['👍', '❤️', '🔥', '💡', '🤔', '😂', '📝', '💀', '👀', '🤯'];
+import { REACTION_EMOJIS } from '../lib/reactions';
 
 interface ReactionStripProps {
   annotationId: number | string;

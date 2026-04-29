@@ -3,6 +3,8 @@ import { MessageCircle, Lock, Send, Trash2, Pencil, MoreHorizontal } from 'lucid
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageLightbox from './ImageLightbox';
 import ReactionStrip from './ReactionStrip';
+import MentionTextarea from './MentionTextarea';
+import MentionText from './MentionText';
 
 function timeAgo(dateStr: string): string {
   const now = new Date();
@@ -177,7 +179,7 @@ const TruncatedText: React.FC<{ text: string }> = ({ text }) => {
   return (
     <div>
       <p style={{ fontSize: '14px', color: '#ccc', lineHeight: 1.65, margin: '0 0 12px 0', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
-        {displayText}
+        <MentionText text={displayText} />
       </p>
       {isTruncated && (
         <button
@@ -372,12 +374,12 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
 
           {editingAnnotation ? (
             <div style={{ marginBottom: '12px' }}>
-              <textarea
+              <MentionTextarea
                 value={editAnnotationText}
-                onChange={(e) => setEditAnnotationText(e.target.value)}
+                onChange={setEditAnnotationText}
                 maxLength={5000}
                 rows={3}
-                style={{
+                textareaStyle={{
                   width: '100%',
                   background: 'rgba(255,255,255,0.03)',
                   border: '1px solid rgba(255,255,255,0.12)',
@@ -549,11 +551,11 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                           gap: '6px',
                         }}
                       >
-                        <textarea
+                        <MentionTextarea
                           placeholder="Reply..."
                           value={commentText}
                           maxLength={1000}
-                          onChange={(e) => setCommentText(e.target.value)}
+                          onChange={setCommentText}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
                               e.preventDefault();
@@ -562,7 +564,9 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                             }
                           }}
                           rows={1}
-                          style={{
+                          wrapperStyle={{ flex: 1 }}
+                          textareaStyle={{
+                            width: '100%',
                             flex: 1,
                             background: 'none',
                             border: 'none',
@@ -654,12 +658,12 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                           </div>
                           {isEditingThis ? (
                             <div>
-                              <textarea
+                              <MentionTextarea
                                 value={editCommentText}
-                                onChange={(e) => setEditCommentText(e.target.value)}
+                                onChange={setEditCommentText}
                                 maxLength={1000}
                                 rows={2}
-                                style={{
+                                textareaStyle={{
                                   width: '100%',
                                   background: 'rgba(255,255,255,0.03)',
                                   border: '1px solid rgba(255,255,255,0.12)',
@@ -716,7 +720,9 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                               </div>
                             </div>
                           ) : (
-                            <p style={{ fontSize: '13px', color: '#bbb', margin: 0, lineHeight: 1.5 }}>{comment.text}</p>
+                            <p style={{ fontSize: '13px', color: '#bbb', margin: 0, lineHeight: 1.5 }}>
+                              <MentionText text={comment.text} />
+                            </p>
                           )}
                         </div>
                       </div>

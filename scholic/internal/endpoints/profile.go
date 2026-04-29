@@ -64,7 +64,7 @@ func UpdateProfile(c *gin.Context) {
 	// Username change is no longer allowed after onboarding
 	if req.Username != nil && *req.Username != "" && *req.Username != user.Username {
 		log.Printf("[Profile] User %v attempted to change username up from %s to %s (Blocked)", userID, user.Username, *req.Username)
-		// We ignore the username update or could return an error. 
+		// We ignore the username update or could return an error.
 		// Since frontend will hide this, we'll just ignore it to avoid breaking other updates.
 	}
 
@@ -227,7 +227,7 @@ func GetUserProfile(c *gin.Context) {
 			"followingCount":   followingCount,
 			"isFollowing":      isFollowing,
 		},
-		"activity":     annotations,
+		"activity":      annotations,
 		"totalActivity": totalActivity,
 	})
 }
@@ -642,6 +642,9 @@ func ToggleFollow(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to toggle follow"})
 		return
+	}
+	if following {
+		createNotification(targetUser.ID, followerID.(uint), NotificationFollow, nil, nil)
 	}
 	c.JSON(http.StatusOK, gin.H{"following": following})
 }

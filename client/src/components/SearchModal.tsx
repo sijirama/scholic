@@ -7,6 +7,7 @@ import api from '../lib/api';
 import UserRow from './UserRow';
 import type { UserRowData } from './UserRow';
 import ReactionStrip from './ReactionStrip';
+import MentionText from './MentionText';
 
 interface SearchAnnotation {
   id: number;
@@ -96,7 +97,7 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
         {/* Annotation note */}
         {ann.text && (
           <p style={{ margin:'0 0 5px', fontSize:12, color:'#aaa', lineHeight:1.5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
-            {ann.text}
+            <MentionText text={ann.text} />
           </p>
         )}
 

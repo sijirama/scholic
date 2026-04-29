@@ -4,6 +4,7 @@ import { Search, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import ReactionStrip from '../components/ReactionStrip';
+import MentionText from '../components/MentionText';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -127,7 +128,7 @@ const AnnotationResultCard: React.FC<{ annotation: SearchAnnotation }> = ({ anno
             {/* Note */}
             {annotation.text && (
               <p style={{ margin: '0 0 10px', fontSize: 13, color: '#777', lineHeight: 1.65, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                {annotation.text}
+                <MentionText text={annotation.text} />
               </p>
             )}
 

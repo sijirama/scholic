@@ -54,6 +54,12 @@ func CreateComment(c *gin.Context) {
 		return
 	}
 
+	if !annotation.IsPrivate {
+		actorID := userID.(uint)
+		createNotification(annotation.UserID, actorID, NotificationComment, uintPtr(annotation.ID), uintPtr(comment.ID))
+		notifyMentionedUsers(actorID, comment.Text, uintPtr(annotation.ID), uintPtr(comment.ID), "", annotation.UserID)
+	}
+
 	c.JSON(http.StatusCreated, comment)
 }
 
@@ -86,6 +92,7 @@ func UpdateComment(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only edit your own comments"})
 		return
 	}
+	previousText := comment.Text
 
 	var req UpdateCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -102,6 +109,11 @@ func UpdateComment(c *gin.Context) {
 	if err := database.DB.Preload("User").First(&comment, comment.ID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Updated but failed to reload"})
 		return
+	}
+
+	var annotation models.Annotation
+	if err := database.DB.Select("id, user_id, is_private").First(&annotation, comment.AnnotationID).Error; err == nil && !annotation.IsPrivate {
+		notifyMentionedUsers(userID.(uint), comment.Text, uintPtr(annotation.ID), uintPtr(comment.ID), previousText, annotation.UserID)
 	}
 
 	c.JSON(http.StatusOK, comment)

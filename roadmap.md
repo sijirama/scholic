@@ -18,7 +18,7 @@ Clear v0.0.2 cruft before adding new surface area.
 
 ---
 
-## Phase 2 — Settings foundation (the unlock)
+## Phase 2 — Settings foundation (the unlock) (SKIPPED)
 A `user_settings` table + Redis read cache. Build infra once, ship four features on top.
 
 - Default highlight color (currently hardcoded green)
@@ -28,18 +28,17 @@ A `user_settings` table + Redis read cache. Build infra once, ship four features
 
 ---
 
-## Phase 3 — Reactions + Tags (parallel)
-Independent schema additions. Land both before Discover so it has signal to rank on.
+## Phase 3 — Reactions — DONE (commit `6e4da14`)
+Twitter-style reactions, curated 10 emojis, replace-on-react semantics.
 
-**Reactions**
-- `annotation_reactions` table with emoji field
-- Toggle endpoint, batch counts in feed
-- Full emoji picker in UI
+- [x] `Reaction` model + composite unique index on (annotation_id, user_id)
+- [x] Toggle endpoint with insert / replace / toggle-off behaviour
+- [x] Reaction counts + viewer's active emoji injected into all 6 read paths
+- [x] `ReactionStrip` component reused across web (Feed, Profile, AnnotationPage, SitePage, Search, SearchModal, Landing)
+- [x] Extension sidebar list items + highlight-hover popup get the same strip
+- [x] Optimistic update with rollback in both web and extension
 
-**Tags**
-- `tags` + `annotation_tags` (many-to-many)
-- Tag input in extension sidebar + web
-- Tag-based browsing/filtering
+Tags were on the original plan as Phase 3b but got cut — see "Cut from v0.0.3" below.
 
 ---
 

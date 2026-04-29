@@ -11,10 +11,8 @@
 - Badge count in navbar, dropdown or dedicated page
 - Mark as read (individual + bulk)
 
-## Annotation Search & Filter
-- Search own annotations by text, URL, or tag
-- Backend: `ILIKE` or full-text search on quote_text, text, url
-- Frontend: search bar on profile page, filter by tag
+## Repost annotations
+- we wanna be able to repost annotations with text/image
 
 ## Tags / Labels on Annotations
 - Many-to-many: `annotation_tags` join table + `tags` table
