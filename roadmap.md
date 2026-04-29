@@ -18,7 +18,7 @@ Clear v0.0.2 cruft before adding new surface area.
 
 ---
 
-## Phase 2 — Settings foundation (the unlock) (SKIPPED)
+## Phase 2 — Settings foundation (the unlock) (DONE)
 
 - Blocklist moved to backend (#2) with regex support (#2b)
 - PDF native-viewer ↔ Scholic viewer toggle without reload
