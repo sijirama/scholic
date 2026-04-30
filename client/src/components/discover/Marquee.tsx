@@ -6,6 +6,7 @@ interface MarqueeProps {
   pauseOnHover?: boolean;
   gap?: number;
   staticAlign?: 'left' | 'center';
+  breakout?: boolean;
   children: React.ReactNode;
 }
 
@@ -31,6 +32,7 @@ const Marquee: React.FC<MarqueeProps> = ({
   pauseOnHover = true,
   gap = 14,
   staticAlign = 'center',
+  breakout = true,
   children,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -110,13 +112,10 @@ const Marquee: React.FC<MarqueeProps> = ({
       onMouseEnter={() => pauseOnHover && setPaused(true)}
       onMouseLeave={() => pauseOnHover && setPaused(false)}
       style={{
-        // Always break out of the parent container to span the full viewport.
-        // The Discover page has overflowX: hidden on its root so this can't
-        // create a horizontal scrollbar.
         position: 'relative',
-        width: '100vw',
-        left: '50%',
-        marginLeft: '-50vw',
+        width: breakout ? '100vw' : '100%',
+        left: breakout ? '50%' : 0,
+        marginLeft: breakout ? '-50vw' : 0,
         overflow: 'hidden',
         padding: '4px 0',
         // Only fade edges when actually scrolling — a fade on a static row

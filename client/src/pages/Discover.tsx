@@ -249,7 +249,7 @@ const Discover: React.FC = () => {
                   accent="#E8C547"
                 />
                 {shouldMarqueePeople ? (
-                  <Marquee speed={0.35} direction="right" staticAlign="left">
+                  <Marquee speed={0.35} direction="right" staticAlign="left" breakout={false}>
                     {data.peopleToFollow.map(p => (
                       <UserCard key={p.id} user={p} currentUserId={user?.id} isAuthed={!!user} />
                     ))}
