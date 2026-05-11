@@ -11,6 +11,7 @@ import Feed from './pages/Feed';
 import Discover from './pages/Discover';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import DocumentPage from './pages/DocumentPage';
 import AnnotationPage from './pages/AnnotationPage';
 import SitePage from './pages/SitePage';
 import SearchPage from './pages/Search';
@@ -32,6 +33,7 @@ function App() {
             <Route path="auth/extension-login" element={<ExtensionLogin />} />
             <Route path="u/:username" element={<Profile />} />
             <Route path="annotation/:id" element={<AnnotationPage />} />
+            <Route path="document/:id" element={<DocumentPage />} />
             <Route path="page" element={<SitePage />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="privacy" element={<Privacy />} />

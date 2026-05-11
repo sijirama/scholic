@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,8 +18,8 @@ import (
 //
 // Query params:
 //
-//	q         text to search (quote_text + text + url for annotations; username/name for users)
-//	type      "all" | "annotations" | "users"  (default "all")
+//	q         text to search (quote_text + text + url for annotations; username/name for users; metadata for documents)
+//	type      "all" | "annotations" | "users" | "documents"  (default "all")
 //	username  scope annotation results to a specific user's public annotations
 //	domain    filter annotations by link_domain (partial match)
 //	color     filter by highlight_color — repeat param for multiple (e.g. color=hex1&color=hex2)
@@ -64,6 +65,13 @@ func Search(c *gin.Context) {
 		users, total := doUserSearch(q, authed, authedUserID)
 		out["users"] = users
 		out["usersTotal"] = total
+	}
+
+	// ── Documents ─────────────────────────────────────────────────────────────
+	if searchType == "all" || searchType == "documents" {
+		documents, total := doDocumentSearch(q, scopeUsername, limit, offset)
+		out["documents"] = documents
+		out["documentsTotal"] = total
 	}
 
 	c.JSON(http.StatusOK, out)
@@ -215,4 +223,17 @@ func doUserSearch(q string, authed bool, authedUserID interface{}) ([]userSearch
 		}
 	}
 	return out, total
+}
+
+func doDocumentSearch(q, scopeUsername string, limit, offset int) ([]DocumentResponse, int64) {
+	documents, total := searchDocuments(context.Background(), q, scopeUsername, limit, offset)
+	if len(documents) == 0 {
+		return []DocumentResponse{}, total
+	}
+
+	results := make([]DocumentResponse, 0, len(documents))
+	for _, document := range documents {
+		results = append(results, formatDocument(document))
+	}
+	return results, total
 }

@@ -33,7 +33,7 @@ func InitializeDatabase() {
 	log.Printf("[Scholic] Database connected at %s:%s/%s",
 		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_NAME"))
 
-	err = DB.AutoMigrate(&models.User{}, &models.Annotation{}, &models.Comment{}, &models.Follow{}, &models.Reaction{}, &models.Notification{})
+	err = DB.AutoMigrate(&models.User{}, &models.Annotation{}, &models.Comment{}, &models.Follow{}, &models.Reaction{}, &models.Notification{}, &models.Document{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
@@ -48,6 +48,11 @@ func InitializeDatabase() {
 		CREATE INDEX IF NOT EXISTS idx_annotations_recently_read
 		ON annotations (user_id, url, created_at DESC)
 		WHERE is_private = false AND deleted_at IS NULL
+	`)
+	_, _ = sqlDB.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_documents_user_created
+		ON documents (user_id, created_at DESC)
+		WHERE deleted_at IS NULL
 	`)
 	log.Println("[Scholic] Database indexes verified")
 }

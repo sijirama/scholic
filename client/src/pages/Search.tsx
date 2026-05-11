@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
+import { FileText, Search, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import ReactionStrip from '../components/ReactionStrip';
@@ -35,7 +35,23 @@ interface SearchUser {
   bio?: string;
 }
 
-type TabType = 'all' | 'annotations' | 'users';
+type TabType = 'all' | 'annotations' | 'users' | 'documents';
+
+interface SearchDocument {
+  id: number;
+  title: string;
+  description: string;
+  authors: string[];
+  tags: string[];
+  publishedYear?: number;
+  publisher?: string;
+  pageCount?: number;
+  fileUrl: string;
+  fileName: string;
+  createdAt: string;
+  metadataSource: string;
+  user: { id: number; username: string; firstName?: string; lastName?: string; profilePicture?: string };
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -184,6 +200,50 @@ const UserResultCard: React.FC<{ user: SearchUser }> = ({ user }) => {
   );
 };
 
+const DocumentResultCard: React.FC<{ documentRecord: SearchDocument }> = ({ documentRecord }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Link to={`/document/${documentRecord.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ display: 'flex', gap: 12, padding: '16px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: 8, background: hovered ? 'rgba(255,255,255,0.03)' : 'transparent', transition: 'background 0.12s' }}
+      >
+        <div style={{ width: 42, height: 42, borderRadius: 14, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <FileText style={{ width: 18, height: 18, color: '#6EB781' }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: '#e5e5e5' }}>{documentRecord.title}</span>
+            {documentRecord.publishedYear && <span style={{ fontSize: 11, color: '#555' }}>{documentRecord.publishedYear}</span>}
+            <span style={{ fontSize: 11, color: '#444', marginLeft: 'auto' }}>by @{documentRecord.user.username}</span>
+          </div>
+          {documentRecord.authors.length > 0 && (
+            <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
+              {documentRecord.authors.join(', ')}
+            </div>
+          )}
+          {documentRecord.description && (
+            <p style={{ margin: '0 0 10px', fontSize: 13, color: '#777', lineHeight: 1.65, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {documentRecord.description}
+            </p>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {documentRecord.publisher && <span style={{ fontSize: 11, color: '#555' }}>{documentRecord.publisher}</span>}
+            {documentRecord.pageCount ? <span style={{ fontSize: 11, color: '#555' }}>{documentRecord.pageCount} pages</span> : null}
+            {documentRecord.tags.slice(0, 4).map((tag) => (
+              <span key={tag} style={{ fontSize: 10, color: '#8cc7f0', background: 'rgba(71,163,232,0.10)', border: '1px solid rgba(71,163,232,0.18)', borderRadius: 999, padding: '3px 7px' }}>
+                {tag}
+              </span>
+            ))}
+            <span style={{ fontSize: 11, color: hovered ? '#666' : '#444', marginLeft: 'auto', transition: 'color 0.1s' }}>View →</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+};
+
 // ── Color chip ─────────────────────────────────────────────────────────────────
 
 const ColorChip: React.FC<{hex:string;label:string;active:boolean;onClick:()=>void}> = ({hex,label,active,onClick}) => {
@@ -222,8 +282,10 @@ const SearchPage: React.FC = () => {
   const [inputVal, setInputVal] = useState(searchParams.get('q') || '');
   const [annotations, setAnnotations] = useState<SearchAnnotation[]>([]);
   const [users, setUsers] = useState<SearchUser[]>([]);
+  const [documents, setDocuments] = useState<SearchDocument[]>([]);
   const [annotationsTotal, setAnnotationsTotal] = useState(0);
   const [usersTotal, setUsersTotal] = useState(0);
+  const [documentsTotal, setDocumentsTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
   const [fetchingMore, setFetchingMore] = useState(false);
@@ -270,7 +332,7 @@ const SearchPage: React.FC = () => {
   const fetchResults = useCallback(async (currentQ: string, currentTab: TabType, colors: string[], username: string, currentOffset: number, append = false) => {
     const hasFilter = currentQ.trim() || colors.length > 0 || username;
     if (!hasFilter) {
-      setAnnotations([]); setUsers([]); setAnnotationsTotal(0); setUsersTotal(0); return;
+      setAnnotations([]); setUsers([]); setDocuments([]); setAnnotationsTotal(0); setUsersTotal(0); setDocumentsTotal(0); return;
     }
     if (append) setFetchingMore(true); else setLoading(true);
     try {
@@ -285,16 +347,20 @@ const SearchPage: React.FC = () => {
       const res = await api.get(`/search?${p}`);
       const newAnns: SearchAnnotation[] = res.data.annotations || [];
       const newUsers: SearchUser[] = res.data.users || [];
+      const newDocs: SearchDocument[] = res.data.documents || [];
 
       if (append) {
         setAnnotations(prev => [...prev, ...newAnns]);
         setUsers(prev => [...prev, ...newUsers]);
+        setDocuments(prev => [...prev, ...newDocs]);
       } else {
         setAnnotations(newAnns);
         setUsers(newUsers);
+        setDocuments(newDocs);
       }
       setAnnotationsTotal(res.data.annotationsTotal ?? 0);
       setUsersTotal(res.data.usersTotal ?? 0);
+      setDocumentsTotal(res.data.documentsTotal ?? 0);
     } catch { /* silent */ }
     finally { setLoading(false); setFetchingMore(false); }
   }, []);
@@ -320,8 +386,9 @@ const SearchPage: React.FC = () => {
 
   const showAnn = tab === 'all' || tab === 'annotations';
   const showUsers = tab === 'all' || tab === 'users';
+  const showDocuments = tab === 'all' || tab === 'documents';
   const hasFilter = !!(q.trim() || colorFilters.length > 0 || scopeUsername);
-  const hasMore = (showAnn && annotations.length < annotationsTotal) || (showUsers && users.length < usersTotal);
+  const hasMore = (showAnn && annotations.length < annotationsTotal) || (showUsers && users.length < usersTotal) || (showDocuments && documents.length < documentsTotal);
 
   return (
     <div style={{ minHeight: '100vh', background: '#0e0e0e', color: '#fff', fontFamily: '"Inter", sans-serif' }}>
@@ -353,7 +420,7 @@ const SearchPage: React.FC = () => {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 24, alignItems: 'center' }}>
           {/* Type tabs */}
           <div style={{ display: 'flex', gap: 2, background: '#141414', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: 3 }}>
-            {(['all', 'annotations', 'users'] as TabType[]).map(t => (
+            {(['all', 'annotations', 'users', 'documents'] as TabType[]).map(t => (
               <TabBtn key={t} label={t} active={tab===t} onClick={() => setParam('type', t === 'all' ? '' : t)} />
             ))}
           </div>
@@ -383,7 +450,7 @@ const SearchPage: React.FC = () => {
         {!hasFilter && (
           <div style={{ textAlign: 'center', paddingTop: 80, color: '#333', fontSize: 14 }}>
             <Search style={{ width: 32, height: 32, margin: '0 auto 16px', opacity: 0.3 }} />
-            <p style={{ margin: 0 }}>Search for annotations or people</p>
+            <p style={{ margin: 0 }}>Search for annotations, people, or documents</p>
             <p style={{ margin: '6px 0 0', fontSize: 12, color: '#2a2a2a' }}>Try a keyword, a URL, or filter by highlight color</p>
           </div>
         )}
@@ -407,7 +474,7 @@ const SearchPage: React.FC = () => {
         )}
 
         {/* No results */}
-        {!loading && hasFilter && annotations.length === 0 && users.length === 0 && (
+        {!loading && hasFilter && annotations.length === 0 && users.length === 0 && documents.length === 0 && (
           <div style={{ textAlign: 'center', paddingTop: 60, color: '#444', fontSize: 14 }}>
             No results for this search
           </div>
@@ -436,6 +503,18 @@ const SearchPage: React.FC = () => {
               </div>
             )}
             {users.map(u => <UserResultCard key={u.id} user={u} />)}
+          </div>
+        )}
+
+        {!loading && showDocuments && documents.length > 0 && (
+          <div style={{ marginBottom: 32 }}>
+            {tab === 'all' && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, padding: '0 4px' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#333', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Documents</span>
+                <span style={{ fontSize: 11, color: '#333' }}>{documentsTotal} total</span>
+              </div>
+            )}
+            {documents.map(doc => <DocumentResultCard key={doc.id} documentRecord={doc} />)}
           </div>
         )}
 

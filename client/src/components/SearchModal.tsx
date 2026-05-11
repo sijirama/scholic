@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { FileText, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -33,7 +33,17 @@ interface SearchModalProps {
   scopeUsername?: string;
 }
 
-type TabType = 'all' | 'annotations' | 'users';
+type TabType = 'all' | 'annotations' | 'users' | 'documents';
+
+interface SearchDocument {
+  id: number;
+  title: string;
+  description: string;
+  authors: string[];
+  tags: string[];
+  publishedYear?: number;
+  user: { id: number; username: string; firstName?: string; lastName?: string; profilePicture?: string };
+}
 
 
 function hexToRgb(hex: string) {
@@ -121,14 +131,55 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
   );
 };
 
+const DocumentRow: React.FC<{ doc: SearchDocument; focused: boolean; onClick: () => void }> = ({ doc, focused, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+  const bg = focused ? 'rgba(255,255,255,0.08)' : hovered ? 'rgba(255,255,255,0.04)' : 'transparent';
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', background: bg, transition: 'background 0.1s' }}
+    >
+      <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <FileText style={{ width: 13, height: 13, color: '#6EB781' }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#ddd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</span>
+          {doc.publishedYear && <span style={{ fontSize: 10, color: '#444' }}>{doc.publishedYear}</span>}
+        </div>
+        {doc.authors.length > 0 && (
+          <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+            {doc.authors.join(', ')}
+          </p>
+        )}
+        {doc.description && (
+          <p style={{ margin: '0 0 4px', fontSize: 11, color: '#666', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+            {doc.description}
+          </p>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, color: '#555' }}>by @{doc.user.username}</span>
+          {doc.tags.slice(0, 3).map((tag) => (
+            <span key={tag} style={{ fontSize: 10, color: '#8cc7f0' }}>{tag}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId, scopeUsername }) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<TabType>('all');
   const [annotations, setAnnotations] = useState<SearchAnnotation[]>([]);
   const [users, setUsers] = useState<UserRowData[]>([]);
+  const [documents, setDocuments] = useState<SearchDocument[]>([]);
   const [annotationsTotal, setAnnotationsTotal] = useState(0);
   const [usersTotal, setUsersTotal] = useState(0);
+  const [documentsTotal, setDocumentsTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,15 +187,15 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
 
   useEffect(() => {
     if (open) {
-      setQuery(''); setAnnotations([]); setUsers([]);
-      setAnnotationsTotal(0); setUsersTotal(0); setFocusedIdx(-1);
+      setQuery(''); setAnnotations([]); setUsers([]); setDocuments([]);
+      setAnnotationsTotal(0); setUsersTotal(0); setDocumentsTotal(0); setFocusedIdx(-1);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
 
   const doSearch = useCallback(async (q: string, t: TabType) => {
     if (!q.trim() && !scopeUsername) {
-      setAnnotations([]); setUsers([]); setAnnotationsTotal(0); setUsersTotal(0); setLoading(false); return;
+      setAnnotations([]); setUsers([]); setDocuments([]); setAnnotationsTotal(0); setUsersTotal(0); setDocumentsTotal(0); setLoading(false); return;
     }
     setLoading(true);
     try {
@@ -156,8 +207,10 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
       const res = await api.get(`/search?${p}`);
       setAnnotations(res.data.annotations || []);
       setUsers(res.data.users || []);
+      setDocuments(res.data.documents || []);
       setAnnotationsTotal(res.data.annotationsTotal ?? 0);
       setUsersTotal(res.data.usersTotal ?? 0);
+      setDocumentsTotal(res.data.documentsTotal ?? 0);
       setFocusedIdx(-1);
     } catch { toast.error('Search failed'); }
     finally { setLoading(false); }
@@ -178,6 +231,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
   const allPaths = [
     ...annotations.map(a => `/annotation/${a.id}`),
     ...users.map(u => `/u/${u.username}`),
+    ...documents.map(d => `/document/${d.id}`),
   ];
   const go = (path: string) => { onClose(); navigate(path); };
   const buildParams = () => {
@@ -207,7 +261,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
 
   const showAnn = tab==='all'||tab==='annotations';
   const showUsers = tab==='all'||tab==='users';
-  const hasResults = annotations.length>0||users.length>0;
+  const showDocuments = tab==='all'||tab==='documents';
+  const hasResults = annotations.length>0||users.length>0||documents.length>0;
   const hasQuery = !!(query.trim()||scopeUsername);
 
   return (
@@ -236,7 +291,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
               {/* Tabs + color chips */}
               <div style={{padding:'8px 12px 6px',borderBottom:'1px solid rgba(255,255,255,0.04)',display:'flex',flexDirection:'column',gap:6}}>
                 <div style={{display:'flex',gap:2}}>
-                  {(['all','annotations','users'] as TabType[]).map(t=>(
+                  {(['all','annotations','users','documents'] as TabType[]).map(t=>(
                     <TabBtn key={t} label={t} active={tab===t} onClick={()=>handleTab(t)} />
                   ))}
                 </div>
@@ -273,6 +328,16 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
                       {usersTotal>0&&<span style={{fontSize:10,color:'#333'}}>{usersTotal}</span>}
                     </div>
                     {users.map(u=><UserRow key={u.id} user={u} currentUserId={currentUserId} onFollow={handleFollow} showFollowButton onNavigate={onClose} />)}
+                  </div>
+                )}
+
+                {showDocuments&&documents.length>0&&(
+                  <div style={{padding:'8px 6px 2px',borderTop:(annotations.length>0||users.length>0)?'1px solid rgba(255,255,255,0.04)':'none'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'2px 8px 5px'}}>
+                      <span style={{fontSize:9,fontWeight:700,color:'#2e2e2e',textTransform:'uppercase',letterSpacing:'0.1em'}}>Documents</span>
+                      {documentsTotal>0&&<span style={{fontSize:10,color:'#333'}}>{documentsTotal}</span>}
+                    </div>
+                    {documents.map((doc, i)=><DocumentRow key={doc.id} doc={doc} focused={focusedIdx===annotations.length + users.length + i} onClick={()=>go(`/document/${doc.id}`)} />)}
                   </div>
                 )}
               </div>

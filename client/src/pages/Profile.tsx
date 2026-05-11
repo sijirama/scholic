@@ -8,6 +8,7 @@ import AnnotationCard from '../components/AnnotationCard';
 import type { Annotation, User as BaseUser, Comment } from '../components/AnnotationCard';
 import FollowersModal from '../components/FollowersModal';
 import Avatar from '../components/Avatar';
+import DocumentUploadModal from '../components/DocumentUploadModal';
 import { toast } from 'sonner';
 
 function timeAgo(dateStr: string): string {
@@ -34,6 +35,30 @@ interface ProfileUser extends BaseUser {
   followersCount?: number;
   followingCount?: number;
   isFollowing?: boolean;
+}
+
+interface UploadedDocument {
+  id: number;
+  createdAt: string;
+  title: string;
+  description: string;
+  authors: string[];
+  tags: string[];
+  publishedYear?: number;
+  publisher?: string;
+  pageCount?: number;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  metadataSource: string;
+  user: {
+    id: number;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+    profilePicture?: string;
+  };
 }
 
 const ProfileSkeleton: React.FC = () => (
@@ -104,6 +129,13 @@ const Profile: React.FC = () => {
   const [commentOffsets, setCommentOffsets] = useState<Record<number, number>>({});
   const [fetchingComments, setFetchingComments] = useState<Record<number, boolean>>({});
   const [followLoading, setFollowLoading] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsFetchingMore, setDocumentsFetchingMore] = useState(false);
+  const [documentsHasMore, setDocumentsHasMore] = useState(false);
+  const [documentsOffset, setDocumentsOffset] = useState(0);
+  const DOCUMENTS_LIMIT = 12;
 
   const toggleFollow = async () => {
     if (!profileUser || followLoading) return;
@@ -224,6 +256,9 @@ const Profile: React.FC = () => {
     setRecentlyRead([]);
     setRecentlyReadOffset(0);
     setRecentlyReadHasMore(false);
+    setDocuments([]);
+    setDocumentsOffset(0);
+    setDocumentsHasMore(false);
     setActiveTab('Annotations');
     fetchProfile(0, true);
   }, [username, fetchProfile]);
@@ -245,7 +280,7 @@ const Profile: React.FC = () => {
   }, [hasMore, fetchingMore, loading, page, username, activeTab, fetchProfile]);
 
   const isOwnProfile = currentUser?.username === username;
-  const tabs = ['Annotations', 'Recently Read'];
+  const tabs = ['Annotations', 'Recently Read', 'Uploaded'];
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -261,6 +296,18 @@ const Profile: React.FC = () => {
         .catch(() => toast.error('Failed to load recently read'))
         .finally(() => setRecentlyReadLoading(false));
     }
+    if (tab === 'Uploaded' && documents.length === 0 && !documentsLoading) {
+      setDocumentsLoading(true);
+      api.get(`/users/${username}/documents?limit=${DOCUMENTS_LIMIT}&offset=0`)
+        .then(res => {
+          const rows = res.data.documents || [];
+          setDocuments(rows);
+          setDocumentsHasMore(res.data.hasMore ?? false);
+          setDocumentsOffset(rows.length);
+        })
+        .catch(() => toast.error('Failed to load documents'))
+        .finally(() => setDocumentsLoading(false));
+    }
   };
 
   const loadMoreRecentlyRead = () => {
@@ -275,6 +322,20 @@ const Profile: React.FC = () => {
       })
       .catch(() => toast.error('Failed to load more'))
       .finally(() => setRecentlyReadFetchingMore(false));
+  };
+
+  const loadMoreDocuments = () => {
+    if (documentsFetchingMore || !documentsHasMore) return;
+    setDocumentsFetchingMore(true);
+    api.get(`/users/${username}/documents?limit=${DOCUMENTS_LIMIT}&offset=${documentsOffset}`)
+      .then(res => {
+        const rows = res.data.documents || [];
+        setDocuments(prev => [...prev, ...rows]);
+        setDocumentsHasMore(res.data.hasMore ?? false);
+        setDocumentsOffset(prev => prev + rows.length);
+      })
+      .catch(() => toast.error('Failed to load more documents'))
+      .finally(() => setDocumentsFetchingMore(false));
   };
 
 
@@ -489,26 +550,36 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '24px' }}>
-          {tabs.map((tab) => (
+        <div className="flex items-center justify-between gap-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '24px' }}>
+          <div className="flex items-center gap-4">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                className="transition-colors cursor-pointer"
+                style={{
+                  padding: '10px 0',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: activeTab === tab ? '#6EB781' : '#666',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: activeTab === tab ? '2px solid #6EB781' : '2px solid transparent',
+                  marginBottom: '-1px',
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          {isOwnProfile && activeTab === 'Uploaded' && (
             <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className="transition-colors cursor-pointer"
-              style={{
-                padding: '10px 0',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: activeTab === tab ? '#6EB781' : '#666',
-                background: 'none',
-                border: 'none',
-                borderBottom: activeTab === tab ? '2px solid #6EB781' : '2px solid transparent',
-                marginBottom: '-1px',
-              }}
+              onClick={() => setUploadModalOpen(true)}
+              style={{ marginBottom: 10, padding: '9px 14px', borderRadius: 999, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', color: '#6EB781', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
             >
-              {tab}
+              Add document
             </button>
-          ))}
+          )}
         </div>
 
         {/* Tab Content */}
@@ -703,6 +774,112 @@ const Profile: React.FC = () => {
             )}
           </div>
         )}
+
+        {activeTab === 'Uploaded' && (
+          <div>
+            {documentsLoading ? (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} style={{ borderRadius: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: 18 }}>
+                    <div style={{ width: '60%', height: 16, borderRadius: 4, background: 'rgba(255,255,255,0.05)', marginBottom: 10 }} className="pulse" />
+                    <div style={{ width: '30%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', marginBottom: 14 }} className="pulse" />
+                    <div style={{ width: '100%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.03)', marginBottom: 6 }} className="pulse" />
+                    <div style={{ width: '80%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.03)' }} className="pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : documents.length === 0 ? (
+              <div className="text-center" style={{ padding: '60px 0', color: '#555' }}>
+                {isOwnProfile ? (
+                  <>
+                    <p style={{ fontSize: '14px', marginBottom: '6px' }}>You haven't uploaded any PDFs yet</p>
+                    <p style={{ fontSize: '12px', color: '#444' }}>Add one and Scholic will prefill the metadata for you.</p>
+                  </>
+                ) : (
+                  <p style={{ fontSize: '14px', marginBottom: '6px' }}>This user hasn't uploaded any documents yet</p>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {documents.map((documentRecord) => (
+                  <div
+                    key={documentRecord.id}
+                    style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.07)', background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02))', padding: 18, cursor: 'pointer' }}
+                    onClick={() => navigate(`/document/${documentRecord.id}`)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6EB781', fontWeight: 800, flexShrink: 0 }}>
+                        PDF
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+                          <h3 style={{ margin: 0, fontFamily: '"Outfit", sans-serif', fontSize: 20, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentRecord.title}</h3>
+                          {documentRecord.publishedYear && (
+                            <span style={{ fontSize: 11, color: '#777', flexShrink: 0 }}>{documentRecord.publishedYear}</span>
+                          )}
+                        </div>
+                        {documentRecord.authors.length > 0 && (
+                          <div style={{ fontSize: 13, color: '#aaa', marginBottom: 8 }}>
+                            {documentRecord.authors.join(', ')}
+                          </div>
+                        )}
+                        {documentRecord.description && (
+                          <p style={{ margin: '0 0 12px', fontSize: 13, color: '#777', lineHeight: 1.6 }}>
+                            {documentRecord.description}
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                          {documentRecord.publisher && (
+                            <span style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', fontSize: 11, color: '#888' }}>
+                              {documentRecord.publisher}
+                            </span>
+                          )}
+                          {documentRecord.pageCount ? (
+                            <span style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', fontSize: 11, color: '#888' }}>
+                              {documentRecord.pageCount} pages
+                            </span>
+                          ) : null}
+                          {documentRecord.tags.slice(0, 4).map((tag) => (
+                            <span key={tag} style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(71,163,232,0.12)', border: '1px solid rgba(71,163,232,0.18)', fontSize: 11, color: '#8cc7f0' }}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <span style={{ fontSize: 11, color: '#555' }}>{documentRecord.fileName}</span>
+                          <div style={{ display: 'flex', gap: 10 }}>
+                            <a
+                              href={documentRecord.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ fontSize: 12, color: '#6EB781', textDecoration: 'none', fontWeight: 600 }}
+                            >
+                              Read PDF
+                            </a>
+                            <span style={{ fontSize: 12, color: '#444' }}>View details →</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {documentsHasMore && (
+                  <div style={{ paddingTop: '12px', display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={loadMoreDocuments}
+                      disabled={documentsFetchingMore}
+                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, background: 'rgba(110,183,129,0.08)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.2)', borderRadius: '20px', cursor: documentsFetchingMore ? 'not-allowed' : 'pointer', opacity: documentsFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
+                    >
+                      {documentsFetchingMore ? 'Loading...' : 'Load more'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {profileUser && (
@@ -716,6 +893,15 @@ const Profile: React.FC = () => {
           followingCount={profileUser.followingCount || 0}
         />
       )}
+      <DocumentUploadModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onCreated={(documentRecord) => {
+          setDocuments(prev => [documentRecord, ...prev]);
+          setDocumentsOffset(prev => prev + 1);
+          setActiveTab('Uploaded');
+        }}
+      />
     </div>
   );
 };

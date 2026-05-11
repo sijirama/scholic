@@ -12,6 +12,7 @@ import (
 	"scholic/internal/endpoints"
 	"scholic/internal/initializers"
 	"scholic/internal/middleware"
+	"scholic/internal/services/ai"
 	"scholic/internal/services/media"
 	"scholic/internal/utils/jwt"
 
@@ -46,6 +47,7 @@ func main() {
 	initializers.InitGothic()
 	jwt.InitJWT()
 	blocklist.LoadAndCache()
+	ai.InitGemini()
 
 	// Initialize R2 (optional — server works without it, just can't upload files)
 	if err := media.InitializeR2(); err != nil {
@@ -84,7 +86,7 @@ func main() {
 		auth.GET("/:provider", endpoints.AuthGoogle)
 		auth.GET("/:provider/callback", endpoints.AuthGoogleCallback)
 		auth.POST("/logout", endpoints.AuthLogout)
-		
+
 		// Protected auth routes
 		protected := auth.Group("/")
 		protected.Use(middleware.AuthMiddleware())
@@ -145,6 +147,11 @@ func main() {
 		// ── Site Page ──
 		api.GET("/site", middleware.OptionalAuthMiddleware(), endpoints.GetSitePage)
 
+		// ── Documents ──
+		api.GET("/documents/:id", middleware.OptionalAuthMiddleware(), endpoints.GetDocument)
+		api.POST("/documents", middleware.AuthMiddleware(), endpoints.CreateDocument)
+		api.GET("/users/:username/documents", middleware.OptionalAuthMiddleware(), endpoints.GetUserDocuments)
+
 		// ── Annotation Routes ──
 		// GET uses optional auth (shows public + user's private annotations)
 		api.GET("/annotations", middleware.OptionalAuthMiddleware(), endpoints.GetAnnotations)
@@ -171,6 +178,8 @@ func main() {
 		uploadProtected.Use(middleware.AuthMiddleware())
 		{
 			uploadProtected.POST("/avatar", endpoints.UploadAvatar)
+			uploadProtected.POST("/document-preview", endpoints.UploadDocumentPreview)
+			uploadProtected.POST("/document-preview/cancel", endpoints.CancelDocumentPreview)
 		}
 	}
 
