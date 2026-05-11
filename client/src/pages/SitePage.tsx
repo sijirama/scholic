@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import SiteAnnotationCard from '../components/SiteAnnotationCard';
 import MentionText from '../components/MentionText';
 import api from '../lib/api';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Annotation } from '../components/AnnotationCard';
 
@@ -69,6 +69,18 @@ const SitePage: React.FC = () => {
   const [availableAuthors, setAvailableAuthors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // If the annotated URL is a Scholic-uploaded PDF, this holds its metadata
+  // so we can show the real title and a link back to the document page.
+  interface UploadedDocSummary {
+    id: number;
+    title: string;
+    authors: string[];
+    pageCount?: number;
+    publishedYear?: number;
+    user: { username: string };
+  }
+  const [uploadedDoc, setUploadedDoc] = useState<UploadedDocSummary | null>(null);
+
   // Filter state (mirrors URL params)
   const [selectedAuthors, setSelectedAuthors] = useState<string[]>(authorParams);
   const [timeRange, setTimeRange] = useState(timeRangeParam);
@@ -103,6 +115,20 @@ const SitePage: React.FC = () => {
   useEffect(() => {
     fetchSite();
   }, [fetchSite]);
+
+  // Detect uploaded-doc URLs (R2-hosted PDFs) so we can show real metadata
+  // instead of the generic "PDF Document" title PDFs report to the extension.
+  useEffect(() => {
+    if (!siteUrl) {
+      setUploadedDoc(null);
+      return;
+    }
+    let cancelled = false;
+    api.get(`/documents/by-url?url=${encodeURIComponent(siteUrl)}`)
+      .then((res) => { if (!cancelled) setUploadedDoc(res.data); })
+      .catch(() => { if (!cancelled) setUploadedDoc(null); });
+    return () => { cancelled = true; };
+  }, [siteUrl]);
 
   // Sync filter changes to URL
   useEffect(() => {
@@ -175,16 +201,20 @@ const SitePage: React.FC = () => {
         </button>
 
         {/* Page header — link preview */}
-        <div style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 14 }}>
-          {linkMeta?.linkFavicon && (
+        <div style={{ marginBottom: uploadedDoc ? 16 : 32, display: 'flex', alignItems: 'center', gap: 14 }}>
+          {uploadedDoc ? (
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FileText style={{ width: 14, height: 14, color: '#6EB781' }} />
+            </div>
+          ) : linkMeta?.linkFavicon && (
             <img src={linkMeta.linkFavicon} style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0 }} alt="" />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ fontFamily: '"Outfit", sans-serif', fontSize: 20, fontWeight: 700, color: '#fff', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {linkMeta?.linkTitle || domainName}
+              {uploadedDoc?.title || linkMeta?.linkTitle || domainName}
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: '#555' }}>{domainName}</span>
+              <span style={{ fontSize: 12, color: '#555' }}>{uploadedDoc ? `uploaded by @${uploadedDoc.user.username}` : domainName}</span>
               <span style={{ fontSize: 12, color: '#333' }}>·</span>
               <span style={{ fontSize: 12, color: '#555' }}>{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</span>
             </div>
@@ -197,9 +227,26 @@ const SitePage: React.FC = () => {
             className="hover:text-white hover:border-white/20"
           >
             <ExternalLink style={{ width: 13, height: 13 }} />
-            Visit site
+            {uploadedDoc ? 'Open PDF' : 'Visit site'}
           </a>
         </div>
+
+        {uploadedDoc && (
+          <div style={{ marginBottom: 32, padding: '14px 16px', borderRadius: 10, border: '1px solid rgba(110,183,129,0.20)', background: 'rgba(110,183,129,0.06)', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: '#6EB781', fontWeight: 600, marginBottom: 2 }}>Uploaded document</div>
+              <div style={{ fontSize: 11.5, color: '#888' }}>
+                {uploadedDoc.authors.length > 0 ? uploadedDoc.authors.join(', ') : 'View the document page for inline preview, metadata, and tags.'}
+              </div>
+            </div>
+            <button
+              onClick={() => navigate(`/document/${uploadedDoc.id}`)}
+              style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: '#08110b', background: '#6EB781', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Open document page →
+            </button>
+          </div>
+        )}
 
         {/* Split layout */}
         <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>

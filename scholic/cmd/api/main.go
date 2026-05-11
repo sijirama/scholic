@@ -148,6 +148,7 @@ func main() {
 		api.GET("/site", middleware.OptionalAuthMiddleware(), endpoints.GetSitePage)
 
 		// ── Documents ──
+		api.GET("/documents/by-url", middleware.OptionalAuthMiddleware(), endpoints.GetDocumentByURL)
 		api.GET("/documents/:id", middleware.OptionalAuthMiddleware(), endpoints.GetDocument)
 		api.POST("/documents", middleware.AuthMiddleware(), endpoints.CreateDocument)
 		api.GET("/users/:username/documents", middleware.OptionalAuthMiddleware(), endpoints.GetUserDocuments)

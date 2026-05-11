@@ -329,6 +329,27 @@ func GetDocument(c *gin.Context) {
 	c.JSON(http.StatusOK, formatDocument(document))
 }
 
+// GetDocumentByURL handles GET /api/documents/by-url?url=...
+// Returns the document matching a file URL (omitting heavy fields like
+// search_text and embedding via formatDocument). Used by SitePage to detect
+// when a /page?url= request is actually an uploaded PDF so it can show real
+// metadata and link back to the document page.
+func GetDocumentByURL(c *gin.Context) {
+	fileURL := strings.TrimSpace(c.Query("url"))
+	if fileURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url query parameter is required"})
+		return
+	}
+
+	var document models.Document
+	if err := database.DB.Preload("User").Where("file_url = ?", fileURL).First(&document).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Document not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, formatDocument(document))
+}
+
 func formatDocument(document models.Document) DocumentResponse {
 	return DocumentResponse{
 		ID:             document.ID,

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
-import { ArrowLeft, Settings } from 'lucide-react';
+import { ArrowLeft, Settings, FileText } from 'lucide-react';
 import AnnotationCard from '../components/AnnotationCard';
 import type { Annotation, User as BaseUser, Comment } from '../components/AnnotationCard';
 import FollowersModal from '../components/FollowersModal';
@@ -575,7 +575,7 @@ const Profile: React.FC = () => {
           {isOwnProfile && activeTab === 'Uploaded' && (
             <button
               onClick={() => setUploadModalOpen(true)}
-              style={{ marginBottom: 10, padding: '9px 14px', borderRadius: 999, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', color: '#6EB781', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ marginBottom: 8, padding: '5px 11px', borderRadius: 8, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', color: '#6EB781', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Add document
             </button>
@@ -804,61 +804,58 @@ const Profile: React.FC = () => {
                 {documents.map((documentRecord) => (
                   <div
                     key={documentRecord.id}
-                    style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.07)', background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02))', padding: 18, cursor: 'pointer' }}
+                    style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', padding: 16, cursor: 'pointer' }}
                     onClick={() => navigate(`/document/${documentRecord.id}`)}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6EB781', fontWeight: 800, flexShrink: 0 }}>
-                        PDF
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6EB781', flexShrink: 0 }}>
+                        <FileText style={{ width: 16, height: 16 }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
-                          <h3 style={{ margin: 0, fontFamily: '"Outfit", sans-serif', fontSize: 20, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentRecord.title}</h3>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+                          <h3 style={{ margin: 0, fontFamily: '"Outfit", sans-serif', fontSize: 17, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentRecord.title}</h3>
                           {documentRecord.publishedYear && (
-                            <span style={{ fontSize: 11, color: '#777', flexShrink: 0 }}>{documentRecord.publishedYear}</span>
+                            <span style={{ fontSize: 11, color: '#666', flexShrink: 0 }}>{documentRecord.publishedYear}</span>
                           )}
                         </div>
                         {documentRecord.authors.length > 0 && (
-                          <div style={{ fontSize: 13, color: '#aaa', marginBottom: 8 }}>
+                          <div style={{ fontSize: 12, color: '#888', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {documentRecord.authors.join(', ')}
                           </div>
                         )}
                         {documentRecord.description && (
-                          <p style={{ margin: '0 0 12px', fontSize: 13, color: '#777', lineHeight: 1.6 }}>
+                          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#777', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                             {documentRecord.description}
                           </p>
                         )}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                          {documentRecord.publisher && (
-                            <span style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', fontSize: 11, color: '#888' }}>
-                              {documentRecord.publisher}
-                            </span>
-                          )}
-                          {documentRecord.pageCount ? (
-                            <span style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', fontSize: 11, color: '#888' }}>
-                              {documentRecord.pageCount} pages
-                            </span>
-                          ) : null}
-                          {documentRecord.tags.slice(0, 4).map((tag) => (
-                            <span key={tag} style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(71,163,232,0.12)', border: '1px solid rgba(71,163,232,0.18)', fontSize: 11, color: '#8cc7f0' }}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                          <span style={{ fontSize: 11, color: '#555' }}>{documentRecord.fileName}</span>
-                          <div style={{ display: 'flex', gap: 10 }}>
-                            <a
-                              href={documentRecord.fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ fontSize: 12, color: '#6EB781', textDecoration: 'none', fontWeight: 600 }}
-                            >
-                              Read PDF
-                            </a>
-                            <span style={{ fontSize: 12, color: '#444' }}>View details →</span>
+                        {documentRecord.tags.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                            {documentRecord.tags.slice(0, 3).map((tag) => (
+                              <span key={tag} style={{ padding: '2px 7px', borderRadius: 5, background: 'rgba(71,163,232,0.10)', border: '1px solid rgba(71,163,232,0.18)', fontSize: 10.5, color: '#8cc7f0', lineHeight: 1.5 }}>
+                                {tag}
+                              </span>
+                            ))}
                           </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 14 }}>
+                          <a
+                            href={`/page?url=${encodeURIComponent(documentRecord.fileUrl)}`}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = '#444'; }}
+                          >
+                            all annotations →
+                          </a>
+                          <a
+                            href={documentRecord.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ fontSize: 11, color: '#6EB781', textDecoration: 'none', fontWeight: 500 }}
+                          >
+                            Read PDF →
+                          </a>
                         </div>
                       </div>
                     </div>
