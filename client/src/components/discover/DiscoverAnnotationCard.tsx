@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, ExternalLink, Globe } from 'lucide-react';
+import { MessageCircle, ExternalLink, Globe, FileText } from 'lucide-react';
 import Avatar from '../Avatar';
 import ReactionStrip from '../ReactionStrip';
 import MentionText from '../MentionText';
 import type { Annotation } from '../AnnotationCard';
+import { useUploadedDoc } from '../../lib/uploadedDocs';
 
 function timeAgo(dateStr: string): string {
   const now = new Date();
@@ -36,6 +37,7 @@ const DiscoverAnnotationCard: React.FC<{
   canReact?: boolean;
 }> = ({ annotation, canReact = false }) => {
   const navigate = useNavigate();
+  const uploadedDoc = useUploadedDoc(annotation.url);
   let domainName = annotation.linkDomain;
   if (!domainName) {
     try {
@@ -44,6 +46,8 @@ const DiscoverAnnotationCard: React.FC<{
       domainName = annotation.url;
     }
   }
+  const titleText = uploadedDoc?.title || annotation.linkTitle || domainName;
+  const subtitleText = uploadedDoc ? `by @${uploadedDoc.user.username}` : domainName;
 
   return (
     <div
@@ -172,7 +176,11 @@ const DiscoverAnnotationCard: React.FC<{
           border: '1px solid rgba(255,255,255,0.045)',
         }}
       >
-        {annotation.linkFavicon ? (
+        {uploadedDoc ? (
+          <div style={{ width: 18, height: 18, borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FileText style={{ width: 10, height: 10, color: '#6EB781' }} />
+          </div>
+        ) : annotation.linkFavicon ? (
           <img
             src={annotation.linkFavicon}
             alt=""
@@ -195,7 +203,7 @@ const DiscoverAnnotationCard: React.FC<{
               whiteSpace: 'nowrap',
             }}
           >
-            {annotation.linkTitle || domainName}
+            {titleText}
           </div>
           <div
             style={{
@@ -207,7 +215,7 @@ const DiscoverAnnotationCard: React.FC<{
               marginTop: 1,
             }}
           >
-            {domainName}
+            {subtitleText}
           </div>
         </div>
       </div>

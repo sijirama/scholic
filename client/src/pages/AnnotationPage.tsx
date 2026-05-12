@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
-import { ArrowLeft, ExternalLink, Lock, MessageCircle, Send, Share2, Link2, Check, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Lock, MessageCircle, Send, Share2, Link2, Check, ChevronDown, ChevronUp, Pencil, Trash2, FileText } from 'lucide-react';
 import Avatar from '../components/Avatar';
 import { toast } from 'sonner';
+import { useUploadedDoc } from '../lib/uploadedDocs';
 import type { Annotation, Comment, User as AnnotationUser } from '../components/AnnotationCard';
 import ImageLightbox from '../components/ImageLightbox';
 import ReactionStrip from '../components/ReactionStrip';
@@ -122,6 +123,11 @@ const AnnotationPage: React.FC = () => {
   const [commentOffset, setCommentOffset] = useState(0);
   const [loadingComments, setLoadingComments] = useState(false);
   const [hasMoreComments, setHasMoreComments] = useState(false);
+
+  // If this annotation is on a Scholic-uploaded PDF, swap the generic "PDF
+  // Document" linkTitle for the AI-extracted title and show a banner linking
+  // to the document page for inline preview.
+  const uploadedDoc = useUploadedDoc(annotation?.url);
 
   // Share menu
   const [shareOpen, setShareOpen] = useState(false);
@@ -324,20 +330,24 @@ const AnnotationPage: React.FC = () => {
         </button>
 
         {/* Source header — favicon + title + site page link + visit button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-          {annotation.linkFavicon && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: uploadedDoc ? 14 : 28 }}>
+          {uploadedDoc ? (
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FileText style={{ width: 14, height: 14, color: '#6EB781' }} />
+            </div>
+          ) : annotation.linkFavicon && (
             <img src={annotation.linkFavicon} style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0 }} alt="" />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: '#e0e0e0', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {annotation.linkTitle || domainName}
+              {uploadedDoc?.title || annotation.linkTitle || domainName}
             </p>
             <a
               href={`/page?url=${encodeURIComponent(annotation.url)}`}
               style={{ fontSize: 11, color: '#6EB781', textDecoration: 'none', fontWeight: 500 }}
               className="hover:underline"
             >
-              View all annotations on {domainName} →
+              {uploadedDoc ? `View all annotations on this document →` : `View all annotations on ${domainName} →`}
             </a>
           </div>
           <a
@@ -348,9 +358,26 @@ const AnnotationPage: React.FC = () => {
             className="hover:text-white hover:border-white/20"
           >
             <ExternalLink style={{ width: 12, height: 12 }} />
-            Visit
+            {uploadedDoc ? 'Open PDF' : 'Visit'}
           </a>
         </div>
+
+        {uploadedDoc && (
+          <div style={{ marginBottom: 28, padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(110,183,129,0.20)', background: 'rgba(110,183,129,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11.5, color: '#6EB781', fontWeight: 600, marginBottom: 2 }}>Uploaded document</div>
+              <div style={{ fontSize: 11, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {uploadedDoc.authors.length > 0 ? uploadedDoc.authors.join(', ') : 'Open the document page for inline preview, metadata, and tags.'}
+              </div>
+            </div>
+            <button
+              onClick={() => navigate(`/document/${uploadedDoc.id}`)}
+              style={{ flexShrink: 0, padding: '5px 11px', fontSize: 11.5, fontWeight: 600, color: '#08110b', background: '#6EB781', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Open document page →
+            </button>
+          </div>
+        )}
 
         {/* Image annotation */}
         {annotation.type === 'image' && annotation.imageUrl && (

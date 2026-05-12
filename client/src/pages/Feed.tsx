@@ -21,6 +21,19 @@ interface RecentSite {
   lastRead: string;
 }
 
+function sidebarTimeAgo(dateStr: string): string {
+  if (!dateStr) return '';
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d`;
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 const SidebarRecentItem: React.FC<{ site: RecentSite }> = ({ site }) => {
   const uploadedDoc = useUploadedDoc(site.url);
   let displayDomain = site.domain;
@@ -28,30 +41,51 @@ const SidebarRecentItem: React.FC<{ site: RecentSite }> = ({ site }) => {
     try { displayDomain = new URL(site.url).hostname.replace('www.', ''); } catch { displayDomain = site.url; }
   }
   const title = uploadedDoc?.title || site.title || displayDomain;
+  const description = uploadedDoc
+    ? (uploadedDoc.authors.length > 0 ? uploadedDoc.authors.join(', ') : '')
+    : site.description;
+
   return (
     <a
       href={site.url}
       target="_blank"
       rel="noreferrer"
-      style={{ display: 'block', padding: '10px 12px', borderRadius: 8, textDecoration: 'none', color: 'inherit', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.015)', transition: 'background 0.15s' }}
-      className="hover:bg-white/[0.04]"
+      style={{ display: 'block', padding: '11px 12px', borderRadius: 10, textDecoration: 'none', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', transition: 'background 0.15s, border-color 0.15s, transform 0.15s' }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(255,255,255,0.045)';
+        e.currentTarget.style.borderColor = 'rgba(110,183,129,0.20)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+      }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, minWidth: 0 }}>
         {uploadedDoc ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0px 5px', borderRadius: 3, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 9.5, color: '#6EB781', fontWeight: 600 }}>
-            <FileText style={{ width: 8, height: 8 }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 9.5, color: '#6EB781', fontWeight: 600, flexShrink: 0 }}>
+            <FileText style={{ width: 9, height: 9 }} />
             PDF
           </span>
         ) : site.favicon ? (
-          <img src={site.favicon} alt="" style={{ width: 11, height: 11, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-        ) : null}
-        <span style={{ fontSize: 10.5, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {displayDomain}
+          <img src={site.favicon} alt="" style={{ width: 12, height: 12, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        ) : (
+          <div style={{ width: 12, height: 12, borderRadius: 2, background: 'rgba(110,183,129,0.18)', flexShrink: 0 }} />
+        )}
+        <span style={{ fontSize: 10.5, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+          {uploadedDoc ? `by @${uploadedDoc.user.username}` : displayDomain}
         </span>
+        {site.lastRead && (
+          <span style={{ fontSize: 10, color: '#444', flexShrink: 0 }}>{sidebarTimeAgo(site.lastRead)}</span>
+        )}
       </div>
-      <div style={{ fontSize: 12, fontWeight: 500, color: '#ccc', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 500, color: '#d4d4d4', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: description ? 4 : 0 }}>
         {title}
       </div>
+      {description && (
+        <div style={{ fontSize: 11, color: '#666', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {description}
+        </div>
+      )}
     </a>
   );
 };
@@ -323,11 +357,21 @@ const Feed: React.FC = () => {
       {user && recentSidebar.length > 0 && (
         <aside
           className="feed-recent-sidebar"
-          style={{ position: 'fixed', top: 92, left: 24, width: 220, zIndex: 10 }}
+          style={{
+            position: 'fixed',
+            // Anchor to the feed: feed left edge is `50% - 350px` (700px centered).
+            // Sit the sidebar just to the left of it with a 24px gutter.
+            top: 170,
+            left: 'calc(50% - 350px - 24px - 260px)',
+            width: 260,
+            maxHeight: 'calc(100vh - 190px)',
+            overflowY: 'auto',
+            zIndex: 10,
+          }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '0 4px', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            <Clock style={{ width: 11, height: 11 }} />
-            <span>Continue reading</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12, padding: '0 4px' }}>
+            <Clock style={{ width: 12, height: 12, color: '#6EB781' }} />
+            <span style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 600 }}>Continue reading</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {recentSidebar.map((site, idx) => (
@@ -461,8 +505,10 @@ const Feed: React.FC = () => {
         input::placeholder { color: #444; }
 
         /* Hide the recently-read sidebar when the viewport is too narrow
-           for it to live left of the centered 700px feed without overlap. */
-        @media (max-width: 1100px) {
+           for it to live left of the centered 700px feed without overlap.
+           Needs: (700px feed) + 2*(260px sidebar + 24px gutter) ≈ 1268px,
+           plus a little breathing room. */
+        @media (max-width: 1280px) {
           .feed-recent-sidebar { display: none; }
         }
       `}</style>

@@ -1,5 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FileText } from 'lucide-react';
+import { useUploadedDoc } from '../../lib/uploadedDocs';
 
 export interface TrendingPage {
   url: string;
@@ -14,11 +16,13 @@ export interface TrendingPage {
 
 const UrlCard: React.FC<{ page: TrendingPage }> = ({ page }) => {
   const navigate = useNavigate();
+  const uploadedDoc = useUploadedDoc(page.url);
   let domain = page.domain;
   if (!domain) {
     try { domain = new URL(page.url).hostname.replace('www.', ''); } catch { domain = page.url; }
   }
-  const title = page.title || domain || page.url;
+  const title = uploadedDoc?.title || page.title || domain || page.url;
+  const domainText = uploadedDoc ? `by @${uploadedDoc.user.username}` : domain;
 
   return (
     <div
@@ -49,7 +53,12 @@ const UrlCard: React.FC<{ page: TrendingPage }> = ({ page }) => {
       ) : null}
       <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#888' }}>
-          {page.favicon && (
+          {uploadedDoc ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0px 5px', borderRadius: 3, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 9.5, color: '#6EB781', fontWeight: 600 }}>
+              <FileText style={{ width: 8, height: 8 }} />
+              PDF
+            </span>
+          ) : page.favicon && (
             <img
               src={page.favicon}
               alt=""
@@ -57,7 +66,7 @@ const UrlCard: React.FC<{ page: TrendingPage }> = ({ page }) => {
               onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
             />
           )}
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domain}</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domainText}</span>
         </div>
         <div style={{
           fontSize: 14, fontWeight: 600, color: '#e0e0e0',
