@@ -7,7 +7,7 @@ import type { Annotation, User as AnnotationUser, Comment } from '../components/
 import Avatar from '../components/Avatar';
 import UserCard from '../components/discover/UserCard';
 import type { DiscoverAuthor } from '../components/discover/UserCard';
-import { Clock, FileText, Users } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUploadedDoc } from '../lib/uploadedDocs';
 
@@ -41,7 +41,7 @@ function sidebarTimeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const FriendsReadingItem: React.FC<{ site: FriendSite }> = ({ site }) => {
+const FriendsReadingItem: React.FC<{ site: FriendSite; index: number }> = ({ site, index }) => {
   const uploadedDoc = useUploadedDoc(site.url);
   let displayDomain = site.domain;
   if (!displayDomain) {
@@ -49,58 +49,82 @@ const FriendsReadingItem: React.FC<{ site: FriendSite }> = ({ site }) => {
   }
   const title = uploadedDoc?.title || site.title || displayDomain;
   const initial = site.username?.[0]?.toUpperCase() || '?';
+  const accent = '#47A3E8';
 
   return (
     <a
       href={site.url}
       target="_blank"
       rel="noreferrer"
-      style={{ display: 'block', padding: '11px 12px', borderRadius: 10, textDecoration: 'none', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', transition: 'background 0.15s, border-color 0.15s' }}
+      style={{
+        position: 'relative',
+        display: 'block',
+        padding: '11px 12px 11px 14px',
+        borderRadius: 12,
+        textDecoration: 'none',
+        color: 'inherit',
+        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012))',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.025) inset, 0 8px 22px rgba(0,0,0,0.18)',
+        overflow: 'hidden',
+        transition: 'transform 0.18s, border-color 0.18s, box-shadow 0.18s',
+      }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.045)';
-        e.currentTarget.style.borderColor = 'rgba(71,163,232,0.20)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
+        e.currentTarget.style.borderColor = 'rgba(71,163,232,0.32)';
+        e.currentTarget.style.boxShadow = `0 1px 0 rgba(255,255,255,0.04) inset, 0 14px 30px rgba(0,0,0,0.28), 0 0 0 1px rgba(71,163,232,0.08)`;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+        e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+        e.currentTarget.style.boxShadow = '0 1px 0 rgba(255,255,255,0.025) inset, 0 8px 22px rgba(0,0,0,0.18)';
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6, minWidth: 0 }}>
+      {/* Left accent stripe */}
+      <span style={{ position: 'absolute', left: 0, top: 12, bottom: 12, width: 2, borderRadius: 2, background: `linear-gradient(180deg, ${accent}, rgba(71,163,232,0.3))`, opacity: 0.65 }} />
+      {/* Soft index numeral, top-right */}
+      <span style={{ position: 'absolute', top: 8, right: 12, fontFamily: '"Outfit", sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.10)', fontWeight: 700, letterSpacing: 0.3, lineHeight: 1 }}>
+        {String(index + 1).padStart(2, '0')}
+      </span>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, minWidth: 0, paddingRight: 14 }}>
         {site.profilePicture ? (
-          <img src={site.profilePicture} alt="" style={{ width: 16, height: 16, borderRadius: '50%', flexShrink: 0, objectFit: 'cover' }} />
+          <img src={site.profilePicture} alt="" style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.10)' }} />
         ) : (
-          <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(71,163,232,0.3), rgba(110,183,129,0.3))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+          <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg, rgba(71,163,232,0.4), rgba(110,183,129,0.3))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9.5, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
             {initial}
           </div>
         )}
-        <span style={{ fontSize: 11, color: '#aaa', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 11.5, color: '#cfcfcf', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
           @{site.username}
         </span>
         {site.lastRead && (
-          <span style={{ fontSize: 10, color: '#444', flexShrink: 0 }}>{sidebarTimeAgo(site.lastRead)}</span>
+          <span style={{ fontSize: 10, color: '#555', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{sidebarTimeAgo(site.lastRead)}</span>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4, minWidth: 0 }}>
+
+      <div style={{ fontSize: 12.5, fontWeight: 500, color: '#e6e6e6', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: 6 }}>
+        {title}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
         {uploadedDoc ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0px 5px', borderRadius: 3, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 9.5, color: '#6EB781', fontWeight: 600, flexShrink: 0 }}>
-            <FileText style={{ width: 8, height: 8 }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 9.5, color: '#6EB781', fontWeight: 600, flexShrink: 0 }}>
+            <FileText style={{ width: 8.5, height: 8.5 }} />
             PDF
           </span>
         ) : site.favicon ? (
-          <img src={site.favicon} alt="" style={{ width: 11, height: 11, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+          <img src={site.favicon} alt="" style={{ width: 10, height: 10, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
         ) : null}
-        <span style={{ fontSize: 10.5, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 10, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
           {displayDomain}
         </span>
-      </div>
-      <div style={{ fontSize: 12.5, fontWeight: 500, color: '#d4d4d4', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {title}
       </div>
     </a>
   );
 };
 
-const SidebarRecentItem: React.FC<{ site: RecentSite }> = ({ site }) => {
+const SidebarRecentItem: React.FC<{ site: RecentSite; index: number }> = ({ site, index }) => {
   const uploadedDoc = useUploadedDoc(site.url);
   let displayDomain = site.domain;
   if (!displayDomain) {
@@ -110,45 +134,66 @@ const SidebarRecentItem: React.FC<{ site: RecentSite }> = ({ site }) => {
   const description = uploadedDoc
     ? (uploadedDoc.authors.length > 0 ? uploadedDoc.authors.join(', ') : '')
     : site.description;
+  const accent = '#6EB781';
 
   return (
     <a
       href={site.url}
       target="_blank"
       rel="noreferrer"
-      style={{ display: 'block', padding: '11px 12px', borderRadius: 10, textDecoration: 'none', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', transition: 'background 0.15s, border-color 0.15s, transform 0.15s' }}
+      style={{
+        position: 'relative',
+        display: 'block',
+        padding: '11px 12px 11px 14px',
+        borderRadius: 12,
+        textDecoration: 'none',
+        color: 'inherit',
+        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012))',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.025) inset, 0 8px 22px rgba(0,0,0,0.18)',
+        overflow: 'hidden',
+        transition: 'transform 0.18s, border-color 0.18s, box-shadow 0.18s',
+      }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.045)';
-        e.currentTarget.style.borderColor = 'rgba(110,183,129,0.20)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
+        e.currentTarget.style.borderColor = 'rgba(110,183,129,0.32)';
+        e.currentTarget.style.boxShadow = `0 1px 0 rgba(255,255,255,0.04) inset, 0 14px 30px rgba(0,0,0,0.28), 0 0 0 1px rgba(110,183,129,0.08)`;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+        e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+        e.currentTarget.style.boxShadow = '0 1px 0 rgba(255,255,255,0.025) inset, 0 8px 22px rgba(0,0,0,0.18)';
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, minWidth: 0 }}>
+      <span style={{ position: 'absolute', left: 0, top: 12, bottom: 12, width: 2, borderRadius: 2, background: `linear-gradient(180deg, ${accent}, rgba(110,183,129,0.3))`, opacity: 0.65 }} />
+      <span style={{ position: 'absolute', top: 8, right: 12, fontFamily: '"Outfit", sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.10)', fontWeight: 700, letterSpacing: 0.3, lineHeight: 1 }}>
+        {String(index + 1).padStart(2, '0')}
+      </span>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, minWidth: 0, paddingRight: 14 }}>
         {uploadedDoc ? (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 9.5, color: '#6EB781', fontWeight: 600, flexShrink: 0 }}>
-            <FileText style={{ width: 9, height: 9 }} />
+            <FileText style={{ width: 8.5, height: 8.5 }} />
             PDF
           </span>
         ) : site.favicon ? (
-          <img src={site.favicon} alt="" style={{ width: 12, height: 12, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+          <img src={site.favicon} alt="" style={{ width: 11, height: 11, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
         ) : (
-          <div style={{ width: 12, height: 12, borderRadius: 2, background: 'rgba(110,183,129,0.18)', flexShrink: 0 }} />
+          <div style={{ width: 11, height: 11, borderRadius: 2, background: 'rgba(110,183,129,0.18)', flexShrink: 0 }} />
         )}
-        <span style={{ fontSize: 10.5, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 10.5, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
           {uploadedDoc ? `by @${uploadedDoc.user.username}` : displayDomain}
         </span>
         {site.lastRead && (
-          <span style={{ fontSize: 10, color: '#444', flexShrink: 0 }}>{sidebarTimeAgo(site.lastRead)}</span>
+          <span style={{ fontSize: 10, color: '#555', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{sidebarTimeAgo(site.lastRead)}</span>
         )}
       </div>
-      <div style={{ fontSize: 12.5, fontWeight: 500, color: '#d4d4d4', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: description ? 4 : 0 }}>
+
+      <div style={{ fontSize: 12.5, fontWeight: 500, color: '#e6e6e6', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: description ? 5 : 0 }}>
         {title}
       </div>
       {description && (
-        <div style={{ fontSize: 11, color: '#666', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <div style={{ fontSize: 10.5, color: '#666', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {description}
         </div>
       )}
@@ -441,71 +486,52 @@ const Feed: React.FC = () => {
     return <Avatar user={annotationUser} size={size} />;
   }, []);
 
+  // Vertical offset (from the top of <main>) that lines the sidebars up with
+  // the Following/Mine tab row when nothing is scrolled. Header takes ~32px
+  // padding + ~50px content + 24px margin → tabs start around y=106. We give
+  // a touch more so the sidebar reads as living "under" the tabs row.
+  const SIDEBAR_TOP_OFFSET = 116;
+
+  const renderSidebarHeader = (label: string, accent: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 2px' }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, boxShadow: `0 0 8px ${accent}` }} />
+      <span style={{ fontFamily: '"Outfit", sans-serif', fontSize: 14, color: '#e4e4e4', fontWeight: 500, letterSpacing: -0.1 }}>{label}</span>
+    </div>
+  );
+
   return (
     <div style={{ ...bodyFont, minHeight: '100vh', background: '#121212', color: '#fff' }}>
       <Navbar />
 
-      {user && (recentSidebar.length > 0 || recentSidebarLoading) && (
-        <aside
-          className="feed-recent-sidebar"
-          style={{
-            position: 'fixed',
-            // Anchor to the feed: feed left edge is `50% - 350px` (700px centered).
-            // 16px gutter so the sidebar reads as adjacent to the feed column.
-            top: 170,
-            left: 'calc(50% - 350px - 16px - 260px)',
-            width: 260,
-            maxHeight: 'calc(100vh - 190px)',
-            overflowY: 'auto',
-            zIndex: 10,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12, padding: '0 4px' }}>
-            <Clock style={{ width: 12, height: 12, color: '#6EB781' }} />
-            <span style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 600 }}>Continue reading</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {recentSidebarLoading && recentSidebar.length === 0
-              ? [0, 1, 2].map((i) => (
-                  <div key={i} style={{ height: 64, borderRadius: 10, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }} className="pulse" />
-                ))
-              : recentSidebar.map((site, idx) => (
-                  <SidebarRecentItem key={idx} site={site} />
-                ))}
-          </div>
-        </aside>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 16, padding: '0 20px' }}>
+        {user && (recentSidebar.length > 0 || recentSidebarLoading) && (
+          <aside
+            className="feed-recent-sidebar"
+            style={{
+              width: 260,
+              flexShrink: 0,
+              position: 'sticky',
+              top: 24,
+              alignSelf: 'flex-start',
+              marginTop: SIDEBAR_TOP_OFFSET,
+              maxHeight: 'calc(100vh - 48px)',
+              overflowY: 'auto',
+            }}
+          >
+            {renderSidebarHeader('Continue reading', '#6EB781')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {recentSidebarLoading && recentSidebar.length === 0
+                ? [0, 1, 2].map((i) => (
+                    <div key={i} style={{ height: 72, borderRadius: 12, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }} className="pulse" />
+                  ))
+                : recentSidebar.map((site, idx) => (
+                    <SidebarRecentItem key={idx} site={site} index={idx} />
+                  ))}
+            </div>
+          </aside>
+        )}
 
-      {user && (friendsSidebar.length > 0 || friendsSidebarLoading) && (
-        <aside
-          className="feed-friends-sidebar"
-          style={{
-            position: 'fixed',
-            top: 170,
-            left: 'calc(50% + 350px + 16px)',
-            width: 260,
-            maxHeight: 'calc(100vh - 190px)',
-            overflowY: 'auto',
-            zIndex: 10,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12, padding: '0 4px' }}>
-            <Users style={{ width: 12, height: 12, color: '#47A3E8' }} />
-            <span style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 600 }}>Friends reading</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {friendsSidebarLoading && friendsSidebar.length === 0
-              ? [0, 1, 2].map((i) => (
-                  <div key={i} style={{ height: 88, borderRadius: 10, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }} className="pulse" />
-                ))
-              : friendsSidebar.map((site, idx) => (
-                  <FriendsReadingItem key={`${site.url}-${idx}`} site={site} />
-                ))}
-          </div>
-        </aside>
-      )}
-
-      <div style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
+        <div style={{ width: '100%', maxWidth: 700, minWidth: 0, padding: '32px 0' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
@@ -614,6 +640,34 @@ const Feed: React.FC = () => {
               )}
             </div>
           </div>
+        )}
+        </div>
+
+        {user && (friendsSidebar.length > 0 || friendsSidebarLoading) && (
+          <aside
+            className="feed-friends-sidebar"
+            style={{
+              width: 260,
+              flexShrink: 0,
+              position: 'sticky',
+              top: 24,
+              alignSelf: 'flex-start',
+              marginTop: SIDEBAR_TOP_OFFSET,
+              maxHeight: 'calc(100vh - 48px)',
+              overflowY: 'auto',
+            }}
+          >
+            {renderSidebarHeader('Friends reading', '#47A3E8')}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {friendsSidebarLoading && friendsSidebar.length === 0
+                ? [0, 1, 2].map((i) => (
+                    <div key={i} style={{ height: 96, borderRadius: 12, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }} className="pulse" />
+                  ))
+                : friendsSidebar.map((site, idx) => (
+                    <FriendsReadingItem key={`${site.url}-${idx}`} site={site} index={idx} />
+                  ))}
+            </div>
+          </aside>
         )}
       </div>
 
