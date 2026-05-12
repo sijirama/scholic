@@ -342,6 +342,111 @@ func GetRecentlyRead(c *gin.Context) {
 	c.JSON(http.StatusOK, payload)
 }
 
+// FriendSite is a single entry in the friends-reading list.
+// Carries reader attribution so the UI can show whose recent read it was.
+type FriendSite struct {
+	URL            string    `json:"url"`
+	Title          string    `json:"title"`
+	Favicon        string    `json:"favicon"`
+	Domain         string    `json:"domain"`
+	Description    string    `json:"description"`
+	Image          string    `json:"image"`
+	LastRead       time.Time `json:"lastRead"`
+	Username       string    `json:"username"`
+	FirstName      string    `json:"firstName"`
+	LastName       string    `json:"lastName"`
+	ProfilePicture string    `json:"profilePicture"`
+}
+
+// GetFriendsReading handles GET /api/users/:username/friends-reading
+//
+// Returns distinct URLs recently and publicly annotated by users that
+// :username follows, with reader attribution (the most recent annotator
+// wins for each URL). Independently paginated + cached from /recently-read
+// so the two sidebars can load in parallel without coupling.
+func GetFriendsReading(c *gin.Context) {
+	username := c.Param("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username parameter is required"})
+		return
+	}
+
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "5"))
+	if err != nil || limit <= 0 || limit > 50 {
+		limit = 5
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	ctx := context.Background()
+	cacheKey := database.FriendsReadingPageKey(username, limit, offset)
+
+	if cached, _ := database.CacheGet(ctx, cacheKey); cached != "" {
+		c.Header("X-Cache", "HIT")
+		c.Data(http.StatusOK, "application/json; charset=utf-8", []byte(cached))
+		return
+	}
+
+	var user models.User
+	if err := database.DB.Where("username = ?", username).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// DISTINCT ON (url) picks the most recent public annotation for each URL
+	// across all users the requester follows. Reader columns come from the
+	// joined Users row so we can attribute who read it most recently.
+	var sites []FriendSite
+	rawSQL := `
+		SELECT url, title, favicon, domain, description, image, last_read,
+		       username, first_name, last_name, profile_picture
+		FROM (
+			SELECT DISTINCT ON (a.url)
+				a.url AS url,
+				a.link_title AS title,
+				a.link_favicon AS favicon,
+				a.link_domain AS domain,
+				a.link_description AS description,
+				a.link_image AS image,
+				a.created_at AS last_read,
+				u.username AS username,
+				u.first_name AS first_name,
+				u.last_name AS last_name,
+				u.profile_picture AS profile_picture
+			FROM annotations a
+			JOIN follows f ON f.following_id = a.user_id AND f.follower_id = ?
+			JOIN users u ON u.id = a.user_id
+			WHERE a.is_private = false AND a.deleted_at IS NULL
+			ORDER BY a.url, a.created_at DESC
+		) latest
+		ORDER BY last_read DESC
+		LIMIT ? OFFSET ?
+	`
+	if err := database.DB.Raw(rawSQL, user.ID, limit, offset).Scan(&sites).Error; err != nil {
+		log.Printf("[Profile] GetFriendsReading DB error for %s: %v", username, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load friends reading"})
+		return
+	}
+
+	if sites == nil {
+		sites = []FriendSite{}
+	}
+
+	payload := gin.H{
+		"sites":  sites,
+		"limit":  limit,
+		"offset": offset,
+	}
+	if payloadBytes, marshalErr := json.Marshal(payload); marshalErr == nil {
+		database.CacheSet(ctx, cacheKey, string(payloadBytes), database.TTLFriendsReading)
+	}
+
+	c.Header("X-Cache", "MISS")
+	c.JSON(http.StatusOK, payload)
+}
+
 // SearchUsers handles GET /api/users/search?q=...&limit=...&offset=...
 func SearchUsers(c *gin.Context) {
 	query := c.Query("q")

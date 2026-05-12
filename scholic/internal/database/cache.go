@@ -14,6 +14,7 @@ const (
 	TTLFeed           = 2 * time.Minute   // personalised feed results
 	TTLUserProfile    = 10 * time.Minute  // public profile + follower counts
 	TTLRecentlyRead   = 5 * time.Minute   // recently-read sites per user
+	TTLFriendsReading = 3 * time.Minute   // pages people the user follows have annotated recently
 )
 
 // Cache key helpers — all keys are prefixed with "scholic:" for namespacing.
@@ -49,6 +50,12 @@ func RecentlyReadPageKey(username string, limit, offset int) string {
 // Use this for invalidation — clears every page at once.
 func RecentlyReadKeyPattern(username string) string {
 	return fmt.Sprintf("scholic:recently_read:%s:*", username)
+}
+
+// FriendsReadingPageKey is the exact cache key for one page of friends-reading
+// (pages from users the given user follows).
+func FriendsReadingPageKey(username string, limit, offset int) string {
+	return fmt.Sprintf("scholic:friends_reading:%s:%d:%d", username, limit, offset)
 }
 
 // CacheGet returns the cached string value for key.

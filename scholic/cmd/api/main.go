@@ -119,6 +119,7 @@ func main() {
 		api.GET("/users/:username/followers", middleware.OptionalAuthMiddleware(), endpoints.GetFollowers)
 		api.GET("/users/:username/following", middleware.OptionalAuthMiddleware(), endpoints.GetFollowing)
 		api.GET("/users/:username/recently-read", middleware.OptionalAuthMiddleware(), endpoints.GetRecentlyRead)
+		api.GET("/users/:username/friends-reading", middleware.OptionalAuthMiddleware(), endpoints.GetFriendsReading)
 		api.POST("/users/:username/follow", middleware.AuthMiddleware(), endpoints.ToggleFollow)
 
 		// ── Search ──
