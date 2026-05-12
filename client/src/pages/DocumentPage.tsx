@@ -37,28 +37,32 @@ const formatFileSize = (size: number) => {
 const DocumentPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [documentRecord, setDocumentRecord] = useState<DocumentRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  // Single state object tagged with the id it was loaded for. When `id`
+  // changes mid-flight, the derived loading/error/doc values below ignore the
+  // stale result until the new fetch settles — no setState-in-effect needed
+  // for the reset.
+  type RequestState =
+    | { status: 'loading' }
+    | { status: 'ready'; doc: DocumentRecord }
+    | { status: 'error'; message: string };
+  const [request, setRequest] = useState<{ id: string | undefined; state: RequestState }>({ id, state: { status: 'loading' } });
+
+  const isCurrent = request.id === id;
+  const loading = !isCurrent || request.state.status === 'loading';
+  const error = isCurrent && request.state.status === 'error' ? request.state.message : '';
+  const documentRecord = isCurrent && request.state.status === 'ready' ? request.state.doc : null;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError('');
     api.get(`/documents/${id}`)
       .then((response) => {
         if (!cancelled) {
-          setDocumentRecord(response.data);
+          setRequest({ id, state: { status: 'ready', doc: response.data } });
         }
       })
       .catch((err: { response?: { data?: { error?: string } } }) => {
         if (!cancelled) {
-          setError(err.response?.data?.error || 'Failed to load document');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
+          setRequest({ id, state: { status: 'error', message: err.response?.data?.error || 'Failed to load document' } });
         }
       });
     return () => {

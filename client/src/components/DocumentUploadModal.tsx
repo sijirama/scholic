@@ -177,44 +177,55 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
         style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)' }}
       />
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ width: '100%', maxWidth: 760, borderRadius: 24, background: '#171717', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 32px 90px rgba(0,0,0,0.45)', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ width: '100%', maxWidth: 680, borderRadius: 12, background: '#171717', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 24px 60px rgba(0,0,0,0.45)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
             <div>
-              <div style={{ fontFamily: '"Outfit", sans-serif', fontSize: 22, color: '#fff', fontWeight: 600 }}>Add document</div>
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                Upload once, review the metadata, publish to your Uploaded tab.
+              <div style={{ fontFamily: '"Outfit", sans-serif', fontSize: 17, color: '#fff', fontWeight: 600 }}>Add document</div>
+              <div style={{ fontSize: 11.5, color: '#666', marginTop: 2 }}>
+                Upload, review the metadata, publish.
               </div>
             </div>
             <button
               disabled
               title="Use Cancel to close and clean up the staged upload"
-              style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#555', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }}
+              style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#555', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }}
             >
-              <X style={{ width: 16, height: 16 }} />
+              <X style={{ width: 14, height: 14 }} />
             </button>
           </div>
 
           {!draft ? (
-            <div style={{ padding: 24 }}>
-              <div style={{ borderRadius: 22, border: '1px dashed rgba(110,183,129,0.35)', background: 'radial-gradient(circle at top, rgba(110,183,129,0.12), rgba(255,255,255,0.02))', padding: '44px 24px', textAlign: 'center' }}>
-                <div style={{ width: 66, height: 66, borderRadius: 20, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.24)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
-                  <Upload style={{ width: 28, height: 28, color: '#6EB781' }} />
+            <div style={{ padding: 20 }}>
+              <div style={{ borderRadius: 10, border: '1px dashed rgba(110,183,129,0.3)', background: 'rgba(110,183,129,0.04)', padding: '32px 20px', textAlign: 'center' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                  <Upload style={{ width: 20, height: 20, color: '#6EB781' }} />
                 </div>
-                <div style={{ fontFamily: '"Outfit", sans-serif', fontSize: 24, color: '#fff', marginBottom: 10 }}>
+                <div style={{ fontFamily: '"Outfit", sans-serif', fontSize: 17, color: '#fff', marginBottom: 6, fontWeight: 600 }}>
                   Drop in a PDF
                 </div>
-                <p style={{ margin: '0 auto 18px', maxWidth: 420, fontSize: 13, lineHeight: 1.7, color: '#888' }}>
-                  Scholic uploads the file, pulls the metadata for you, and gives you a clean review form before publishing.
+                <p style={{ margin: '0 auto 16px', maxWidth: 400, fontSize: 12, lineHeight: 1.6, color: '#888' }}>
+                  Scholic uploads the file, pulls the metadata, and shows you a clean review form before publishing.
                 </p>
                 <button
                   onClick={() => inputRef.current?.click()}
                   disabled={uploading}
-                  style={{ padding: '12px 18px', borderRadius: 12, border: 'none', background: '#6EB781', color: '#08110b', fontWeight: 700, cursor: uploading ? 'wait' : 'pointer', fontFamily: 'inherit', fontSize: 13 }}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: uploading ? 'rgba(255,255,255,0.08)' : '#6EB781',
+                    color: uploading ? '#666' : '#08110b',
+                    fontWeight: 600,
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: 12,
+                    opacity: uploading ? 0.7 : 1,
+                  }}
                 >
                   {uploading ? 'Uploading and extracting…' : 'Choose PDF'}
                 </button>
-              <div style={{ marginTop: 12, fontSize: 11, color: '#555' }}>PDF only · up to 15MB</div>
-              <div style={{ marginTop: 8, fontSize: 11, color: '#444' }}>Close is disabled here so staged uploads don&apos;t get stranded.</div>
+              <div style={{ marginTop: 10, fontSize: 11, color: '#555' }}>PDF only · up to 15MB</div>
+              <div style={{ marginTop: 6, fontSize: 10.5, color: '#444' }}>Close is disabled here so staged uploads don&apos;t get stranded.</div>
                 <input
                   ref={inputRef}
                   type="file"
@@ -229,30 +240,30 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 14 }}>
                 <button
                   onClick={cancelDraft}
                   disabled={uploading || cancelling}
-                  style={{ padding: '11px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 600, cursor: uploading || cancelling ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: uploading || cancelling ? 0.7 : 1 }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 500, cursor: uploading || cancelling ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: uploading || cancelling ? 0.6 : 1 }}
                 >
                   {cancelling ? 'Cancelling…' : 'Cancel'}
                 </button>
               </div>
             </div>
           ) : (
-            <div style={{ padding: 24, display: 'grid', gap: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <FileText style={{ width: 18, height: 18, color: '#ddd' }} />
+            <div style={{ padding: 20, display: 'grid', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText style={{ width: 14, height: 14, color: '#ddd' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, color: '#eee', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{draft.fileName}</div>
-                  <div style={{ fontSize: 11, color: '#666', marginTop: 3 }}>
+                  <div style={{ fontSize: 12.5, color: '#eee', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{draft.fileName}</div>
+                  <div style={{ fontSize: 10.5, color: '#666', marginTop: 2 }}>
                     {(draft.fileSize / (1024 * 1024)).toFixed(1)} MB · {metadata.pageCount ? `${metadata.pageCount} pages` : 'page count pending'}
                   </div>
                 </div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 999, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.2)', fontSize: 11, color: '#6EB781', fontWeight: 700 }}>
-                  <Sparkles style={{ width: 12, height: 12 }} />
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 5, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.2)', fontSize: 10.5, color: '#6EB781', fontWeight: 600 }}>
+                  <Sparkles style={{ width: 10, height: 10 }} />
                   {metadata.metadataSource === 'ai' ? 'AI-filled' : 'Ready to review'}
                 </div>
               </div>
@@ -296,11 +307,11 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                 </label>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, paddingTop: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, paddingTop: 4 }}>
                 <button
                   onClick={cancelDraft}
                   disabled={cancelling}
-                  style={{ padding: '11px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 600, cursor: cancelling ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: cancelling ? 0.7 : 1 }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 500, cursor: cancelling ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: cancelling ? 0.6 : 1 }}
                 >
                   {cancelling ? 'Cancelling…' : 'Cancel'}
                 </button>
@@ -320,14 +331,25 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                     }
                   }}
                   disabled={cancelling || saving}
-                  style={{ padding: '11px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 600, cursor: cancelling || saving ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: cancelling || saving ? 0.7 : 1 }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 500, cursor: cancelling || saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: cancelling || saving ? 0.6 : 1 }}
                 >
                   Replace file
                 </button>
                 <button
                   onClick={submit}
                   disabled={saving || cancelling}
-                  style={{ padding: '11px 18px', borderRadius: 12, border: 'none', background: '#6EB781', color: '#08110b', fontWeight: 800, cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit' }}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: (saving || cancelling) ? 'rgba(255,255,255,0.08)' : '#6EB781',
+                    color: (saving || cancelling) ? '#666' : '#08110b',
+                    fontWeight: 600,
+                    cursor: (saving || cancelling) ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: 12,
+                    opacity: (saving || cancelling) ? 0.7 : 1,
+                  }}
                 >
                   {saving ? 'Saving…' : 'Publish document'}
                 </button>
@@ -343,13 +365,13 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
 const inputStyle: React.CSSProperties = {
   width: '100%',
   boxSizing: 'border-box',
-  borderRadius: 12,
+  borderRadius: 6,
   border: '1px solid rgba(255,255,255,0.08)',
   background: 'rgba(255,255,255,0.03)',
   color: '#fff',
-  padding: '10px 12px',
+  padding: '7px 10px',
   fontFamily: 'inherit',
-  fontSize: 13,
+  fontSize: 12.5,
   outline: 'none',
 };
 

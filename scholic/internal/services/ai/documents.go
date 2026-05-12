@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	defaultDocumentModel = "gemini-2.5-flash"
+	defaultDocumentModel = "gemini-2.5-flash-lite"
 	defaultHTTPTimeout   = 90 * time.Second
 )
 

@@ -1,10 +1,11 @@
 import React from 'react';
-import { MessageCircle, Lock, Send, Trash2, Pencil, MoreHorizontal } from 'lucide-react';
+import { MessageCircle, Lock, Send, Trash2, Pencil, MoreHorizontal, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageLightbox from './ImageLightbox';
 import ReactionStrip from './ReactionStrip';
 import MentionTextarea from './MentionTextarea';
 import MentionText from './MentionText';
+import { useUploadedDoc } from '../lib/uploadedDocs';
 
 function timeAgo(dateStr: string): string {
   const now = new Date();
@@ -231,6 +232,11 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   const [editingCommentId, setEditingCommentId] = React.useState<number | null>(null);
   const [editCommentText, setEditCommentText] = React.useState('');
 
+  // PDFs report "PDF Document" as their <title>, which leaks into the link
+  // preview. If the URL is a Scholic-uploaded doc, override with the AI title
+  // and tag it visually so readers know it's hosted by us.
+  const uploadedDoc = useUploadedDoc(annotation.url);
+
   // Preflight the link-preview image. Some sources (arxiv, etc.) advertise an
   // og:image that 404s — without this check the card reserves a 180px-tall slot
   // for an image that never paints. Mark failed so we skip the slot entirely.
@@ -445,19 +451,27 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             )}
             <div style={{ padding: '12px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                {annotation.linkFavicon && <img src={annotation.linkFavicon} style={{ width: '14px', height: '14px', borderRadius: '2px' }} alt="" />}
+                {uploadedDoc ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 10, color: '#6EB781', fontWeight: 600 }}>
+                    <FileText style={{ width: 10, height: 10 }} />
+                    uploaded PDF
+                  </span>
+                ) : annotation.linkFavicon && <img src={annotation.linkFavicon} style={{ width: '14px', height: '14px', borderRadius: '2px' }} alt="" />}
                 <a
                   href={`/page?url=${encodeURIComponent(annotation.url)}`}
                   style={{ fontSize: '12px', color: '#888', fontWeight: 500, textDecoration: 'none' }}
                   className="hover:underline"
                 >
-                  {annotation.linkDomain || (() => { try { return new URL(annotation.url).hostname.replace('www.', ''); } catch { return annotation.url; } })()}
+                  {uploadedDoc ? `by @${uploadedDoc.user.username}` : (annotation.linkDomain || (() => { try { return new URL(annotation.url).hostname.replace('www.', ''); } catch { return annotation.url; } })())}
                 </a>
               </div>
               <a href={annotation.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }} className="hover:bg-white/5">
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 4px 0', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{annotation.linkTitle || annotation.url}</h3>
-                {annotation.linkDescription && (
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 4px 0', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{uploadedDoc?.title || annotation.linkTitle || annotation.url}</h3>
+                {!uploadedDoc && annotation.linkDescription && (
                   <p style={{ fontSize: '12px', color: '#888', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{annotation.linkDescription}</p>
+                )}
+                {uploadedDoc && uploadedDoc.authors.length > 0 && (
+                  <p style={{ fontSize: '12px', color: '#888', margin: 0, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{uploadedDoc.authors.join(', ')}</p>
                 )}
               </a>
             </div>

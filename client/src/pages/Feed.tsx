@@ -7,7 +7,54 @@ import type { Annotation, User as AnnotationUser, Comment } from '../components/
 import Avatar from '../components/Avatar';
 import UserCard from '../components/discover/UserCard';
 import type { DiscoverAuthor } from '../components/discover/UserCard';
+import { Clock, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUploadedDoc } from '../lib/uploadedDocs';
+
+interface RecentSite {
+  url: string;
+  title: string;
+  favicon: string;
+  domain: string;
+  description: string;
+  image: string;
+  lastRead: string;
+}
+
+const SidebarRecentItem: React.FC<{ site: RecentSite }> = ({ site }) => {
+  const uploadedDoc = useUploadedDoc(site.url);
+  let displayDomain = site.domain;
+  if (!displayDomain) {
+    try { displayDomain = new URL(site.url).hostname.replace('www.', ''); } catch { displayDomain = site.url; }
+  }
+  const title = uploadedDoc?.title || site.title || displayDomain;
+  return (
+    <a
+      href={site.url}
+      target="_blank"
+      rel="noreferrer"
+      style={{ display: 'block', padding: '10px 12px', borderRadius: 8, textDecoration: 'none', color: 'inherit', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.015)', transition: 'background 0.15s' }}
+      className="hover:bg-white/[0.04]"
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        {uploadedDoc ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0px 5px', borderRadius: 3, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 9.5, color: '#6EB781', fontWeight: 600 }}>
+            <FileText style={{ width: 8, height: 8 }} />
+            PDF
+          </span>
+        ) : site.favicon ? (
+          <img src={site.favicon} alt="" style={{ width: 11, height: 11, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        ) : null}
+        <span style={{ fontSize: 10.5, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {displayDomain}
+        </span>
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 500, color: '#ccc', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {title}
+      </div>
+    </a>
+  );
+};
 
 const FeedSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -48,6 +95,8 @@ const Feed: React.FC = () => {
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
   const [commentOffsets, setCommentOffsets] = useState<Record<number, number>>({});
   const [fetchingComments, setFetchingComments] = useState<Record<number, boolean>>({});
+
+  const [recentSidebar, setRecentSidebar] = useState<RecentSite[]>([]);
 
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
@@ -207,6 +256,19 @@ const Feed: React.FC = () => {
     return () => controller.abort();
   }, [tab, fetchFeed]);
 
+  // Pull a tiny "continue reading" list for the sidebar. Only for logged-in users.
+  useEffect(() => {
+    if (!user?.username) {
+      setRecentSidebar([]);
+      return;
+    }
+    let cancelled = false;
+    api.get(`/users/${user.username}/recently-read?limit=3&offset=0`)
+      .then((res) => { if (!cancelled) setRecentSidebar(res.data.sites || []); })
+      .catch(() => { /* non-blocking */ });
+    return () => { cancelled = true; };
+  }, [user?.username]);
+
   // Lazy-load people-to-follow suggestions only when the Following feed
   // turns out empty (Mine should never need them).
   useEffect(() => {
@@ -257,6 +319,23 @@ const Feed: React.FC = () => {
   return (
     <div style={{ ...bodyFont, minHeight: '100vh', background: '#121212', color: '#fff' }}>
       <Navbar />
+
+      {user && recentSidebar.length > 0 && (
+        <aside
+          className="feed-recent-sidebar"
+          style={{ position: 'fixed', top: 92, left: 24, width: 220, zIndex: 10 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '0 4px', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <Clock style={{ width: 11, height: 11 }} />
+            <span>Continue reading</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {recentSidebar.map((site, idx) => (
+              <SidebarRecentItem key={idx} site={site} />
+            ))}
+          </div>
+        </aside>
+      )}
 
       <div style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
         {/* Header */}
@@ -380,6 +459,12 @@ const Feed: React.FC = () => {
         .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
         input::placeholder { color: #444; }
+
+        /* Hide the recently-read sidebar when the viewport is too narrow
+           for it to live left of the centered 700px feed without overlap. */
+        @media (max-width: 1100px) {
+          .feed-recent-sidebar { display: none; }
+        }
       `}</style>
     </div>
   );

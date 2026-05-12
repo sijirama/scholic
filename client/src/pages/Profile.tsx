@@ -9,6 +9,7 @@ import type { Annotation, User as BaseUser, Comment } from '../components/Annota
 import FollowersModal from '../components/FollowersModal';
 import Avatar from '../components/Avatar';
 import DocumentUploadModal from '../components/DocumentUploadModal';
+import { useUploadedDoc } from '../lib/uploadedDocs';
 import { toast } from 'sonner';
 
 function timeAgo(dateStr: string): string {
@@ -60,6 +61,99 @@ interface UploadedDocument {
     profilePicture?: string;
   };
 }
+
+interface RecentlyReadCardProps {
+  site: {
+    url: string;
+    title: string;
+    favicon: string;
+    domain: string;
+    description: string;
+    image: string;
+    lastRead: string;
+  };
+  username: string;
+}
+
+const RecentlyReadCard: React.FC<RecentlyReadCardProps> = ({ site, username }) => {
+  const uploadedDoc = useUploadedDoc(site.url);
+  let displayDomain = site.domain;
+  if (!displayDomain) {
+    try { displayDomain = new URL(site.url).hostname.replace('www.', ''); } catch { displayDomain = site.url; }
+  }
+  const displayTitle = uploadedDoc?.title || site.title || displayDomain;
+  const displayDescription = uploadedDoc
+    ? (uploadedDoc.authors.length > 0 ? uploadedDoc.authors.join(', ') : '')
+    : site.description;
+  const sitePageUrl = `/page?url=${encodeURIComponent(site.url)}&author=${encodeURIComponent(username)}`;
+
+  return (
+    <div style={{ border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
+      <a
+        href={site.url}
+        target="_blank"
+        rel="noreferrer"
+        style={{ display: 'flex', alignItems: 'stretch', gap: '0', textDecoration: 'none', color: 'inherit' }}
+        className="hover:bg-white/[0.03] transition-colors"
+      >
+        <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+            {uploadedDoc ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 10, color: '#6EB781', fontWeight: 600 }}>
+                <FileText style={{ width: 9, height: 9 }} />
+                uploaded PDF
+              </span>
+            ) : site.favicon ? (
+              <img
+                src={site.favicon}
+                alt=""
+                style={{ width: '13px', height: '13px', borderRadius: '2px', objectFit: 'contain', flexShrink: 0 }}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : (
+              <div style={{ width: '13px', height: '13px', borderRadius: '2px', background: 'rgba(110,183,129,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#6EB781', fontWeight: 700 }}>
+                {displayDomain[0]?.toUpperCase() || '?'}
+              </div>
+            )}
+            <span style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {uploadedDoc ? `by @${uploadedDoc.user.username}` : displayDomain}
+            </span>
+            {site.lastRead && (
+              <>
+                <span style={{ fontSize: '11px', color: '#444', flexShrink: 0 }}>·</span>
+                <span style={{ fontSize: '11px', color: '#555', flexShrink: 0 }} title={new Date(site.lastRead).toLocaleString()}>
+                  {timeAgo(site.lastRead)}
+                </span>
+              </>
+            )}
+          </div>
+          <div style={{ fontSize: '13px', fontWeight: 500, color: '#d0d0d0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
+            {displayTitle}
+          </div>
+          {displayDescription && (
+            <div style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {displayDescription}
+            </div>
+          )}
+        </div>
+
+        {site.image && !uploadedDoc && (
+          <div style={{ width: '72px', flexShrink: 0, background: `url(${site.image}) center/cover no-repeat`, borderLeft: '1px solid rgba(255,255,255,0.05)' }} />
+        )}
+      </a>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '7px 14px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
+        <a
+          href={sitePageUrl}
+          style={{ fontSize: '11px', color: '#6EB781', textDecoration: 'none', fontWeight: 500 }}
+          className="hover:underline"
+        >
+          see all notes →
+        </a>
+      </div>
+    </div>
+  );
+};
 
 const ProfileSkeleton: React.FC = () => (
   <div style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
@@ -674,86 +768,9 @@ const Profile: React.FC = () => {
                   </svg>
                   <span>Sorted by most recent visit</span>
                 </div>
-                {recentlyRead.map((site, idx) => {
-                  let displayDomain = site.domain;
-                  if (!displayDomain) {
-                    try { displayDomain = new URL(site.url).hostname.replace('www.', ''); } catch { displayDomain = site.url; }
-                  }
-                  const displayTitle = site.title || displayDomain;
-                  const sitePageUrl = `/page?url=${encodeURIComponent(site.url)}&author=${encodeURIComponent(username || '')}`;
-
-                  return (
-                    <div
-                      key={idx}
-                      style={{ border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}
-                    >
-                      {/* Mini preview card */}
-                      <a
-                        href={site.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ display: 'flex', alignItems: 'stretch', gap: '0', textDecoration: 'none', color: 'inherit' }}
-                        className="hover:bg-white/[0.03] transition-colors"
-                      >
-                        {/* Text content */}
-                        <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
-                          {/* Favicon + domain */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                            {site.favicon ? (
-                              <img
-                                src={site.favicon}
-                                alt=""
-                                style={{ width: '13px', height: '13px', borderRadius: '2px', objectFit: 'contain', flexShrink: 0 }}
-                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                              />
-                            ) : (
-                              <div style={{ width: '13px', height: '13px', borderRadius: '2px', background: 'rgba(110,183,129,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#6EB781', fontWeight: 700 }}>
-                                {displayDomain[0]?.toUpperCase() || '?'}
-                              </div>
-                            )}
-                            <span style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {displayDomain}
-                            </span>
-                            {site.lastRead && (
-                              <>
-                                <span style={{ fontSize: '11px', color: '#444', flexShrink: 0 }}>·</span>
-                                <span style={{ fontSize: '11px', color: '#555', flexShrink: 0 }} title={new Date(site.lastRead).toLocaleString()}>
-                                  {timeAgo(site.lastRead)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          {/* Title */}
-                          <div style={{ fontSize: '13px', fontWeight: 500, color: '#d0d0d0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
-                            {displayTitle}
-                          </div>
-                          {/* Description */}
-                          {site.description && (
-                            <div style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {site.description}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Thumbnail — only rendered if we have a preview image */}
-                        {site.image && (
-                          <div style={{ width: '72px', flexShrink: 0, background: `url(${site.image}) center/cover no-repeat`, borderLeft: '1px solid rgba(255,255,255,0.05)' }} />
-                        )}
-                      </a>
-
-                      {/* Footer: link to filtered site page */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '7px 14px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
-                        <a
-                          href={sitePageUrl}
-                          style={{ fontSize: '11px', color: '#6EB781', textDecoration: 'none', fontWeight: 500 }}
-                          className="hover:underline"
-                        >
-                          see all notes →
-                        </a>
-                      </div>
-                    </div>
-                  );
-                })}
+                {recentlyRead.map((site, idx) => (
+                  <RecentlyReadCard key={idx} site={site} username={username || ''} />
+                ))}
 
                 {/* Load more */}
                 {recentlyReadHasMore && (
@@ -800,20 +817,20 @@ const Profile: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                 {documents.map((documentRecord) => (
                   <div
                     key={documentRecord.id}
-                    style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', padding: 16, cursor: 'pointer' }}
+                    style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', padding: 16, cursor: 'pointer', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}
                     onClick={() => navigate(`/document/${documentRecord.id}`)}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6EB781', flexShrink: 0 }}>
                         <FileText style={{ width: 16, height: 16 }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
-                          <h3 style={{ margin: 0, fontFamily: '"Outfit", sans-serif', fontSize: 17, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{documentRecord.title}</h3>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 4, minWidth: 0 }}>
+                          <h3 style={{ margin: 0, fontFamily: '"Outfit", sans-serif', fontSize: 17, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{documentRecord.title}</h3>
                           {documentRecord.publishedYear && (
                             <span style={{ fontSize: 11, color: '#666', flexShrink: 0 }}>{documentRecord.publishedYear}</span>
                           )}
@@ -824,14 +841,14 @@ const Profile: React.FC = () => {
                           </div>
                         )}
                         {documentRecord.description && (
-                          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#777', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#777', lineHeight: 1.55, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {documentRecord.description}
                           </p>
                         )}
                         {documentRecord.tags.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10, overflow: 'hidden' }}>
                             {documentRecord.tags.slice(0, 3).map((tag) => (
-                              <span key={tag} style={{ padding: '2px 7px', borderRadius: 5, background: 'rgba(71,163,232,0.10)', border: '1px solid rgba(71,163,232,0.18)', fontSize: 10.5, color: '#8cc7f0', lineHeight: 1.5 }}>
+                              <span key={tag} style={{ padding: '2px 7px', borderRadius: 5, background: 'rgba(71,163,232,0.10)', border: '1px solid rgba(71,163,232,0.18)', fontSize: 10.5, color: '#8cc7f0', lineHeight: 1.5, whiteSpace: 'nowrap' }}>
                                 {tag}
                               </span>
                             ))}
