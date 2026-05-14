@@ -88,18 +88,20 @@ const RecentlyReadCard: React.FC<RecentlyReadCardProps> = ({ site, username }) =
   const sitePageUrl = `/page?url=${encodeURIComponent(site.url)}&author=${encodeURIComponent(username)}`;
 
   return (
-    <div style={{ border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)' }}>
+    <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--surface-inset)' }}>
       <a
         href={site.url}
         target="_blank"
         rel="noreferrer"
         style={{ display: 'flex', alignItems: 'stretch', gap: '0', textDecoration: 'none', color: 'inherit' }}
-        className="hover:bg-white/[0.03] transition-colors"
+        className="transition-colors"
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
       >
         <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
             {uploadedDoc ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 10, color: '#6EB781', fontWeight: 600 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', fontSize: 10, color: 'var(--accent)', fontWeight: 600 }}>
                 <FileText style={{ width: 9, height: 9 }} />
                 uploaded PDF
               </span>
@@ -111,41 +113,41 @@ const RecentlyReadCard: React.FC<RecentlyReadCardProps> = ({ site, username }) =
                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
-              <div style={{ width: '13px', height: '13px', borderRadius: '2px', background: 'rgba(110,183,129,0.2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#6EB781', fontWeight: 700 }}>
+              <div style={{ width: '13px', height: '13px', borderRadius: '2px', background: 'var(--accent-soft)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: 'var(--accent)', fontWeight: 700 }}>
                 {displayDomain[0]?.toUpperCase() || '?'}
               </div>
             )}
-            <span style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {uploadedDoc ? `by @${uploadedDoc.user.username}` : displayDomain}
             </span>
             {site.lastRead && (
               <>
-                <span style={{ fontSize: '11px', color: '#444', flexShrink: 0 }}>·</span>
-                <span style={{ fontSize: '11px', color: '#555', flexShrink: 0 }} title={new Date(site.lastRead).toLocaleString()}>
+                <span style={{ fontSize: '11px', color: 'var(--text-faint)', flexShrink: 0 }}>·</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-dim)', flexShrink: 0 }} title={new Date(site.lastRead).toLocaleString()}>
                   {timeAgo(site.lastRead)}
                 </span>
               </>
             )}
           </div>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: '#d0d0d0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
             {displayTitle}
           </div>
           {displayDescription && (
-            <div style={{ fontSize: '11px', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {displayDescription}
             </div>
           )}
         </div>
 
         {site.image && !uploadedDoc && (
-          <div style={{ width: '72px', flexShrink: 0, background: `url(${site.image}) center/cover no-repeat`, borderLeft: '1px solid rgba(255,255,255,0.05)' }} />
+          <div style={{ width: '72px', flexShrink: 0, background: `url(${site.image}) center/cover no-repeat`, borderLeft: '1px solid var(--border)' }} />
         )}
       </a>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '7px 14px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.15)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '7px 14px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
         <a
           href={sitePageUrl}
-          style={{ fontSize: '11px', color: '#6EB781', textDecoration: 'none', fontWeight: 500 }}
+          style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}
           className="hover:underline"
         >
           see all notes →
@@ -158,19 +160,19 @@ const RecentlyReadCard: React.FC<RecentlyReadCardProps> = ({ site, username }) =
 const ProfileSkeleton: React.FC = () => (
   <div style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
     <div style={{ display: 'flex', alignItems: 'start', gap: '16px', marginBottom: '32px' }}>
-      <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} className="pulse" />
+      <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--surface-2)' }} className="pulse" />
       <div style={{ flex: 1, marginTop: '8px' }}>
-        <div style={{ width: '120px', height: '20px', borderRadius: '4px', background: 'rgba(255,255,255,0.04)', marginBottom: '8px' }} className="pulse" />
-        <div style={{ width: '60px', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)', marginBottom: '12px' }} className="pulse" />
-        <div style={{ width: '100%', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+        <div style={{ width: '120px', height: '20px', borderRadius: '4px', background: 'var(--surface-2)', marginBottom: '8px' }} className="pulse" />
+        <div style={{ width: '60px', height: '14px', borderRadius: '4px', background: 'var(--surface-inset)', marginBottom: '12px' }} className="pulse" />
+        <div style={{ width: '100%', height: '14px', borderRadius: '4px', background: 'var(--surface-inset)' }} className="pulse" />
       </div>
     </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {[1, 2].map(i => (
-        <div key={i} style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-          <div style={{ width: '140px', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.04)', marginBottom: '12px' }} className="pulse" />
-          <div style={{ width: '100%', height: '16px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '8px' }} className="pulse" />
-          <div style={{ width: '40%', height: '16px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)' }} className="pulse" />
+        <div key={i} style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ width: '140px', height: '14px', borderRadius: '4px', background: 'var(--surface-2)', marginBottom: '12px' }} className="pulse" />
+          <div style={{ width: '100%', height: '16px', borderRadius: '4px', background: 'var(--surface)', marginBottom: '8px' }} className="pulse" />
+          <div style={{ width: '40%', height: '16px', borderRadius: '4px', background: 'var(--surface)' }} className="pulse" />
         </div>
       ))}
     </div>
@@ -440,9 +442,9 @@ const Profile: React.FC = () => {
     }
 
     if (annotation.text && annotation.text.trim()) {
-      return <span>shared a thought on <a href={annotation.url} target="_blank" rel="noreferrer" style={{color: '#6EB781', textDecoration: 'none'}} className="hover:underline">{domainName}</a></span>;
+      return <span>shared a thought on <a href={annotation.url} target="_blank" rel="noreferrer" style={{color: 'var(--accent)', textDecoration: 'none'}} className="hover:underline">{domainName}</a></span>;
     }
-    return <span>annotated <a href={annotation.url} target="_blank" rel="noreferrer" style={{color: '#6EB781', textDecoration: 'none'}} className="hover:underline">{domainName}</a></span>;
+    return <span>annotated <a href={annotation.url} target="_blank" rel="noreferrer" style={{color: 'var(--accent)', textDecoration: 'none'}} className="hover:underline">{domainName}</a></span>;
   }, []);
 
   const renderAvatar = useCallback((annotationUser: BaseUser, size = 36) => {
@@ -494,7 +496,7 @@ const Profile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full" style={{ ...bodyFont, background: '#121212', color: '#fff' }}>
+      <div className="theme-page" style={{ ...bodyFont }}>
         <Navbar />
         <ProfileSkeleton />
         <style>{`
@@ -511,14 +513,15 @@ const Profile: React.FC = () => {
 
   if (error || !profileUser) {
     return (
-      <div className="min-h-screen w-full" style={{ ...bodyFont, background: '#121212', color: '#fff' }}>
+      <div className="theme-page" style={{ ...bodyFont }}>
         <Navbar />
-        <div className="text-center" style={{ padding: '60px 0', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <div className="text-center" style={{ padding: '60px 0', color: 'var(--text-dim)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
           <p style={{ fontSize: '14px' }}>{error || 'User not found'}</p>
           {error && (
             <button
               onClick={() => { setError(''); fetchProfile(0, true); }}
-              style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, background: 'rgba(110,183,129,0.12)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.25)', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}
+              className="theme-pill"
+              style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Try again
             </button>
@@ -531,7 +534,7 @@ const Profile: React.FC = () => {
   const initial = profileUser.username?.[0]?.toUpperCase() || profileUser.firstName?.[0]?.toUpperCase() || '?';
 
   return (
-    <div className="min-h-screen w-full" style={{ ...bodyFont, background: '#121212', color: '#fff' }}>
+    <div className="theme-page" style={{ ...bodyFont }}>
       <Navbar />
 
       <div className="mx-auto" style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
@@ -539,16 +542,16 @@ const Profile: React.FC = () => {
         <div className="flex justify-between items-center" style={{ marginBottom: '24px' }}>
           <button
             onClick={() => navigate(-1)}
-            className="p-1 -ml-1 rounded-md hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1 -ml-1 rounded-md transition-colors cursor-pointer theme-icon-button"
           >
-            <ArrowLeft className="w-5 h-5" style={{ color: '#999' }} />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           {isOwnProfile && (
             <button
               onClick={() => navigate('/settings')}
-              className="p-1 rounded-md hover:bg-white/5 transition-colors cursor-pointer"
+              className="p-1 rounded-md transition-colors cursor-pointer theme-icon-button"
             >
-              <Settings className="w-5 h-5" style={{ color: '#999' }} />
+              <Settings className="w-5 h-5" />
             </button>
           )}
           {!isOwnProfile && currentUser && profileUser && (
@@ -560,9 +563,9 @@ const Profile: React.FC = () => {
                 fontSize: '13px',
                 fontWeight: 600,
                 borderRadius: '20px',
-                border: profileUser.isFollowing ? '1px solid #555' : 'none',
-                background: profileUser.isFollowing ? 'transparent' : '#fff',
-                color: profileUser.isFollowing ? '#ccc' : '#000',
+                border: profileUser.isFollowing ? '1px solid var(--border-strong)' : '1px solid var(--accent)',
+                background: profileUser.isFollowing ? 'transparent' : 'var(--accent)',
+                color: profileUser.isFollowing ? 'var(--text-muted)' : 'var(--text-inverse)',
                 cursor: followLoading ? 'wait' : 'pointer',
                 opacity: followLoading ? 0.6 : 1,
                 transition: 'all 0.2s',
@@ -582,11 +585,11 @@ const Profile: React.FC = () => {
               width: '80px',
               height: '80px',
               borderRadius: '50%',
-              background: profileUser.profilePicture ? 'transparent' : 'linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3))',
-              border: profileUser.profilePicture ? 'none' : '2px solid rgba(110,183,129,0.2)',
+              background: profileUser.profilePicture ? 'transparent' : 'var(--avatar-gradient-soft)',
+              border: profileUser.profilePicture ? 'none' : '2px solid var(--avatar-border)',
               fontSize: '28px',
               fontWeight: 700,
-              color: '#fff',
+              color: 'var(--text-inverse)',
             }}
           >
             {profileUser.profilePicture ? (
@@ -597,14 +600,14 @@ const Profile: React.FC = () => {
           </div>
           <div className="flex-1 mt-1">
             <div className="flex items-center gap-2 mb-1">
-              <h1 style={{ fontSize: '20px', fontWeight: 600, color: '#fff' }}>
+              <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text)' }}>
                 {profileUser.firstName ? `${profileUser.firstName} ${profileUser.lastName || ''}` : profileUser.username}
               </h1>
               {profileUser.showMemberNumber && profileUser.memberNumber > 0 && (
                 <span
                   style={{
-                    backgroundColor: 'rgba(232,197,71,0.15)',
-                    color: '#e8c547',
+                    backgroundColor: 'var(--color-yellow-soft)',
+                    color: 'var(--color-yellow-text)',
                     padding: '2px 6px',
                     borderRadius: '4px',
                     fontSize: '11px',
@@ -615,36 +618,38 @@ const Profile: React.FC = () => {
                 </span>
               )}
             </div>
-            <div style={{ fontSize: '13px', color: '#999', marginBottom: '8px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-soft)', marginBottom: '8px' }}>
               @{profileUser.username}
             </div>
             {profileUser.bio && (
-              <div style={{ fontSize: '13px', color: '#ccc', marginBottom: '12px', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
                 {profileUser.bio}
               </div>
             )}
-            <div className="flex items-center gap-4" style={{ fontSize: '12px', color: '#888' }}>
-              <span><strong style={{ color: '#fff' }}>{totalActivity}</strong> notes</span>
+            <div className="flex items-center gap-4" style={{ fontSize: '12px', color: 'var(--text-soft)' }}>
+              <span><strong style={{ color: 'var(--text)' }}>{totalActivity}</strong> notes</span>
               <span
                 onClick={() => { setFollowersModalTab('followers'); setFollowersModalOpen(true); }}
                 style={{ cursor: 'pointer', transition: 'color 0.15s' }}
-                className="hover:text-white"
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-soft)'; }}
               >
-                <strong style={{ color: '#fff' }}>{profileUser.followersCount || 0}</strong> followers
+                <strong style={{ color: 'var(--text)' }}>{profileUser.followersCount || 0}</strong> followers
               </span>
               <span
                 onClick={() => { setFollowersModalTab('following'); setFollowersModalOpen(true); }}
                 style={{ cursor: 'pointer', transition: 'color 0.15s' }}
-                className="hover:text-white"
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-soft)'; }}
               >
-                <strong style={{ color: '#fff' }}>{profileUser.followingCount || 0}</strong> following
+                <strong style={{ color: 'var(--text)' }}>{profileUser.followingCount || 0}</strong> following
               </span>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center justify-between gap-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '24px' }}>
+        <div className="flex items-center justify-between gap-4" style={{ borderBottom: '1px solid var(--border)', marginBottom: '24px' }}>
           <div className="flex items-center gap-4">
             {tabs.map((tab) => (
               <button
@@ -655,10 +660,10 @@ const Profile: React.FC = () => {
                   padding: '10px 0',
                   fontSize: '13px',
                   fontWeight: 500,
-                  color: activeTab === tab ? '#6EB781' : '#666',
+                  color: activeTab === tab ? 'var(--accent)' : 'var(--text-dim)',
                   background: 'none',
                   border: 'none',
-                  borderBottom: activeTab === tab ? '2px solid #6EB781' : '2px solid transparent',
+                  borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
                   marginBottom: '-1px',
                 }}
               >
@@ -669,7 +674,8 @@ const Profile: React.FC = () => {
           {isOwnProfile && activeTab === 'Uploaded' && (
             <button
               onClick={() => setUploadModalOpen(true)}
-              style={{ marginBottom: 8, padding: '5px 11px', borderRadius: 8, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', color: '#6EB781', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              className="theme-pill"
+              style={{ marginBottom: 8, padding: '5px 11px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Add document
             </button>
@@ -680,11 +686,11 @@ const Profile: React.FC = () => {
         {activeTab === 'Annotations' && (
           <div>
             {activity.length === 0 ? (
-              <div className="text-center" style={{ padding: '60px 0', color: '#555' }}>
+              <div className="text-center" style={{ padding: '60px 0', color: 'var(--text-dim)' }}>
                 {isOwnProfile ? (
                   <>
                     <p style={{ fontSize: '14px', marginBottom: '6px' }}>You haven't made any annotations yet</p>
-                    <p style={{ fontSize: '12px', color: '#444' }}>Install the Scholic extension to start annotating the web</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Install the Scholic extension to start annotating the web</p>
                   </>
                 ) : (
                   <p style={{ fontSize: '14px', marginBottom: '6px' }}>This user hasn't made any annotations yet</p>
@@ -715,7 +721,7 @@ const Profile: React.FC = () => {
                 <div ref={observerTarget} style={{ padding: '40px 0', display: 'flex', flexDirection: 'column' }}>
                   {fetchingMore && <ProfileSkeleton />}
                   {!hasMore && activity.length > 0 && (
-                    <p style={{ fontSize: '12px', color: '#444', textAlign: 'center' }}>You've reached the end of the activity</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center' }}>You've reached the end of the activity</p>
                   )}
                 </div>
               </div>
@@ -730,23 +736,23 @@ const Profile: React.FC = () => {
               /* Skeleton */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {[1, 2, 3, 4].map(i => (
-                  <div key={i} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)', padding: '12px 14px' }}>
+                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--surface-inset)', padding: '12px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} className="pulse" />
-                      <div style={{ width: '80px', height: '11px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)' }} className="pulse" />
+                      <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'var(--surface-3)', flexShrink: 0 }} className="pulse" />
+                      <div style={{ width: '80px', height: '11px', borderRadius: '3px', background: 'var(--surface-2)' }} className="pulse" />
                     </div>
-                    <div style={{ width: '75%', height: '13px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', marginBottom: '6px' }} className="pulse" />
-                    <div style={{ width: '55%', height: '11px', borderRadius: '3px', background: 'rgba(255,255,255,0.04)' }} className="pulse" />
+                    <div style={{ width: '75%', height: '13px', borderRadius: '3px', background: 'var(--surface-3)', marginBottom: '6px' }} className="pulse" />
+                    <div style={{ width: '55%', height: '11px', borderRadius: '3px', background: 'var(--surface-2)' }} className="pulse" />
                   </div>
                 ))}
               </div>
             ) : recentlyRead.length === 0 ? (
-              <div className="text-center" style={{ padding: '60px 0', color: '#555' }}>
+              <div className="text-center" style={{ padding: '60px 0', color: 'var(--text-dim)' }}>
                 <p style={{ fontSize: '14px', marginBottom: '6px' }}>
                   {isOwnProfile ? "You haven't annotated any pages yet" : 'No public annotations yet'}
                 </p>
                 {isOwnProfile && (
-                  <p style={{ fontSize: '12px', color: '#444' }}>Install the Scholic extension to start annotating the web</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Install the Scholic extension to start annotating the web</p>
                 )}
               </div>
             ) : (
@@ -757,7 +763,7 @@ const Profile: React.FC = () => {
                     alignItems: 'center',
                     gap: '6px',
                     fontSize: '11px',
-                    color: '#666',
+                    color: 'var(--text-dim)',
                     padding: '0 2px 4px',
                     letterSpacing: '0.02em',
                   }}
@@ -778,14 +784,15 @@ const Profile: React.FC = () => {
                     <button
                       onClick={loadMoreRecentlyRead}
                       disabled={recentlyReadFetchingMore}
-                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, background: 'rgba(110,183,129,0.08)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.2)', borderRadius: '20px', cursor: recentlyReadFetchingMore ? 'not-allowed' : 'pointer', opacity: recentlyReadFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
+                      className="theme-pill"
+                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, borderRadius: '20px', cursor: recentlyReadFetchingMore ? 'not-allowed' : 'pointer', opacity: recentlyReadFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
                     >
                       {recentlyReadFetchingMore ? 'Loading...' : 'Load more'}
                     </button>
                   </div>
                 )}
                 {!recentlyReadHasMore && recentlyRead.length > 0 && (
-                  <p style={{ fontSize: '12px', color: '#444', textAlign: 'center', paddingTop: '20px' }}>You've reached the end</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center', paddingTop: '20px' }}>You've reached the end</p>
                 )}
               </div>
             )}
@@ -797,20 +804,20 @@ const Profile: React.FC = () => {
             {documentsLoading ? (
               <div style={{ display: 'grid', gap: 12 }}>
                 {[1, 2, 3].map((i) => (
-                  <div key={i} style={{ borderRadius: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: 18 }}>
-                    <div style={{ width: '60%', height: 16, borderRadius: 4, background: 'rgba(255,255,255,0.05)', marginBottom: 10 }} className="pulse" />
-                    <div style={{ width: '30%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', marginBottom: 14 }} className="pulse" />
-                    <div style={{ width: '100%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.03)', marginBottom: 6 }} className="pulse" />
-                    <div style={{ width: '80%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.03)' }} className="pulse" />
+                  <div key={i} style={{ borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--border)', padding: 18 }}>
+                    <div style={{ width: '60%', height: 16, borderRadius: 4, background: 'var(--surface-2)', marginBottom: 10 }} className="pulse" />
+                    <div style={{ width: '30%', height: 12, borderRadius: 4, background: 'var(--surface)', marginBottom: 14 }} className="pulse" />
+                    <div style={{ width: '100%', height: 12, borderRadius: 4, background: 'var(--surface)', marginBottom: 6 }} className="pulse" />
+                    <div style={{ width: '80%', height: 12, borderRadius: 4, background: 'var(--surface)' }} className="pulse" />
                   </div>
                 ))}
               </div>
             ) : documents.length === 0 ? (
-              <div className="text-center" style={{ padding: '60px 0', color: '#555' }}>
+              <div className="text-center" style={{ padding: '60px 0', color: 'var(--text-dim)' }}>
                 {isOwnProfile ? (
                   <>
                     <p style={{ fontSize: '14px', marginBottom: '6px' }}>You haven't uploaded any PDFs yet</p>
-                    <p style={{ fontSize: '12px', color: '#444' }}>Add one and Scholic will prefill the metadata for you.</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Add one and Scholic will prefill the metadata for you.</p>
                   </>
                 ) : (
                   <p style={{ fontSize: '14px', marginBottom: '6px' }}>This user hasn't uploaded any documents yet</p>
@@ -821,34 +828,34 @@ const Profile: React.FC = () => {
                 {documents.map((documentRecord) => (
                   <div
                     key={documentRecord.id}
-                    style={{ borderRadius: 14, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', padding: 16, cursor: 'pointer', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}
+                    style={{ borderRadius: 14, border: '1px solid var(--border)', background: 'var(--surface-inset)', padding: 16, cursor: 'pointer', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}
                     onClick={() => navigate(`/document/${documentRecord.id}`)}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6EB781', flexShrink: 0 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
                         <FileText style={{ width: 16, height: 16 }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 4, minWidth: 0 }}>
-                          <h3 style={{ margin: 0, fontFamily: '"Outfit", sans-serif', fontSize: 17, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{documentRecord.title}</h3>
+                          <h3 style={{ margin: 0, fontFamily: '"Outfit", sans-serif', fontSize: 17, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{documentRecord.title}</h3>
                           {documentRecord.publishedYear && (
-                            <span style={{ fontSize: 11, color: '#666', flexShrink: 0 }}>{documentRecord.publishedYear}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>{documentRecord.publishedYear}</span>
                           )}
                         </div>
                         {documentRecord.authors.length > 0 && (
-                          <div style={{ fontSize: 12, color: '#888', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 12, color: 'var(--text-soft)', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {documentRecord.authors.join(', ')}
                           </div>
                         )}
                         {documentRecord.description && (
-                          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#777', lineHeight: 1.55, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.55, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {documentRecord.description}
                           </p>
                         )}
                         {documentRecord.tags.length > 0 && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10, overflow: 'hidden' }}>
                             {documentRecord.tags.slice(0, 3).map((tag) => (
-                              <span key={tag} style={{ padding: '2px 7px', borderRadius: 5, background: 'rgba(71,163,232,0.10)', border: '1px solid rgba(71,163,232,0.18)', fontSize: 10.5, color: '#8cc7f0', lineHeight: 1.5, whiteSpace: 'nowrap' }}>
+                              <span key={tag} style={{ padding: '2px 7px', borderRadius: 5, background: 'var(--color-blue-soft)', border: '1px solid var(--color-blue-border)', fontSize: 10.5, color: 'var(--color-blue-text)', lineHeight: 1.5, whiteSpace: 'nowrap' }}>
                                 {tag}
                               </span>
                             ))}
@@ -858,9 +865,9 @@ const Profile: React.FC = () => {
                           <a
                             href={`/page?url=${encodeURIComponent(documentRecord.fileUrl)}`}
                             onClick={(e) => e.stopPropagation()}
-                            style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = '#444'; }}
+                            style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; }}
                           >
                             all annotations →
                           </a>
@@ -869,7 +876,7 @@ const Profile: React.FC = () => {
                             target="_blank"
                             rel="noreferrer"
                             onClick={(e) => e.stopPropagation()}
-                            style={{ fontSize: 11, color: '#6EB781', textDecoration: 'none', fontWeight: 500 }}
+                            style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}
                           >
                             Read PDF →
                           </a>
@@ -884,7 +891,8 @@ const Profile: React.FC = () => {
                     <button
                       onClick={loadMoreDocuments}
                       disabled={documentsFetchingMore}
-                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, background: 'rgba(110,183,129,0.08)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.2)', borderRadius: '20px', cursor: documentsFetchingMore ? 'not-allowed' : 'pointer', opacity: documentsFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
+                      className="theme-pill"
+                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, borderRadius: '20px', cursor: documentsFetchingMore ? 'not-allowed' : 'pointer', opacity: documentsFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
                     >
                       {documentsFetchingMore ? 'Loading...' : 'Load more'}
                     </button>

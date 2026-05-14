@@ -193,15 +193,15 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
       if (match.index > lastIndex) {
         nodes.push(text.slice(lastIndex, match.index));
       }
-      nodes.push(
-        <span
-          key={`${match[0]}-${match.index}`}
-          style={{
-            color: 'transparent',
-            background: 'rgba(110,183,129,0.13)',
-            borderRadius: '4px',
-            fontWeight: 'inherit',
-          }}
+        nodes.push(
+          <span
+            key={`${match[0]}-${match.index}`}
+            style={{
+              color: 'transparent',
+              background: 'var(--accent-soft)',
+              borderRadius: '4px',
+              fontWeight: 'inherit',
+            }}
         >
           {match[0]}
         </span>
@@ -287,20 +287,20 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
             ...(popoverPos.placeAbove
               ? { bottom: window.innerHeight - popoverPos.top }
               : { top: popoverPos.top }),
-            background: '#1a1a1a',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
             borderRadius: '8px',
             padding: '6px',
             zIndex: 9999,
-            boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
+            boxShadow: 'var(--shadow-lg)',
           }}
         >
           {loading ? (
-            <div style={{ padding: '9px 10px', color: '#777', fontSize: '12px' }}>
+            <div style={{ padding: '9px 10px', color: 'var(--text-dim)', fontSize: '12px' }}>
               Finding people...
             </div>
           ) : users.length === 0 ? (
-            <div style={{ padding: '9px 10px', color: '#777', fontSize: '12px', lineHeight: 1.4 }}>
+            <div style={{ padding: '9px 10px', color: 'var(--text-dim)', fontSize: '12px', lineHeight: 1.4 }}>
               {query.trim() ? 'No matching users' : currentUser ? 'No following yet. Type a name to search.' : 'Type a name to search people.'}
             </div>
           ) : users.map((user, index) => {
@@ -321,8 +321,8 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
                   padding: '7px 8px',
                   border: 'none',
                   borderRadius: '6px',
-                  background: index === activeIndex ? 'rgba(110,183,129,0.12)' : 'transparent',
-                  color: '#ddd',
+                  background: index === activeIndex ? 'var(--accent-soft)' : 'transparent',
+                  color: 'var(--text-muted)',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                   textAlign: 'left',
@@ -332,7 +332,7 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
                 <span style={{ minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: '12px', fontWeight: 700 }}>@{user.username}</span>
                   {displayName && (
-                    <span style={{ display: 'block', fontSize: '11px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {displayName}
                     </span>
                   )}

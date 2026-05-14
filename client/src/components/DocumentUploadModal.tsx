@@ -174,21 +174,21 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
       <div
         aria-hidden="true"
-        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)' }}
+        style={{ position: 'absolute', inset: 0, background: 'var(--overlay)' }}
       />
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ width: '100%', maxWidth: 680, borderRadius: 12, background: '#171717', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 24px 60px rgba(0,0,0,0.45)', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ width: '100%', maxWidth: 680, borderRadius: 12, background: 'var(--bg-elevated)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
             <div>
-              <div style={{ fontFamily: '"Outfit", sans-serif', fontSize: 17, color: '#fff', fontWeight: 600 }}>Add document</div>
-              <div style={{ fontSize: 11.5, color: '#666', marginTop: 2 }}>
+              <div style={{ fontFamily: '"Outfit", sans-serif', fontSize: 17, color: 'var(--text)', fontWeight: 600 }}>Add document</div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-dim)', marginTop: 2 }}>
                 Upload, review the metadata, publish.
               </div>
             </div>
             <button
               disabled
               title="Use Cancel to close and clean up the staged upload"
-              style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#555', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }}
+              style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-dim)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }}
             >
               <X style={{ width: 14, height: 14 }} />
             </button>
@@ -196,14 +196,14 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
 
           {!draft ? (
             <div style={{ padding: 20 }}>
-              <div style={{ borderRadius: 10, border: '1px dashed rgba(110,183,129,0.3)', background: 'rgba(110,183,129,0.04)', padding: '32px 20px', textAlign: 'center' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                  <Upload style={{ width: 20, height: 20, color: '#6EB781' }} />
+              <div style={{ borderRadius: 10, border: '1px dashed var(--accent-border)', background: 'var(--accent-soft)', padding: '32px 20px', textAlign: 'center' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                  <Upload style={{ width: 20, height: 20, color: 'var(--accent)' }} />
                 </div>
-                <div style={{ fontFamily: '"Outfit", sans-serif', fontSize: 17, color: '#fff', marginBottom: 6, fontWeight: 600 }}>
+                <div style={{ fontFamily: '"Outfit", sans-serif', fontSize: 17, color: 'var(--text)', marginBottom: 6, fontWeight: 600 }}>
                   Drop in a PDF
                 </div>
-                <p style={{ margin: '0 auto 16px', maxWidth: 400, fontSize: 12, lineHeight: 1.6, color: '#888' }}>
+                <p style={{ margin: '0 auto 16px', maxWidth: 400, fontSize: 12, lineHeight: 1.6, color: 'var(--text-soft)' }}>
                   Scholic uploads the file, pulls the metadata, and shows you a clean review form before publishing.
                 </p>
                 <button
@@ -213,8 +213,8 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                     padding: '7px 14px',
                     borderRadius: 8,
                     border: 'none',
-                    background: uploading ? 'rgba(255,255,255,0.08)' : '#6EB781',
-                    color: uploading ? '#666' : '#08110b',
+                    background: uploading ? 'var(--surface-3)' : 'var(--accent)',
+                    color: uploading ? 'var(--text-dim)' : 'var(--text-inverse)',
                     fontWeight: 600,
                     cursor: uploading ? 'not-allowed' : 'pointer',
                     fontFamily: 'inherit',
@@ -224,8 +224,8 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                 >
                   {uploading ? 'Uploading and extracting…' : 'Choose PDF'}
                 </button>
-              <div style={{ marginTop: 10, fontSize: 11, color: '#555' }}>PDF only · up to 15MB</div>
-              <div style={{ marginTop: 6, fontSize: 10.5, color: '#444' }}>Close is disabled here so staged uploads don&apos;t get stranded.</div>
+              <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-dim)' }}>PDF only · up to 15MB</div>
+              <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--text-faint)' }}>Close is disabled here so staged uploads don&apos;t get stranded.</div>
                 <input
                   ref={inputRef}
                   type="file"
@@ -244,7 +244,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                 <button
                   onClick={cancelDraft}
                   disabled={uploading || cancelling}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 500, cursor: uploading || cancelling ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: uploading || cancelling ? 0.6 : 1 }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', fontWeight: 500, cursor: uploading || cancelling ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: uploading || cancelling ? 0.6 : 1 }}
                 >
                   {cancelling ? 'Cancelling…' : 'Cancel'}
                 </button>
@@ -252,17 +252,17 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
             </div>
           ) : (
             <div style={{ padding: 20, display: 'grid', gap: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <FileText style={{ width: 14, height: 14, color: '#ddd' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText style={{ width: 14, height: 14, color: 'var(--text-muted)' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, color: '#eee', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{draft.fileName}</div>
-                  <div style={{ fontSize: 10.5, color: '#666', marginTop: 2 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{draft.fileName}</div>
+                  <div style={{ fontSize: 10.5, color: 'var(--text-dim)', marginTop: 2 }}>
                     {(draft.fileSize / (1024 * 1024)).toFixed(1)} MB · {metadata.pageCount ? `${metadata.pageCount} pages` : 'page count pending'}
                   </div>
                 </div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 5, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.2)', fontSize: 10.5, color: '#6EB781', fontWeight: 600 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 5, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', fontSize: 10.5, color: 'var(--accent)', fontWeight: 600 }}>
                   <Sparkles style={{ width: 10, height: 10 }} />
                   {metadata.metadataSource === 'ai' ? 'AI-filled' : 'Ready to review'}
                 </div>
@@ -270,39 +270,39 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
 
               <div style={{ display: 'grid', gap: 14 }}>
                 <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontSize: 12, color: '#777' }}>Title</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>Title</span>
                   <input value={metadata.title} onChange={(e) => setMetadata((prev) => ({ ...prev, title: e.target.value }))} style={inputStyle} />
                 </label>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: 14 }}>
                   <label style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 12, color: '#777' }}>Authors</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>Authors</span>
                     <input value={authorsText} onChange={(e) => setAuthorsText(e.target.value)} style={inputStyle} placeholder="Comma-separated names" />
                   </label>
                   <label style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 12, color: '#777' }}>Year</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>Year</span>
                     <input value={yearText} onChange={(e) => setYearText(e.target.value)} style={inputStyle} placeholder="2024" inputMode="numeric" />
                   </label>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 150px', gap: 14 }}>
                   <label style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 12, color: '#777' }}>Publisher</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>Publisher</span>
                     <input value={metadata.publisher} onChange={(e) => setMetadata((prev) => ({ ...prev, publisher: e.target.value }))} style={inputStyle} />
                   </label>
                   <label style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 12, color: '#777' }}>Pages</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>Pages</span>
                     <input value={metadata.pageCount || ''} onChange={(e) => setMetadata((prev) => ({ ...prev, pageCount: Number(e.target.value) || 0 }))} style={inputStyle} inputMode="numeric" />
                   </label>
                 </div>
 
                 <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontSize: 12, color: '#777' }}>Description</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>Description</span>
                   <textarea value={metadata.description} onChange={(e) => setMetadata((prev) => ({ ...prev, description: e.target.value }))} style={{ ...inputStyle, minHeight: 118, resize: 'vertical', paddingTop: 12 }} />
                 </label>
 
                 <label style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontSize: 12, color: '#777' }}>Tags</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-soft)' }}>Tags</span>
                   <input value={tagsText} onChange={(e) => setTagsText(e.target.value)} style={inputStyle} placeholder="machine learning, philosophy, sociology" />
                 </label>
               </div>
@@ -311,7 +311,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                 <button
                   onClick={cancelDraft}
                   disabled={cancelling}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 500, cursor: cancelling ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: cancelling ? 0.6 : 1 }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', fontWeight: 500, cursor: cancelling ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: cancelling ? 0.6 : 1 }}
                 >
                   {cancelling ? 'Cancelling…' : 'Cancel'}
                 </button>
@@ -331,7 +331,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                     }
                   }}
                   disabled={cancelling || saving}
-                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#d0d0d0', fontWeight: 500, cursor: cancelling || saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: cancelling || saving ? 0.6 : 1 }}
+                  style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', fontWeight: 500, cursor: cancelling || saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: 12, opacity: cancelling || saving ? 0.6 : 1 }}
                 >
                   Replace file
                 </button>
@@ -342,8 +342,8 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({ open, onClose
                     padding: '6px 14px',
                     borderRadius: 6,
                     border: 'none',
-                    background: (saving || cancelling) ? 'rgba(255,255,255,0.08)' : '#6EB781',
-                    color: (saving || cancelling) ? '#666' : '#08110b',
+                    background: (saving || cancelling) ? 'var(--surface-3)' : 'var(--accent)',
+                    color: (saving || cancelling) ? 'var(--text-dim)' : 'var(--text-inverse)',
                     fontWeight: 600,
                     cursor: (saving || cancelling) ? 'not-allowed' : 'pointer',
                     fontFamily: 'inherit',
@@ -366,9 +366,9 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   boxSizing: 'border-box',
   borderRadius: 6,
-  border: '1px solid rgba(255,255,255,0.08)',
-  background: 'rgba(255,255,255,0.03)',
-  color: '#fff',
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text)',
   padding: '7px 10px',
   fontFamily: 'inherit',
   fontSize: 12.5,

@@ -20,7 +20,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, onClose }) => {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(0,0,0,0.88)',
+        background: 'var(--overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -34,7 +34,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, onClose }) => {
           position: 'absolute',
           top: '16px',
           right: '16px',
-          background: 'rgba(255,255,255,0.08)',
+          background: 'var(--surface-3)',
           border: 'none',
           borderRadius: '8px',
           width: '36px',
@@ -43,7 +43,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, onClose }) => {
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          color: '#ccc',
+          color: 'var(--text-muted)',
         }}
       >
         <X style={{ width: 18, height: 18 }} />
@@ -55,7 +55,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, onClose }) => {
           maxWidth: '100%',
           maxHeight: '100%',
           borderRadius: '8px',
-          boxShadow: '0 32px 64px rgba(0,0,0,0.6)',
+          boxShadow: 'var(--shadow-lg)',
           objectFit: 'contain',
         }}
         alt="Full size"

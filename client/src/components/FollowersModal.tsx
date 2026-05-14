@@ -127,7 +127,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(0,0,0,0.6)',
+              background: 'var(--overlay)',
               backdropFilter: 'blur(4px)',
               zIndex: 9998,
             }}
@@ -153,28 +153,29 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
             style={{
               width: '100%',
               maxWidth: '520px',
-              background: '#1a1a1a',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
               borderRadius: '16px',
               overflow: 'hidden',
-              boxShadow: '0 24px 48px rgba(0,0,0,0.4)',
+              boxShadow: 'var(--shadow-lg)',
               pointerEvents: 'auto',
             }}
           >
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 0 16px' }}>
-              <span style={{ fontSize: '15px', fontWeight: 600, color: '#fff' }}>@{username}</span>
+              <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>@{username}</span>
               <button
                 onClick={onClose}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex' }}
-                className="hover:bg-white/5"
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
               >
-                <X style={{ width: 16, height: 16, color: '#666' }} />
+                <X style={{ width: 16, height: 16, color: 'var(--text-dim)' }} />
               </button>
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 16px', marginTop: '8px' }}>
+            <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border)', padding: '0 16px', marginTop: '8px' }}>
               {(['followers', 'following'] as Tab[]).map(t => (
                 <button
                   key={t}
@@ -183,8 +184,8 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
                     flex: 1,
                     background: 'none',
                     border: 'none',
-                    borderBottom: tab === t ? '2px solid #6EB781' : '2px solid transparent',
-                    color: tab === t ? '#fff' : '#666',
+                    borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
+                    color: tab === t ? 'var(--text)' : 'var(--text-dim)',
                     fontSize: '13px',
                     fontWeight: 500,
                     padding: '10px 0',
@@ -211,7 +212,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
                 }}
               >
                 {users.length === 0 && !loading && (
-                  <div style={{ padding: '32px 0', textAlign: 'center', color: '#555', fontSize: '13px' }}>
+                  <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>
                     {tab === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
                   </div>
                 )}
@@ -229,7 +230,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
               </div>
 
               {loading && (
-                <div style={{ padding: '32px 0', textAlign: 'center', color: '#555', fontSize: '13px' }}>
+                <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-dim)', fontSize: '13px' }}>
                   Loading...
                 </div>
               )}

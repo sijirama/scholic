@@ -46,7 +46,8 @@ const UserRow: React.FC<UserRowProps> = ({ user, currentUserId, onFollow, showFo
         cursor: 'pointer',
         transition: 'background 0.15s',
       }}
-      className="hover:bg-white/5"
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
     >
       {/* Avatar */}
       <div
@@ -54,13 +55,13 @@ const UserRow: React.FC<UserRowProps> = ({ user, currentUserId, onFollow, showFo
           width: 40,
           height: 40,
           borderRadius: '50%',
-          background: user.profilePicture ? 'transparent' : 'linear-gradient(135deg, rgba(110,183,129,0.5), rgba(71,163,232,0.5))',
+          background: user.profilePicture ? 'transparent' : 'var(--avatar-gradient)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: 15,
           fontWeight: 700,
-          color: '#fff',
+          color: 'var(--text-inverse)',
           flexShrink: 0,
           overflow: 'hidden',
         }}
@@ -76,15 +77,15 @@ const UserRow: React.FC<UserRowProps> = ({ user, currentUserId, onFollow, showFo
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {displayName && (
-            <span style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {displayName}
             </span>
           )}
           {user.showMemberNumber && user.memberNumber && user.memberNumber > 0 && (
             <span
               style={{
-                backgroundColor: 'rgba(232,197,71,0.15)',
-                color: '#e8c547',
+                backgroundColor: 'var(--color-yellow-soft)',
+                color: 'var(--color-yellow-text)',
                 padding: '1px 5px',
                 borderRadius: '4px',
                 fontSize: '10px',
@@ -97,9 +98,9 @@ const UserRow: React.FC<UserRowProps> = ({ user, currentUserId, onFollow, showFo
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '13px', color: '#888' }}>@{user.username}</span>
+          <span style={{ fontSize: '13px', color: 'var(--text-soft)' }}>@{user.username}</span>
           {user.followersCount !== undefined && (
-            <span style={{ fontSize: '11px', color: '#555' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
               {user.followersCount} followers
             </span>
           )}
@@ -118,9 +119,9 @@ const UserRow: React.FC<UserRowProps> = ({ user, currentUserId, onFollow, showFo
             fontSize: '12px',
             fontWeight: 600,
             borderRadius: '20px',
-            border: user.isFollowing ? '1px solid rgba(255,255,255,0.12)' : 'none',
-            background: user.isFollowing ? 'transparent' : '#fff',
-            color: user.isFollowing ? '#aaa' : '#000',
+            border: user.isFollowing ? '1px solid var(--border-strong)' : '1px solid var(--accent-border)',
+            background: user.isFollowing ? 'transparent' : 'var(--accent)',
+            color: user.isFollowing ? 'var(--text-soft)' : 'var(--text-inverse)',
             cursor: 'pointer',
             transition: 'all 0.15s',
             flexShrink: 0,

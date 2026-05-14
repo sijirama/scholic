@@ -64,7 +64,7 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
   const isImage = ann.type === 'image' && ann.imageUrl;
   const initial = ann.user.username?.[0]?.toUpperCase() || '?';
   const [hovered, setHovered] = useState(false);
-  const bg = focused ? 'rgba(255,255,255,0.08)' : hovered ? 'rgba(255,255,255,0.04)' : 'transparent';
+  const bg = focused ? 'var(--surface-active)' : hovered ? 'var(--surface-hover)' : 'transparent';
   const highlightBg = `rgba(${r},${g},${b},0.32)`;
 
   return (
@@ -75,7 +75,7 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
       style={{ display:'flex', alignItems:'flex-start', gap:9, padding:'10px 12px', borderRadius:8, cursor:'pointer', background: bg, transition:'background 0.1s' }}
     >
       {/* Avatar */}
-      <div style={{ width:26, height:26, borderRadius:'50%', flexShrink:0, overflow:'hidden', background: ann.user.profilePicture ? 'transparent' : 'linear-gradient(135deg,rgba(110,183,129,0.4),rgba(71,163,232,0.4))', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#aaa', marginTop:1 }}>
+      <div style={{ width:26, height:26, borderRadius:'50%', flexShrink:0, overflow:'hidden', background: ann.user.profilePicture ? 'transparent' : 'var(--avatar-gradient-faint)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'var(--text-soft)', marginTop:1 }}>
         {ann.user.profilePicture
           ? <img src={ann.user.profilePicture} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
           : initial}
@@ -84,13 +84,13 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
       <div style={{ flex:1, minWidth:0 }}>
         {/* Author + time header */}
         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
-          <span style={{ fontSize:11, fontWeight:600, color:'#aaa' }}>@{ann.user.username}</span>
-          <span style={{ fontSize:10, color:'#444' }}>{timeAgo(ann.createdAt)}</span>
+          <span style={{ fontSize:11, fontWeight:600, color:'var(--text-soft)' }}>@{ann.user.username}</span>
+          <span style={{ fontSize:10, color:'var(--text-dim)' }}>{timeAgo(ann.createdAt)}</span>
         </div>
 
         {/* Screenshot — clipped strip */}
         {isImage && (
-          <div style={{ borderRadius:6, overflow:'hidden', height:72, marginBottom:5, border:'1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ borderRadius:6, overflow:'hidden', height:72, marginBottom:5, border:'1px solid var(--border)' }}>
             <img src={ann.imageUrl} alt="screenshot" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'top' }} />
           </div>
         )}
@@ -98,7 +98,7 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
         {/* Highlighted quote */}
         {!isImage && ann.quoteText && (
           <p style={{ margin:'0 0 4px', fontSize:13, lineHeight:1.55, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as const }}>
-            <mark style={{ background: highlightBg, color:'#ddd', borderRadius:3, padding:'1px 4px', fontStyle:'italic', boxDecorationBreak:'clone' } as React.CSSProperties}>
+            <mark style={{ background: highlightBg, color:'var(--text-muted)', borderRadius:3, padding:'1px 4px', fontStyle:'italic', boxDecorationBreak:'clone' } as React.CSSProperties}>
               {ann.quoteText}
             </mark>
           </p>
@@ -106,7 +106,7 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
 
         {/* Annotation note */}
         {ann.text && (
-          <p style={{ margin:'0 0 5px', fontSize:12, color:'#aaa', lineHeight:1.5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+          <p style={{ margin:'0 0 5px', fontSize:12, color:'var(--text-soft)', lineHeight:1.5, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
             <MentionText text={ann.text} />
           </p>
         )}
@@ -115,7 +115,7 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
         <div style={{ display:'flex', alignItems:'center', gap:8, overflow:'hidden', flexWrap:'wrap' }}>
           <div style={{ display:'flex', alignItems:'center', gap:5, overflow:'hidden', flex:1, minWidth:0 }}>
             {ann.linkFavicon && <img src={ann.linkFavicon} alt="" style={{ width:11, height:11, borderRadius:2, flexShrink:0 }} />}
-            <span style={{ fontSize:11, color:'#666', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
+            <span style={{ fontSize:11, color:'var(--text-dim)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
               {ann.linkTitle || domain || ann.url}
             </span>
           </div>
@@ -133,7 +133,7 @@ const AnnRow: React.FC<{ ann: SearchAnnotation; focused: boolean; onClick: () =>
 
 const DocumentRow: React.FC<{ doc: SearchDocument; focused: boolean; onClick: () => void }> = ({ doc, focused, onClick }) => {
   const [hovered, setHovered] = useState(false);
-  const bg = focused ? 'rgba(255,255,255,0.08)' : hovered ? 'rgba(255,255,255,0.04)' : 'transparent';
+  const bg = focused ? 'var(--surface-active)' : hovered ? 'var(--surface-hover)' : 'transparent';
   return (
     <div
       onClick={onClick}
@@ -141,28 +141,28 @@ const DocumentRow: React.FC<{ doc: SearchDocument; focused: boolean; onClick: ()
       onMouseLeave={() => setHovered(false)}
       style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', background: bg, transition: 'background 0.1s' }}
     >
-      <div style={{ width: 28, height: 28, borderRadius: 9, background: 'rgba(110,183,129,0.12)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <FileText style={{ width: 13, height: 13, color: '#6EB781' }} />
+      <div style={{ width: 28, height: 28, borderRadius: 9, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <FileText style={{ width: 13, height: 13, color: 'var(--accent)' }} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#ddd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</span>
-          {doc.publishedYear && <span style={{ fontSize: 10, color: '#444' }}>{doc.publishedYear}</span>}
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</span>
+          {doc.publishedYear && <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{doc.publishedYear}</span>}
         </div>
         {doc.authors.length > 0 && (
-          <p style={{ margin: '0 0 4px', fontSize: 11, color: '#888', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+          <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-soft)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
             {doc.authors.join(', ')}
           </p>
         )}
         {doc.description && (
-          <p style={{ margin: '0 0 4px', fontSize: 11, color: '#666', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+          <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
             {doc.description}
           </p>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, color: '#555' }}>by @{doc.user.username}</span>
+          <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>by @{doc.user.username}</span>
           {doc.tags.slice(0, 3).map((tag) => (
-            <span key={tag} style={{ fontSize: 10, color: '#8cc7f0' }}>{tag}</span>
+            <span key={tag} style={{ fontSize: 10, color: 'var(--color-blue-text)' }}>{tag}</span>
           ))}
         </div>
       </div>
@@ -270,33 +270,33 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
       {open && (
         <>
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.15}}
-            onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.65)',backdropFilter:'blur(4px)',zIndex:9998}} />
+            onClick={onClose} style={{position:'fixed',inset:0,background:'var(--overlay)',backdropFilter:'blur(4px)',zIndex:9998}} />
 
           <div style={{position:'fixed',inset:0,display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:'12vh',zIndex:9999,pointerEvents:'none'}}>
             <motion.div initial={{opacity:0,y:-10,scale:0.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-10,scale:0.98}}
               transition={{duration:0.18,ease:[0.22,1,0.36,1]}}
-              style={{width:'100%',maxWidth:700,background:'#191919',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,overflow:'hidden',boxShadow:'0 32px 64px rgba(0,0,0,0.5)',pointerEvents:'auto'}}
+              style={{width:'100%',maxWidth:700,background:'var(--bg-elevated)',border:'1px solid var(--border)',borderRadius:16,overflow:'hidden',boxShadow:'var(--shadow-lg)',pointerEvents:'auto'}}
             >
               {/* Input row */}
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'14px 16px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-                <Search style={{width:15,height:15,color:'#555',flexShrink:0}} />
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'14px 16px',borderBottom:'1px solid var(--border)'}}>
+                <Search style={{width:15,height:15,color:'var(--text-dim)',flexShrink:0}} />
                 <input ref={inputRef} type="text"
                   placeholder={scopeUsername ? `Search @${scopeUsername}'s annotations...` : 'Search annotations, people, URLs...'}
                   value={query} onChange={e=>handleQuery(e.target.value)}
-                  style={{flex:1,background:'none',border:'none',outline:'none',fontSize:15,color:'#fff',fontFamily:'inherit'}} />
-                {loading && <div style={{width:14,height:14,border:'2px solid rgba(255,255,255,0.08)',borderTopColor:'#6EB781',borderRadius:'50%',animation:'scholic-spin 0.6s linear infinite',flexShrink:0}} />}
-                <button onClick={onClose} style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:5,padding:'2px 6px',fontSize:11,color:'#555',cursor:'pointer',fontFamily:'monospace',flexShrink:0}}>ESC</button>
+                  style={{flex:1,background:'none',border:'none',outline:'none',fontSize:15,color:'var(--text)',fontFamily:'inherit'}} />
+                {loading && <div style={{width:14,height:14,border:'2px solid var(--border)',borderTopColor:'var(--accent)',borderRadius:'50%',animation:'scholic-spin 0.6s linear infinite',flexShrink:0}} />}
+                <button onClick={onClose} style={{background:'var(--surface-3)',border:'none',borderRadius:5,padding:'2px 6px',fontSize:11,color:'var(--text-dim)',cursor:'pointer',fontFamily:'monospace',flexShrink:0}}>ESC</button>
               </div>
 
               {/* Tabs + color chips */}
-              <div style={{padding:'8px 12px 6px',borderBottom:'1px solid rgba(255,255,255,0.04)',display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{padding:'8px 12px 6px',borderBottom:'1px solid var(--border)',display:'flex',flexDirection:'column',gap:6}}>
                 <div style={{display:'flex',gap:2}}>
                   {(['all','annotations','users','documents'] as TabType[]).map(t=>(
                     <TabBtn key={t} label={t} active={tab===t} onClick={()=>handleTab(t)} />
                   ))}
                 </div>
                 {scopeUsername && (
-                  <div style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:20,background:'rgba(110,183,129,0.1)',border:'1px solid rgba(110,183,129,0.22)',fontSize:11,color:'#6EB781',fontWeight:600,alignSelf:'flex-start'}}>
+                  <div style={{display:'inline-flex',alignItems:'center',padding:'2px 8px',borderRadius:20,background:'var(--accent-soft)',border:'1px solid var(--accent-border)',fontSize:11,color:'var(--accent)',fontWeight:600,alignSelf:'flex-start'}}>
                     @{scopeUsername}
                   </div>
                 )}
@@ -304,16 +304,16 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
 
               {/* Results */}
               <div style={{maxHeight:480,overflowY:'auto'}}>
-                {!hasQuery && <div style={{padding:'28px 0',textAlign:'center',color:'#2e2e2e',fontSize:13}}>Type to search{scopeUsername?` @${scopeUsername}`:''}</div>}
-                {hasQuery&&!loading&&!hasResults && <div style={{padding:'28px 0',textAlign:'center',color:'#444',fontSize:13}}>No results</div>}
+                {!hasQuery && <div style={{padding:'28px 0',textAlign:'center',color:'var(--text-dim)',fontSize:13}}>Type to search{scopeUsername?` @${scopeUsername}`:''}</div>}
+                {hasQuery&&!loading&&!hasResults && <div style={{padding:'28px 0',textAlign:'center',color:'var(--text-dim)',fontSize:13}}>No results</div>}
 
                 {showAnn&&annotations.length>0&&(
                   <div style={{padding:'8px 6px 2px'}}>
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'2px 8px 5px'}}>
-                      <span style={{fontSize:9,fontWeight:700,color:'#2e2e2e',textTransform:'uppercase',letterSpacing:'0.1em'}}>Annotations</span>
+                      <span style={{fontSize:9,fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Annotations</span>
                       {annotationsTotal>annotations.length
                         ? <SeeAllBtn onClick={goFull} count={annotationsTotal} />
-                        : annotationsTotal>0 && <span style={{fontSize:10,color:'#333'}}>{annotationsTotal}</span>}
+                        : annotationsTotal>0 && <span style={{fontSize:10,color:'var(--text-dim)'}}>{annotationsTotal}</span>}
                     </div>
                     {annotations.map((ann,i)=>(
                       <AnnRow key={ann.id} ann={ann} focused={focusedIdx===i} onClick={()=>go(`/annotation/${ann.id}`)} />
@@ -322,20 +322,20 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
                 )}
 
                 {showUsers&&users.length>0&&(
-                  <div style={{padding:'8px 6px 2px',borderTop:annotations.length>0?'1px solid rgba(255,255,255,0.04)':'none'}}>
+                  <div style={{padding:'8px 6px 2px',borderTop:annotations.length>0?'1px solid var(--border)':'none'}}>
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'2px 8px 5px'}}>
-                      <span style={{fontSize:9,fontWeight:700,color:'#2e2e2e',textTransform:'uppercase',letterSpacing:'0.1em'}}>People</span>
-                      {usersTotal>0&&<span style={{fontSize:10,color:'#333'}}>{usersTotal}</span>}
+                      <span style={{fontSize:9,fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.1em'}}>People</span>
+                      {usersTotal>0&&<span style={{fontSize:10,color:'var(--text-dim)'}}>{usersTotal}</span>}
                     </div>
                     {users.map(u=><UserRow key={u.id} user={u} currentUserId={currentUserId} onFollow={handleFollow} showFollowButton onNavigate={onClose} />)}
                   </div>
                 )}
 
                 {showDocuments&&documents.length>0&&(
-                  <div style={{padding:'8px 6px 2px',borderTop:(annotations.length>0||users.length>0)?'1px solid rgba(255,255,255,0.04)':'none'}}>
+                  <div style={{padding:'8px 6px 2px',borderTop:(annotations.length>0||users.length>0)?'1px solid var(--border)':'none'}}>
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'2px 8px 5px'}}>
-                      <span style={{fontSize:9,fontWeight:700,color:'#2e2e2e',textTransform:'uppercase',letterSpacing:'0.1em'}}>Documents</span>
-                      {documentsTotal>0&&<span style={{fontSize:10,color:'#333'}}>{documentsTotal}</span>}
+                      <span style={{fontSize:9,fontWeight:700,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Documents</span>
+                      {documentsTotal>0&&<span style={{fontSize:10,color:'var(--text-dim)'}}>{documentsTotal}</span>}
                     </div>
                     {documents.map((doc, i)=><DocumentRow key={doc.id} doc={doc} focused={focusedIdx===annotations.length + users.length + i} onClick={()=>go(`/document/${doc.id}`)} />)}
                   </div>
@@ -343,8 +343,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ open, onClose, currentUserId,
               </div>
 
               {/* Footer */}
-              <div style={{padding:'7px 14px',borderTop:'1px solid rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <span style={{fontSize:10,color:'#252525'}}>↑↓ navigate · ↵ open · ⌘K close</span>
+              <div style={{padding:'7px 14px',borderTop:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <span style={{fontSize:10,color:'var(--text-faint)'}}>↑↓ navigate · ↵ open · ⌘K close</span>
                 {hasQuery&&<FullResultsBtn onClick={goFull} />}
               </div>
             </motion.div>
@@ -364,8 +364,8 @@ const TabBtn: React.FC<{label:string;active:boolean;onClick:()=>void}> = ({label
     <button onClick={onClick}
       onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
       style={{padding:'3px 11px',fontSize:12,fontWeight:500,borderRadius:6,border:'none',cursor:'pointer',
-        background: active ? 'rgba(255,255,255,0.1)' : hovered ? 'rgba(255,255,255,0.05)' : 'transparent',
-        color: active ? '#ddd' : hovered ? '#888' : '#555',
+        background: active ? 'var(--surface-active)' : hovered ? 'var(--surface-hover)' : 'transparent',
+        color: active ? 'var(--text-muted)' : hovered ? 'var(--text-soft)' : 'var(--text-dim)',
         fontFamily:'inherit',transition:'all 0.1s',textTransform:'capitalize'}}>
       {label}
     </button>
@@ -379,7 +379,7 @@ const SeeAllBtn: React.FC<{onClick:()=>void;count:number}> = ({onClick,count}) =
     <button onClick={onClick}
       onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
       style={{background:'none',border:'none',cursor:'pointer',padding:0,
-        fontSize:10,color: hovered ? '#7ec890' : '#6EB781',
+        fontSize:10,color: hovered ? 'var(--accent-strong)' : 'var(--accent)',
         fontFamily:'inherit',transition:'color 0.1s'}}>
       See all {count} →
     </button>
@@ -391,7 +391,7 @@ const FullResultsBtn: React.FC<{onClick:()=>void}> = ({onClick}) => {
   return (
     <button onClick={onClick}
       onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
-      style={{fontSize:11,color: hovered ? '#888' : '#3a3a3a',background:'none',border:'none',cursor:'pointer',fontFamily:'inherit',transition:'color 0.1s'}}>
+      style={{fontSize:11,color: hovered ? 'var(--text-soft)' : 'var(--text-faint)',background:'none',border:'none',cursor:'pointer',fontFamily:'inherit',transition:'color 0.1s'}}>
       Full results →
     </button>
   );

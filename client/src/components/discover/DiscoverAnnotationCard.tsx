@@ -53,24 +53,24 @@ const DiscoverAnnotationCard: React.FC<{
     <div
       onClick={() => navigate(`/annotation/${annotation.id}`)}
       style={{
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(180deg, var(--surface-2), var(--surface-inset))',
+        border: '1px solid var(--border)',
         borderRadius: 14,
         padding: '16px 16px 14px',
         cursor: 'pointer',
         transition: 'border-color 0.15s, transform 0.15s, background 0.15s',
         minWidth: 0,
-        boxShadow: '0 14px 36px rgba(0,0,0,0.18)',
+        boxShadow: 'var(--shadow-lg)',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'rgba(110,183,129,0.18)';
+        e.currentTarget.style.borderColor = 'var(--accent-border)';
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03))';
+        e.currentTarget.style.background = 'linear-gradient(180deg, var(--surface-3), var(--surface))';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+        e.currentTarget.style.borderColor = 'var(--border)';
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))';
+        e.currentTarget.style.background = 'linear-gradient(180deg, var(--surface-2), var(--surface-inset))';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
@@ -87,12 +87,12 @@ const DiscoverAnnotationCard: React.FC<{
             onClick={(event) => event.stopPropagation()}
             style={{ textDecoration: 'none' }}
           >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#ededed', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               @{annotation.user?.username}
             </div>
           </a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-            <span style={{ fontSize: 11, color: '#555' }}>{timeAgo(annotation.createdAt)}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{timeAgo(annotation.createdAt)}</span>
           </div>
         </div>
         <a
@@ -100,7 +100,7 @@ const DiscoverAnnotationCard: React.FC<{
           target="_blank"
           rel="noreferrer"
           onClick={(event) => event.stopPropagation()}
-          style={{ color: '#666', display: 'inline-flex', flexShrink: 0 }}
+          style={{ color: 'var(--text-dim)', display: 'inline-flex', flexShrink: 0 }}
         >
           <ExternalLink style={{ width: 14, height: 14 }} />
         </a>
@@ -112,8 +112,8 @@ const DiscoverAnnotationCard: React.FC<{
             marginBottom: annotation.text ? 12 : 16,
             padding: '14px 16px',
             borderRadius: 10,
-            background: 'rgba(255,255,255,0.025)',
-            border: '1px solid rgba(255,255,255,0.045)',
+            background: 'var(--surface-inset)',
+            border: '1px solid var(--border)',
             overflow: 'hidden',
           }}
         >
@@ -122,7 +122,7 @@ const DiscoverAnnotationCard: React.FC<{
               margin: 0,
               fontSize: 15,
               lineHeight: 1.7,
-              color: '#e3e3e3',
+              color: 'var(--text-muted)',
               fontStyle: 'italic',
               display: '-webkit-box',
               WebkitLineClamp: 5,
@@ -148,7 +148,7 @@ const DiscoverAnnotationCard: React.FC<{
         <div
           style={{
             fontSize: 13,
-            color: '#a2a2a2',
+            color: 'var(--text-soft)',
             lineHeight: 1.62,
             marginBottom: 16,
             display: '-webkit-box',
@@ -172,13 +172,13 @@ const DiscoverAnnotationCard: React.FC<{
           marginBottom: 14,
           padding: '9px 10px',
           borderRadius: 10,
-          background: 'rgba(255,255,255,0.028)',
-          border: '1px solid rgba(255,255,255,0.045)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
         }}
       >
         {uploadedDoc ? (
-          <div style={{ width: 18, height: 18, borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <FileText style={{ width: 10, height: 10, color: '#6EB781' }} />
+          <div style={{ width: 18, height: 18, borderRadius: 4, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FileText style={{ width: 10, height: 10, color: 'var(--accent)' }} />
           </div>
         ) : annotation.linkFavicon ? (
           <img
@@ -190,14 +190,14 @@ const DiscoverAnnotationCard: React.FC<{
             }}
           />
         ) : (
-          <Globe style={{ width: 14, height: 14, color: '#666', flexShrink: 0 }} />
+          <Globe style={{ width: 14, height: 14, color: 'var(--text-dim)', flexShrink: 0 }} />
         )}
         <div style={{ minWidth: 0, flex: 1 }}>
           <div
             style={{
               fontSize: 12,
               fontWeight: 600,
-              color: '#d9d9d9',
+              color: 'var(--text-muted)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -208,7 +208,7 @@ const DiscoverAnnotationCard: React.FC<{
           <div
             style={{
               fontSize: 11,
-              color: '#6EB781',
+              color: 'var(--accent)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -221,7 +221,7 @@ const DiscoverAnnotationCard: React.FC<{
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#666' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text-dim)' }}>
           <MessageCircle style={{ width: 13, height: 13 }} />
           <span style={{ fontSize: 11 }}>{annotation.commentCount || 0}</span>
         </div>

@@ -152,17 +152,18 @@ const Notifications: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#121212', color: '#fff', fontFamily: '"Inter", sans-serif' }}>
+    <div className="theme-page" style={{ fontFamily: '"Inter", sans-serif' }}>
       <Navbar />
       <main style={{ maxWidth: 700, margin: '0 auto', padding: '32px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 4px' }}>Notifications</h1>
-            <p style={{ fontSize: 13, color: '#555', margin: 0 }}>Mentions, replies, reactions, and new followers.</p>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: 0 }}>Mentions, replies, reactions, and new followers.</p>
           </div>
           <button
             onClick={markAllRead}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'rgba(110,183,129,0.1)', border: '1px solid rgba(110,183,129,0.22)', color: '#6EB781', borderRadius: 8, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            className="theme-pill"
+            style={{ display: 'flex', alignItems: 'center', gap: 7, borderRadius: 8, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             <CheckCheck style={{ width: 14, height: 14 }} />
             Mark all read
@@ -170,15 +171,15 @@ const Notifications: React.FC = () => {
         </div>
 
         {loading ? (
-          <div style={{ padding: '56px 0', textAlign: 'center', color: '#555', fontSize: 13 }}>Loading notifications...</div>
+          <div style={{ padding: '56px 0', textAlign: 'center', color: 'var(--text-dim)', fontSize: 13 }}>Loading notifications...</div>
         ) : notifications.length === 0 ? (
-          <div style={{ padding: '64px 20px', textAlign: 'center', color: '#555' }}>
+          <div style={{ padding: '64px 20px', textAlign: 'center', color: 'var(--text-dim)' }}>
             <Bell style={{ width: 34, height: 34, margin: '0 auto 14px', opacity: 0.35 }} />
-            <div style={{ fontSize: 14, color: '#777', marginBottom: 4 }}>No notifications yet</div>
+            <div style={{ fontSize: 14, color: 'var(--text-soft)', marginBottom: 4 }}>No notifications yet</div>
             <div style={{ fontSize: 12 }}>When people mention, follow, reply, or react, it will show here.</div>
           </div>
         ) : (
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ borderTop: '1px solid var(--border)' }}>
             {notifications.map((notification) => {
               const Icon = iconFor(notification.type);
               const unread = !notification.readAt;
@@ -195,7 +196,7 @@ const Notifications: React.FC = () => {
                     padding: '16px 0',
                     background: 'transparent',
                     border: 'none',
-                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     textAlign: 'left',
@@ -204,17 +205,17 @@ const Notifications: React.FC = () => {
                   <Avatar user={notification.actor} size={38} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                      <Icon style={{ width: 15, height: 15, color: '#6EB781' }} />
-                      <span style={{ color: unread ? '#fff' : '#ccc', fontSize: 14, fontWeight: unread ? 700 : 500 }}>{textFor(notification)}</span>
-                      <span style={{ color: '#555', fontSize: 11, marginLeft: 'auto' }}>{timeAgo(notification.createdAt)}</span>
+                      <Icon style={{ width: 15, height: 15, color: 'var(--accent)' }} />
+                      <span style={{ color: unread ? 'var(--text)' : 'var(--text-muted)', fontSize: 14, fontWeight: unread ? 700 : 500 }}>{textFor(notification)}</span>
+                      <span style={{ color: 'var(--text-dim)', fontSize: 11, marginLeft: 'auto' }}>{timeAgo(notification.createdAt)}</span>
                     </div>
                     {preview && (
-                      <p style={{ color: '#777', fontSize: 13, lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      <p style={{ color: 'var(--text-soft)', fontSize: 13, lineHeight: 1.5, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {preview}
                       </p>
                     )}
                   </div>
-                  {unread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#6EB781', marginTop: 7, flexShrink: 0 }} />}
+                  {unread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', marginTop: 7, flexShrink: 0 }} />}
                 </button>
               );
             })}
@@ -225,7 +226,8 @@ const Notifications: React.FC = () => {
           <button
             onClick={() => fetchNotifications(offset, true)}
             disabled={fetchingMore}
-            style={{ marginTop: 20, width: '100%', padding: 10, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#aaa', fontSize: 13, fontWeight: 600, cursor: fetchingMore ? 'default' : 'pointer', fontFamily: 'inherit', opacity: fetchingMore ? 0.6 : 1 }}
+            className="theme-button-secondary"
+            style={{ marginTop: 20, width: '100%', padding: 10, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: fetchingMore ? 'default' : 'pointer', fontFamily: 'inherit', opacity: fetchingMore ? 0.6 : 1 }}
           >
             {fetchingMore ? 'Loading...' : 'Load more'}
           </button>

@@ -36,8 +36,8 @@ const SectionHeader: React.FC<{
       <div
         style={{
           width: 36, height: 36, borderRadius: 10,
-          background: `linear-gradient(135deg, ${accent}33, ${accent}11)`,
-          border: `1px solid ${accent}55`,
+          background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 20%, transparent), color-mix(in srgb, ${accent} 7%, transparent))`,
+          border: `1px solid color-mix(in srgb, ${accent} 33%, transparent)`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: accent, flexShrink: 0,
         }}
@@ -46,13 +46,13 @@ const SectionHeader: React.FC<{
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#444', letterSpacing: 0.5 }}>
+          <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-faint)', letterSpacing: 0.5 }}>
             {String(index).padStart(2, '0')}
           </span>
-          <h2 style={{ ...brandFont, fontSize: 18, fontWeight: 600, color: '#fff', margin: 0 }}>{title}</h2>
+          <h2 style={{ ...brandFont, fontSize: 18, fontWeight: 600, color: 'var(--text)', margin: 0 }}>{title}</h2>
         </div>
         {subtitle && (
-          <p style={{ fontSize: 12, color: '#666', margin: '2px 0 0' }}>{subtitle}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-dim)', margin: '2px 0 0' }}>{subtitle}</p>
         )}
       </div>
     </div>
@@ -109,7 +109,7 @@ const Discover: React.FC = () => {
   );
 
   return (
-    <div style={{ ...bodyFont, minHeight: '100vh', background: '#0e0e0e', color: '#fff', overflowX: 'hidden' }}>
+    <div className="theme-page" style={{ ...bodyFont, overflowX: 'hidden' }}>
       <Navbar />
 
       {/* Decorative background gradient */}
@@ -117,7 +117,7 @@ const Discover: React.FC = () => {
         aria-hidden
         style={{
           position: 'absolute', top: 48, left: 0, right: 0, height: 480,
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(110,183,129,0.08), transparent 60%)',
+          background: 'radial-gradient(ellipse at 50% 0%, var(--accent-soft), transparent 60%)',
           pointerEvents: 'none', zIndex: 0,
         }}
       />
@@ -130,14 +130,14 @@ const Discover: React.FC = () => {
           transition={{ duration: 0.4 }}
           style={{ marginBottom: 40 }}
         >
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: 'rgba(110,183,129,0.1)', border: '1px solid rgba(110,183,129,0.25)', marginBottom: 14 }}>
-            <Sparkles style={{ width: 12, height: 12, color: '#6EB781' }} />
-            <span style={{ fontSize: 11, color: '#6EB781', fontWeight: 600, letterSpacing: 0.3 }}>DISCOVER</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 999, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', marginBottom: 14 }}>
+            <Sparkles style={{ width: 12, height: 12, color: 'var(--accent)' }} />
+            <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, letterSpacing: 0.3 }}>DISCOVER</span>
           </div>
           <h1 style={{ ...brandFont, fontSize: 36, fontWeight: 700, margin: 0, lineHeight: 1.1, letterSpacing: -0.5 }}>
-            What the community is <span style={{ color: '#6EB781' }}>reading</span>
+            What the community is <span style={{ color: 'var(--accent)' }}>reading</span>
           </h1>
-          <p style={{ fontSize: 14, color: '#777', margin: '10px 0 0', maxWidth: 540 }}>
+          <p style={{ fontSize: 14, color: 'var(--text-dim)', margin: '10px 0 0', maxWidth: 540 }}>
             Trending highlights, buzzing pages, and scholars worth following — refreshed every few hours.
           </p>
         </motion.div>
@@ -145,17 +145,18 @@ const Discover: React.FC = () => {
         {loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {[1, 2, 3, 4].map(i => (
-              <div key={i} style={{ height: 220, background: 'rgba(255,255,255,0.02)', borderRadius: 12 }} className="discover-pulse" />
+              <div key={i} style={{ height: 220, background: 'var(--surface-inset)', borderRadius: 12 }} className="discover-pulse" />
             ))}
           </div>
         )}
 
         {!loading && err && (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-dim)' }}>
             <p style={{ fontSize: 14, marginBottom: 16 }}>Failed to load Discover</p>
             <button
               onClick={() => window.location.reload()}
-              style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, background: 'rgba(110,183,129,0.12)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.25)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}
+              className="theme-pill"
+              style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Try again
             </button>
@@ -175,15 +176,15 @@ const Discover: React.FC = () => {
                   position: 'relative',
                   marginBottom: 56,
                   padding: '36px 40px',
-                  background: 'linear-gradient(135deg, rgba(110,183,129,0.06), rgba(71,163,232,0.04))',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: 'linear-gradient(135deg, var(--accent-soft), var(--color-blue-soft))',
+                  border: '1px solid var(--border)',
                   borderRadius: 16,
                   cursor: 'pointer',
                   overflow: 'hidden',
                 }}
-                whileHover={{ borderColor: 'rgba(110,183,129,0.25)' }}
+                whileHover={{ borderColor: 'var(--accent-border)' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, fontSize: 11, color: '#6EB781', fontWeight: 600, letterSpacing: 0.5 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, fontSize: 11, color: 'var(--accent)', fontWeight: 600, letterSpacing: 0.5 }}>
                   <TrendingUp style={{ width: 12, height: 12 }} />
                   <span>FEATURED HIGHLIGHT</span>
                 </div>
@@ -192,7 +193,7 @@ const Discover: React.FC = () => {
                   fontSize: 22,
                   fontWeight: 500,
                   lineHeight: 1.4,
-                  color: '#fff',
+                  color: 'var(--text)',
                   margin: '0 0 20px',
                   display: '-webkit-box',
                   WebkitLineClamp: 4,
@@ -200,20 +201,20 @@ const Discover: React.FC = () => {
                   overflow: 'hidden',
                   position: 'relative',
                   paddingLeft: 20,
-                  borderLeft: '3px solid #6EB781',
+                  borderLeft: '3px solid var(--accent)',
                 }}>
                   "{featured.quoteText}"
                 </blockquote>
                 {featured.text && (
-                  <p style={{ fontSize: 14, color: '#999', margin: '0 0 20px', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <p style={{ fontSize: 14, color: 'var(--text-soft)', margin: '0 0 20px', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     <MentionText text={featured.text} />
                   </p>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Avatar user={featured.user} size={28} />
-                  <span style={{ fontSize: 13, color: '#bbb', fontWeight: 500 }}>@{featured.user.username}</span>
-                  <span style={{ fontSize: 12, color: '#555' }}>·</span>
-                  <span style={{ fontSize: 12, color: '#777' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-soft)', fontWeight: 500 }}>@{featured.user.username}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>·</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                     on {(() => { try { return featured.linkDomain || new URL(featured.url).hostname.replace('www.', ''); } catch { return 'site'; } })()}
                   </span>
                 </div>
@@ -229,7 +230,7 @@ const Discover: React.FC = () => {
                     title="Pages getting buzz"
                     subtitle="Where the conversation is heating up"
                     icon={<Globe style={{ width: 16, height: 16 }} />}
-                    accent="#47A3E8"
+                    accent="var(--color-blue)"
                   />
                 </div>
                 <Marquee speed={0.4}>
@@ -246,7 +247,7 @@ const Discover: React.FC = () => {
                   title="Scholars to follow"
                   subtitle="Active voices worth a tap"
                   icon={<UserPlus style={{ width: 16, height: 16 }} />}
-                  accent="#E8C547"
+                  accent="var(--color-yellow)"
                 />
                 {shouldMarqueePeople ? (
                   <Marquee speed={0.35} direction="right" staticAlign="left" breakout={false}>
@@ -280,7 +281,7 @@ const Discover: React.FC = () => {
                   title="Trending annotations"
                   subtitle="Most reacted-to highlights from the community"
                   icon={<TrendingUp style={{ width: 16, height: 16 }} />}
-                  accent="#6EB781"
+                  accent="var(--accent)"
                 />
                 {renderAnnotationGrid(restTrending)}
               </section>
@@ -294,7 +295,7 @@ const Discover: React.FC = () => {
                   title="On pages you've read"
                   subtitle="What others are saying about your annotated pages"
                   icon={<BookmarkCheck style={{ width: 16, height: 16 }} />}
-                  accent="#C792EA"
+                  accent="var(--color-purple-strong)"
                 />
                 {renderAnnotationGrid(data.onPagesYouveRead)}
               </section>
@@ -304,7 +305,7 @@ const Discover: React.FC = () => {
               data.trendingPages.length === 0 &&
               data.peopleToFollow.length === 0 &&
               data.onPagesYouveRead.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-dim)' }}>
                   <p style={{ fontSize: 14 }}>Nothing to discover just yet — check back soon.</p>
                 </div>
               )}

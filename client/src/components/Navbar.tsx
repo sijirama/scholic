@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Search } from 'lucide-react';
+import { Moon, Search, SunMedium } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SearchModal from './SearchModal';
 import NotificationsMenu from './NotificationsMenu';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Navbar: React.FC = () => {
   const { user, logout, login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -37,7 +39,13 @@ const Navbar: React.FC = () => {
     <>
       <nav
         className="w-full relative flex items-center justify-center"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', height: '48px', padding: '0 40px' }}
+        style={{
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--nav-bg)',
+          backdropFilter: 'blur(18px)',
+          height: '48px',
+          padding: '0 40px',
+        }}
       >
         {/* Center: brand + search */}
         <div className="flex items-center gap-3">
@@ -47,7 +55,7 @@ const Navbar: React.FC = () => {
             style={{
               background: 'transparent',
               border: 'none',
-              color: location.pathname === '/discover' ? '#fff' : '#777',
+              color: location.pathname === '/discover' ? 'var(--text)' : 'var(--text-dim)',
               fontSize: '13px',
               fontWeight: location.pathname === '/discover' ? 600 : 500,
               fontFamily: 'inherit',
@@ -58,41 +66,73 @@ const Navbar: React.FC = () => {
           </button>
           <span
             className="font-semibold cursor-pointer"
-            style={{ ...brandFont, fontSize: '18px', color: '#fff', letterSpacing: '-0.3px' }}
+            style={{ ...brandFont, fontSize: '18px', color: 'var(--text)', letterSpacing: '-0.3px' }}
             onClick={() => navigate('/feed')}
           >
-            <span style={{ color: '#6EB781' }}>#</span>scholic
+            <span style={{ color: 'var(--accent)' }}>#</span>scholic
           </span>
           <button
             onClick={() => setSearchOpen(true)}
             className="flex items-center gap-2 cursor-pointer transition-colors"
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.07)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
               borderRadius: '8px',
               padding: '4px 10px 4px 8px',
-              color: '#444',
+              color: 'var(--text-dim)',
               fontSize: '12px',
               fontFamily: 'inherit',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLButtonElement).style.color = '#666'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLButtonElement).style.color = '#444'; }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-hover)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-soft)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-dim)';
+            }}
           >
             <Search style={{ width: 12, height: 12 }} />
             <span>Search</span>
-            <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#333', background: 'rgba(255,255,255,0.06)', borderRadius: 4, padding: '1px 5px', marginLeft: 2 }}>⌘K</span>
+            <span
+              style={{
+                fontSize: '10px',
+                fontFamily: 'monospace',
+                color: 'var(--text-faint)',
+                background: 'var(--surface-3)',
+                borderRadius: 4,
+                padding: '1px 5px',
+                marginLeft: 2,
+              }}
+            >
+              ⌘K
+            </span>
           </button>
         </div>
 
         {/* Right side: actions */}
         <div className="absolute right-10 flex items-center gap-4">
+          <button
+            onClick={toggleTheme}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            className="theme-icon-button flex items-center justify-center rounded-full cursor-pointer"
+            style={{ width: '30px', height: '30px' }}
+          >
+            {theme === 'dark' ? <SunMedium style={{ width: 15, height: 15 }} /> : <Moon style={{ width: 15, height: 15 }} />}
+          </button>
           {user && (
             <>
               <NotificationsMenu />
               <button
                 onClick={logout}
-                className="text-xs transition-colors cursor-pointer hover:text-white"
-                style={{ color: '#777' }}
+                className="text-xs transition-colors cursor-pointer"
+                style={{ color: 'var(--text-dim)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-dim)';
+                }}
               >
                 Sign out
               </button>
@@ -102,11 +142,11 @@ const Navbar: React.FC = () => {
                 style={{
                   width: '28px',
                   height: '28px',
-                  background: user.profilePicture ? 'transparent' : 'linear-gradient(135deg, rgba(110,183,129,0.5), rgba(71,163,232,0.5))',
+                  background: user.profilePicture ? 'transparent' : 'var(--avatar-gradient)',
                   fontSize: '11px',
                   fontWeight: 700,
-                  color: '#fff',
-                  border: location.pathname === `/u/${user.username}` ? '2px solid #6EB781' : '2px solid transparent',
+                  color: 'var(--text-inverse)',
+                  border: location.pathname === `/u/${user.username}` ? '2px solid var(--accent)' : '2px solid transparent',
                 }}
               >
                 {user.profilePicture ? (
@@ -124,8 +164,29 @@ const Navbar: React.FC = () => {
           {!user && (
             <button
               onClick={login}
-              className="text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
-              style={{ color: '#6EB781', border: '1px solid rgba(110,183,129,0.3)' }}
+              className="transition-colors cursor-pointer"
+              style={{
+                padding: '8px 16px',
+                minHeight: '34px',
+                borderRadius: '999px',
+                border: '1px solid var(--border-strong)',
+                background: 'var(--bg-elevated)',
+                color: 'var(--text)',
+                fontSize: '12px',
+                fontWeight: 650,
+                lineHeight: 1,
+                boxShadow: 'var(--shadow-sm)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--surface-hover)';
+                e.currentTarget.style.borderColor = 'var(--accent-border)';
+                e.currentTarget.style.color = 'var(--accent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--bg-elevated)';
+                e.currentTarget.style.borderColor = 'var(--border-strong)';
+                e.currentTarget.style.color = 'var(--text)';
+              }}
             >
               Sign in
             </button>

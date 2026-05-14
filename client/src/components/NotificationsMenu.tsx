@@ -183,9 +183,9 @@ const NotificationsMenu: React.FC = () => {
           width: 30,
           height: 30,
           borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.07)',
-          background: open ? 'rgba(110,183,129,0.12)' : 'rgba(255,255,255,0.03)',
-          color: open ? '#6EB781' : '#888',
+          border: '1px solid var(--border)',
+          background: open ? 'var(--accent-soft)' : 'var(--surface)',
+          color: open ? 'var(--accent)' : 'var(--text-soft)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -203,12 +203,12 @@ const NotificationsMenu: React.FC = () => {
               height: 16,
               padding: '0 4px',
               borderRadius: 999,
-              background: '#6EB781',
-              color: '#061008',
+              background: 'var(--accent)',
+              color: 'var(--text-inverse)',
               fontSize: 10,
               lineHeight: '16px',
               fontWeight: 800,
-              border: '2px solid #121212',
+              border: '2px solid var(--bg)',
             }}
           >
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -224,20 +224,20 @@ const NotificationsMenu: React.FC = () => {
             top: 38,
             width: 360,
             maxWidth: 'calc(100vw - 32px)',
-            background: '#171717',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
             borderRadius: 10,
-            boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
+            boxShadow: 'var(--shadow-lg)',
             overflow: 'hidden',
             zIndex: 100,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Notifications</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Notifications</span>
             <button
               onClick={markAllRead}
               title="Mark all read"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#6EB781', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               <CheckCheck style={{ width: 13, height: 13 }} />
               Mark all
@@ -246,9 +246,9 @@ const NotificationsMenu: React.FC = () => {
 
           <div style={{ maxHeight: 390, overflow: 'auto' }}>
             {loading ? (
-              <div style={{ padding: 22, color: '#555', fontSize: 12, textAlign: 'center' }}>Loading...</div>
+              <div style={{ padding: 22, color: 'var(--text-dim)', fontSize: 12, textAlign: 'center' }}>Loading...</div>
             ) : notifications.length === 0 ? (
-              <div style={{ padding: '34px 20px', color: '#555', fontSize: 13, textAlign: 'center' }}>No notifications yet</div>
+              <div style={{ padding: '34px 20px', color: 'var(--text-dim)', fontSize: 13, textAlign: 'center' }}>No notifications yet</div>
             ) : notifications.map((notification) => {
               const Icon = iconFor(notification.type);
               const unread = !notification.readAt;
@@ -262,9 +262,9 @@ const NotificationsMenu: React.FC = () => {
                     display: 'flex',
                     gap: 10,
                     padding: '12px 14px',
-                    background: unread ? 'rgba(110,183,129,0.055)' : 'transparent',
+                    background: unread ? 'var(--accent-soft)' : 'transparent',
                     border: 'none',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
                     textAlign: 'left',
                     fontFamily: 'inherit',
@@ -274,17 +274,17 @@ const NotificationsMenu: React.FC = () => {
                   <Avatar user={notification.actor} size={32} />
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 3 }}>
-                      <Icon style={{ width: 13, height: 13, color: '#6EB781', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: '#ddd', fontWeight: unread ? 700 : 500 }}>{textFor(notification)}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 10, color: '#555', flexShrink: 0 }}>{timeAgo(notification.createdAt)}</span>
+                      <Icon style={{ width: 13, height: 13, color: 'var(--accent)', flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: unread ? 700 : 500 }}>{textFor(notification)}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-dim)', flexShrink: 0 }}>{timeAgo(notification.createdAt)}</span>
                     </div>
                     {preview && (
-                      <div style={{ fontSize: 11, color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-soft)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {preview}
                       </div>
                     )}
                   </div>
-                  {unread && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6EB781', marginTop: 6, flexShrink: 0 }} />}
+                  {unread && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', marginTop: 6, flexShrink: 0 }} />}
                 </button>
               );
             })}
@@ -295,7 +295,7 @@ const NotificationsMenu: React.FC = () => {
               setOpen(false);
               navigate('/notifications');
             }}
-            style={{ width: '100%', padding: 11, background: 'rgba(255,255,255,0.03)', border: 'none', color: '#6EB781', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ width: '100%', padding: 11, background: 'var(--surface)', border: 'none', color: 'var(--accent)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             View all notifications
           </button>

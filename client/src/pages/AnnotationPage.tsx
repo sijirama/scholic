@@ -268,18 +268,18 @@ const AnnotationPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ fontFamily: '"Inter", sans-serif', minHeight: '100vh', background: '#121212', color: '#fff' }}>
+      <div style={{ fontFamily: '"Inter", sans-serif', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
         <Navbar />
         <div style={{ maxWidth: '640px', padding: '32px 20px', margin: '0 auto' }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 24 }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', flexShrink: 0 }} className="pulse" />
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0 }} className="pulse" />
             <div style={{ flex: 1 }}>
-              <div style={{ width: 120, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.04)', marginBottom: 8 }} className="pulse" />
-              <div style={{ width: 60, height: 11, borderRadius: 4, background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+              <div style={{ width: 120, height: 14, borderRadius: 4, background: 'var(--surface-2)', marginBottom: 8 }} className="pulse" />
+              <div style={{ width: 60, height: 11, borderRadius: 4, background: 'var(--surface-inset)' }} className="pulse" />
             </div>
           </div>
-          <div style={{ height: 200, borderRadius: 6, background: 'rgba(255,255,255,0.03)', marginBottom: 16 }} className="pulse" />
-          <div style={{ height: 120, borderRadius: 8, background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+          <div style={{ height: 200, borderRadius: 6, background: 'var(--surface)', marginBottom: 16 }} className="pulse" />
+          <div style={{ height: 120, borderRadius: 8, background: 'var(--surface-inset)' }} className="pulse" />
         </div>
         <style>{`
           @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 0.7; } 100% { opacity: 0.4; } }
@@ -291,14 +291,14 @@ const AnnotationPage: React.FC = () => {
 
   if (error || !annotation) {
     return (
-      <div style={{ fontFamily: '"Inter", sans-serif', minHeight: '100vh', background: '#121212', color: '#fff' }}>
+      <div style={{ fontFamily: '"Inter", sans-serif', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
         <Navbar />
         <div style={{ maxWidth: '640px', padding: '60px 20px', margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>404</div>
-          <p style={{ fontSize: 14, color: '#555', marginBottom: 24 }}>{error || 'Annotation not found'}</p>
+          <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 24 }}>{error || 'Annotation not found'}</p>
           <button
             onClick={() => navigate('/feed')}
-            style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '8px 20px', color: '#ccc', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ background: 'var(--surface-2)', border: 'none', borderRadius: 8, padding: '8px 20px', color: 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             Back to Feed
           </button>
@@ -315,15 +315,16 @@ const AnnotationPage: React.FC = () => {
   const hasPaper = !!(annotation.quoteText || annotation.text);
 
   return (
-    <div style={{ fontFamily: '"Inter", sans-serif', minHeight: '100vh', background: '#121212', color: '#fff' }}>
+    <div style={{ fontFamily: '"Inter", sans-serif', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
       <Navbar />
 
       <div style={{ maxWidth: '640px', padding: '32px 20px', margin: '0 auto' }}>
         {/* Back */}
         <button
           onClick={() => navigate(-1)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: 28, fontFamily: 'inherit', transition: 'color 0.15s' }}
-          className="hover:text-white"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: 28, fontFamily: 'inherit', transition: 'color 0.15s' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-dim)'; }}
         >
           <ArrowLeft style={{ width: 15, height: 15 }} />
           Back
@@ -332,19 +333,19 @@ const AnnotationPage: React.FC = () => {
         {/* Source header — favicon + title + site page link + visit button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: uploadedDoc ? 14 : 28 }}>
           {uploadedDoc ? (
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <FileText style={{ width: 14, height: 14, color: '#6EB781' }} />
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FileText style={{ width: 14, height: 14, color: 'var(--accent)' }} />
             </div>
           ) : annotation.linkFavicon && (
             <img src={annotation.linkFavicon} style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0 }} alt="" />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 600, color: '#e0e0e0', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {uploadedDoc?.title || annotation.linkTitle || domainName}
             </p>
             <a
               href={`/page?url=${encodeURIComponent(annotation.url)}`}
-              style={{ fontSize: 11, color: '#6EB781', textDecoration: 'none', fontWeight: 500 }}
+              style={{ fontSize: 11, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}
               className="hover:underline"
             >
               {uploadedDoc ? `View all annotations on this document →` : `View all annotations on ${domainName} →`}
@@ -354,8 +355,9 @@ const AnnotationPage: React.FC = () => {
             href={annotation.url}
             target="_blank"
             rel="noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555', textDecoration: 'none', flexShrink: 0, padding: '5px 10px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.06)', transition: 'all 0.15s' }}
-            className="hover:text-white hover:border-white/20"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none', flexShrink: 0, padding: '5px 10px', borderRadius: 7, border: '1px solid var(--border)', transition: 'all 0.15s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-dim)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           >
             <ExternalLink style={{ width: 12, height: 12 }} />
             {uploadedDoc ? 'Open PDF' : 'Visit'}
@@ -363,16 +365,16 @@ const AnnotationPage: React.FC = () => {
         </div>
 
         {uploadedDoc && (
-          <div style={{ marginBottom: 28, padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(110,183,129,0.20)', background: 'rgba(110,183,129,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ marginBottom: 28, padding: '12px 14px', borderRadius: 10, border: '1px solid var(--accent-border)', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11.5, color: '#6EB781', fontWeight: 600, marginBottom: 2 }}>Uploaded document</div>
-              <div style={{ fontSize: 11, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 600, marginBottom: 2 }}>Uploaded document</div>
+              <div style={{ fontSize: 11, color: 'var(--text-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {uploadedDoc.authors.length > 0 ? uploadedDoc.authors.join(', ') : 'Open the document page for inline preview, metadata, and tags.'}
               </div>
             </div>
             <button
               onClick={() => navigate(`/document/${uploadedDoc.id}`)}
-              style={{ flexShrink: 0, padding: '5px 11px', fontSize: 11.5, fontWeight: 600, color: '#08110b', background: '#6EB781', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ flexShrink: 0, padding: '5px 11px', fontSize: 11.5, fontWeight: 600, color: 'var(--on-accent)', background: 'var(--accent)', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Open document page →
             </button>
@@ -383,7 +385,7 @@ const AnnotationPage: React.FC = () => {
         {annotation.type === 'image' && annotation.imageUrl && (
           <div
             onClick={() => setLightboxSrc(annotation.imageUrl!)}
-            style={{ borderRadius: 8, overflow: 'hidden', marginBottom: 20, border: '1px solid rgba(255,255,255,0.08)', cursor: 'zoom-in' }}
+            style={{ borderRadius: 8, overflow: 'hidden', marginBottom: 20, border: '1px solid var(--border)', cursor: 'zoom-in' }}
           >
             <img src={annotation.imageUrl} alt="Annotation Screenshot" style={{ width: '100%', display: 'block' }} />
           </div>
@@ -395,19 +397,19 @@ const AnnotationPage: React.FC = () => {
             display: 'flex',
             borderRadius: '3px 8px 8px 3px',
             overflow: 'hidden',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.25), 0 12px 48px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--paper-shadow)',
             marginBottom: 20,
           }}>
             {/* Margin line — uses current color (edit or saved) */}
             <div style={{ width: 4, background: hexToRgba(editing ? editColor : (annotation.highlightColor || '#A8D5B5'), 0.7), flexShrink: 0, transition: 'background 0.2s' }} />
 
             {/* Paper body */}
-            <div style={{ flex: 1, background: '#f9f6f0', padding: '28px 32px 28px 22px' }}>
+            <div style={{ flex: 1, background: 'var(--paper-bg)', padding: '28px 32px 28px 22px' }}>
               {annotation.quoteText && (
                 <p style={{
                   fontSize: 17,
                   lineHeight: 1.9,
-                  color: '#1a1a1a',
+                  color: 'var(--paper-ink)',
                   fontFamily: '"Georgia", "Times New Roman", serif',
                   margin: 0,
                   display: '-webkit-box',
@@ -432,7 +434,7 @@ const AnnotationPage: React.FC = () => {
               {editing ? (
                 <>
                   {annotation.quoteText && (
-                    <hr style={{ border: 'none', borderTop: '1px dashed rgba(0,0,0,0.14)', margin: '18px 0 16px' }} />
+                    <hr style={{ border: 'none', borderTop: '1px dashed var(--paper-rule)', margin: '18px 0 16px' }} />
                   )}
                   {/* Color picker */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
@@ -446,10 +448,10 @@ const AnnotationPage: React.FC = () => {
                           height: 20,
                           borderRadius: '50%',
                           background: c.hex,
-                          border: editColor === c.hex ? '2px solid #333' : '2px solid transparent',
+                          border: editColor === c.hex ? '2px solid var(--paper-swatch-selected)' : '2px solid transparent',
                           cursor: 'pointer',
                           padding: 0,
-                          boxShadow: editColor === c.hex ? '0 0 0 1px #fff' : 'none',
+                          boxShadow: editColor === c.hex ? '0 0 0 1px var(--paper-swatch-ring)' : 'none',
                           transition: 'transform 0.1s',
                         }}
                       />
@@ -465,10 +467,10 @@ const AnnotationPage: React.FC = () => {
                       width: '100%',
                       fontFamily: '"Caveat", cursive',
                       fontSize: 20,
-                      color: '#3a5c45',
+                      color: 'var(--paper-handwriting)',
                       lineHeight: 1.5,
-                      background: 'rgba(0,0,0,0.04)',
-                      border: '1px dashed rgba(0,0,0,0.15)',
+                      background: 'var(--paper-textarea-bg)',
+                      border: '1px dashed var(--paper-textarea-border)',
                       borderRadius: 6,
                       padding: '8px 10px',
                       resize: 'vertical',
@@ -479,14 +481,14 @@ const AnnotationPage: React.FC = () => {
                   <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
                     <button
                       onClick={cancelEditing}
-                      style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: 7, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#555', fontFamily: 'inherit' }}
+                      style={{ background: 'var(--paper-button-bg)', border: 'none', borderRadius: 7, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--paper-button-text)', fontFamily: 'inherit' }}
                     >
                       Cancel
                     </button>
                     <button
                       onClick={saveEdit}
                       disabled={saving}
-                      style={{ background: '#3a5c45', border: 'none', borderRadius: 7, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer', color: '#fff', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}
+                      style={{ background: 'var(--paper-handwriting)', border: 'none', borderRadius: 7, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer', color: 'var(--paper-bg)', fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}
                     >
                       {saving ? 'Saving...' : 'Save'}
                     </button>
@@ -496,12 +498,12 @@ const AnnotationPage: React.FC = () => {
                 annotation.text && (
                   <>
                     {annotation.quoteText && (
-                      <hr style={{ border: 'none', borderTop: '1px dashed rgba(0,0,0,0.14)', margin: '18px 0 16px' }} />
+                      <hr style={{ border: 'none', borderTop: '1px dashed var(--paper-rule)', margin: '18px 0 16px' }} />
                     )}
                     <p style={{
                       fontFamily: '"Caveat", cursive',
                       fontSize: 22,
-                      color: '#3a5c45',
+                      color: 'var(--paper-handwriting)',
                       lineHeight: 1.5,
                       margin: 0,
                       letterSpacing: 0.2,
@@ -528,16 +530,16 @@ const AnnotationPage: React.FC = () => {
           </a>
           <div style={{ flex: 1 }}>
             <a href={`/u/${annotation.user?.username}`} style={{ textDecoration: 'none' }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#e0e0e0' }} className="hover:underline">
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }} className="hover:underline">
                 @{annotation.user?.username || 'unknown'}
               </span>
             </a>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-              <span style={{ fontSize: 12, color: '#555' }}>{timeAgo(annotation.createdAt)}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{timeAgo(annotation.createdAt)}</span>
               {annotation.isPrivate && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <Lock style={{ width: 10, height: 10, color: '#666' }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private</span>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 4, background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                  <Lock style={{ width: 10, height: 10, color: 'var(--text-dim)' }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private</span>
                 </div>
               )}
             </div>
@@ -549,7 +551,7 @@ const AnnotationPage: React.FC = () => {
               <button
                 onClick={startEditing}
                 title="Edit annotation"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, color: '#555', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
                 className="hover:bg-white/5 hover:text-white"
               >
                 <Pencil style={{ width: 15, height: 15 }} />
@@ -557,7 +559,7 @@ const AnnotationPage: React.FC = () => {
               <button
                 onClick={() => setShowDeleteModal(true)}
                 title="Delete annotation"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, color: '#555', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 8, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', transition: 'all 0.15s' }}
                 className="hover:bg-red-500/10 hover:text-red-400"
               >
                 <Trash2 style={{ width: 15, height: 15 }} />
@@ -569,7 +571,7 @@ const AnnotationPage: React.FC = () => {
           <div ref={shareRef} style={{ position: 'relative' }}>
             <button
               onClick={() => setShareOpen(prev => !prev)}
-              style={{ background: shareOpen ? 'rgba(255,255,255,0.06)' : 'none', border: 'none', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5, color: '#666', fontSize: 12, fontWeight: 500, fontFamily: 'inherit', transition: 'all 0.15s' }}
+              style={{ background: shareOpen ? 'var(--surface-hover)' : 'none', border: 'none', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-dim)', fontSize: 12, fontWeight: 500, fontFamily: 'inherit', transition: 'all 0.15s' }}
               className="hover:bg-white/5"
             >
               <Share2 style={{ width: 14, height: 14 }} />
@@ -577,7 +579,7 @@ const AnnotationPage: React.FC = () => {
             </button>
 
             {shareOpen && (
-              <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: 4, zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', minWidth: 160 }}>
+              <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, zIndex: 50, boxShadow: 'var(--shadow-lg)', minWidth: 160 }}>
                 {SHARE_PLATFORMS.map((platform) => {
                   const Icon = platform.icon;
                   const isCopy = platform.name === 'Copy Link';
@@ -593,10 +595,10 @@ const AnnotationPage: React.FC = () => {
                         }
                         if (!isCopy) setShareOpen(false);
                       }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: 6, color: '#ccc', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', background: 'none', border: 'none', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
                       className="hover:bg-white/5"
                     >
-                      {isCopy && copied ? <Check style={{ width: 14, height: 14, color: '#6EB781' }} /> : <Icon style={{ width: 14, height: 14 }} />}
+                      {isCopy && copied ? <Check style={{ width: 14, height: 14, color: 'var(--accent)' }} /> : <Icon style={{ width: 14, height: 14 }} />}
                       {isCopy && copied ? 'Copied!' : platform.name}
                     </button>
                   );
@@ -607,11 +609,11 @@ const AnnotationPage: React.FC = () => {
         </div>
 
         {/* Comments toggle + reactions row */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 20 }}>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <button
               onClick={() => setShowComments(p => !p)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: showComments ? '#6EB781' : '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit', transition: 'color 0.15s' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: showComments ? 'var(--accent)' : 'var(--text-dim)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit', transition: 'color 0.15s' }}
             >
               <MessageCircle style={{ width: 16, height: 16 }} />
               {commentTotal} {commentTotal === 1 ? 'comment' : 'comments'}
@@ -637,7 +639,7 @@ const AnnotationPage: React.FC = () => {
               {currentUser && (
                 <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center' }}>
                   <Avatar user={currentUser as AnnotationUser} size={28} />
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '4px 4px 4px 14px', gap: 6 }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '4px 4px 4px 14px', gap: 6 }}>
                     <MentionTextarea
                       placeholder="Add a comment..."
                       value={commentText}
@@ -650,13 +652,13 @@ const AnnotationPage: React.FC = () => {
                       }}
                       rows={1}
                       wrapperStyle={{ flex: 1 }}
-                      textareaStyle={{ width: '100%', flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: '#fff', resize: 'none', fontFamily: 'inherit', lineHeight: 1.5, padding: '6px 0' }}
+                      textareaStyle={{ width: '100%', flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text)', resize: 'none', fontFamily: 'inherit', lineHeight: 1.5, padding: '6px 0' }}
                     />
                     <button
                       onClick={submitComment}
-                      style={{ background: commentText.trim() ? '#6EB781' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: commentText.trim() ? 'pointer' : 'default', transition: 'background 0.15s', padding: 0, flexShrink: 0 }}
+                      style={{ background: commentText.trim() ? 'var(--accent)' : 'var(--surface-2)', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: commentText.trim() ? 'pointer' : 'default', transition: 'background 0.15s', padding: 0, flexShrink: 0 }}
                     >
-                      <Send style={{ width: 14, height: 14, color: commentText.trim() ? '#fff' : '#555' }} />
+                      <Send style={{ width: 14, height: 14, color: commentText.trim() ? 'var(--on-accent)' : 'var(--text-dim)' }} />
                     </button>
                   </div>
                 </div>
@@ -664,9 +666,9 @@ const AnnotationPage: React.FC = () => {
 
               {/* Comment list */}
               {loadingComments && comments.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 0', color: '#555', fontSize: 13 }}>Loading comments...</div>
+                <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-dim)', fontSize: 13 }}>Loading comments...</div>
               ) : comments.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 0', color: '#444', fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-faint)', fontSize: 13 }}>
                   No comments yet. Be the first to share your thoughts.
                 </div>
               ) : (
@@ -677,11 +679,11 @@ const AnnotationPage: React.FC = () => {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                           <a href={`/u/${comment.user.username}`} style={{ textDecoration: 'none' }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: '#eee' }} className="hover:underline">@{comment.user.username}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }} className="hover:underline">@{comment.user.username}</span>
                           </a>
-                          <span style={{ fontSize: 11, color: '#444' }}>{timeAgo(comment.createdAt)}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{timeAgo(comment.createdAt)}</span>
                         </div>
-                        <p style={{ fontSize: 13, color: '#bbb', margin: 0, lineHeight: 1.6 }}>
+                        <p style={{ fontSize: 13, color: 'var(--text-soft)', margin: 0, lineHeight: 1.6 }}>
                           <MentionText text={comment.text} />
                         </p>
                       </div>
@@ -692,7 +694,7 @@ const AnnotationPage: React.FC = () => {
                     <button
                       onClick={() => fetchComments(commentOffset, false)}
                       disabled={loadingComments}
-                      style={{ background: 'none', border: 'none', color: '#6EB781', fontSize: 12, fontWeight: 500, cursor: 'pointer', padding: '8px 0', textAlign: 'left', fontFamily: 'inherit', opacity: loadingComments ? 0.5 : 1 }}
+                      style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontWeight: 500, cursor: 'pointer', padding: '8px 0', textAlign: 'left', fontFamily: 'inherit', opacity: loadingComments ? 0.5 : 1 }}
                     >
                       {loadingComments ? 'Loading...' : `View ${commentTotal - comments.length} more comments`}
                     </button>
@@ -715,28 +717,28 @@ const AnnotationPage: React.FC = () => {
       {showDeleteModal && (
         <div
           onClick={() => { if (!deleting) setShowDeleteModal(false); }}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          style={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '28px 28px 24px', maxWidth: 380, width: '100%', boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}
+            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', borderRadius: 14, padding: '28px 28px 24px', maxWidth: 380, width: '100%', boxShadow: 'var(--shadow-lg)' }}
           >
-            <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#fff' }}>Delete annotation?</h3>
-            <p style={{ margin: '0 0 24px', fontSize: 13, color: '#777', lineHeight: 1.6 }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>Delete annotation?</h3>
+            <p style={{ margin: '0 0 24px', fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.6 }}>
               This will permanently remove the annotation and all its comments. This cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowDeleteModal(false)}
                 disabled={deleting}
-                style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#ccc', fontFamily: 'inherit' }}
+                style={{ background: 'var(--surface-2)', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--text-muted)', fontFamily: 'inherit' }}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={deleting}
-                style={{ background: deleting ? 'rgba(239,68,68,0.5)' : '#ef4444', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: deleting ? 'default' : 'pointer', color: '#fff', fontFamily: 'inherit' }}
+                style={{ background: 'var(--danger)', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: deleting ? 'default' : 'pointer', color: 'var(--text-inverse)', fontFamily: 'inherit', opacity: deleting ? 0.6 : 1 }}
               >
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
