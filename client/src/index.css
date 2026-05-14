@@ -3,11 +3,188 @@
 @theme {
   --color-primary: #6EB781;
   --color-primary-dark: #5a9a6b;
-  --color-bg: #121212;
-  --color-bg-nav: #121212;
+  --color-bg: var(--bg);
+  --color-bg-nav: var(--nav-bg);
   --color-text-muted: #888888;
   --color-text-dim: #666666;
-  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-subtle: var(--border);
+}
+
+:root,
+html[data-theme="dark"] {
+  --bg: #121212;
+  --bg-elevated: #171717;
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-2: rgba(255, 255, 255, 0.05);
+  --surface-3: rgba(255, 255, 255, 0.08);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-active: rgba(255, 255, 255, 0.1);
+  --surface-inset: rgba(255, 255, 255, 0.02);
+  --surface-accent: rgba(110, 183, 129, 0.12);
+  --nav-bg: rgba(18, 18, 18, 0.92);
+  --text: #f3f4f6;
+  --text-muted: #d4d4d4;
+  --text-soft: #9ca3af;
+  --text-dim: #6b7280;
+  --text-faint: #4b5563;
+  --text-inverse: #061008;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --accent: #6eb781;
+  --accent-strong: #5a9a6b;
+  --accent-soft: rgba(110, 183, 129, 0.12);
+  --accent-border: rgba(110, 183, 129, 0.28);
+  --danger: #ff6b63;
+  --danger-soft: rgba(255, 107, 99, 0.1);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.45);
+  --overlay: rgba(0, 0, 0, 0.65);
+
+  /* Decorative palette (used for tag chips, badges, decorative SVG dots) */
+  --color-yellow: #e8c547;
+  --color-yellow-text: #e8c547;
+  --color-yellow-soft: rgba(232, 197, 71, 0.15);
+  --color-orange: #e87347;
+  --color-blue: #47a3e8;
+  --color-blue-soft: rgba(71, 163, 232, 0.1);
+  --color-blue-soft-strong: rgba(71, 163, 232, 0.18);
+  --color-blue-border: rgba(71, 163, 232, 0.18);
+  --color-blue-text: #8cc7f0;
+  --color-blue-text-strong: #bcdcf3;
+  --color-purple: #9b6eb7;
+  --color-purple-strong: #c792ea;
+  --color-pink: #e8477a;
+  --color-pink-soft: rgba(232, 71, 122, 0.1);
+  --color-pink-border: rgba(232, 71, 122, 0.25);
+  --color-aqua: #47e8c5;
+  --color-aqua-soft: rgba(71, 232, 197, 0.08);
+  --color-aqua-ring: rgba(71, 232, 197, 0.15);
+
+  /* Avatar fallback gradients (used when a user has no profile picture) */
+  --avatar-gradient: linear-gradient(135deg, rgba(110, 183, 129, 0.5), rgba(71, 163, 232, 0.5));
+  --avatar-gradient-strong: linear-gradient(135deg, rgba(110, 183, 129, 0.9), rgba(71, 163, 232, 0.85));
+  --avatar-gradient-soft: linear-gradient(135deg, rgba(110, 183, 129, 0.3), rgba(71, 163, 232, 0.3));
+  --avatar-gradient-faint: linear-gradient(135deg, rgba(110, 183, 129, 0.4), rgba(71, 163, 232, 0.4));
+  --avatar-border: rgba(110, 183, 129, 0.2);
+
+  /* Mention chip gradient */
+  --mention-gradient: linear-gradient(135deg, rgba(110, 183, 129, 0.55), rgba(71, 163, 232, 0.45));
+
+  /* Paper card aesthetic (annotation paper note — intentionally consistent across themes) */
+  --paper-bg: #f9f6f0;
+  --paper-ink: #1a1a1a;
+  --paper-handwriting: #3a5c45;
+  --paper-rule: rgba(0, 0, 0, 0.14);
+  --paper-button-bg: rgba(0, 0, 0, 0.06);
+  --paper-button-text: #555;
+  --paper-button-text-soft: #777;
+  --paper-textarea-bg: rgba(0, 0, 0, 0.04);
+  --paper-textarea-border: rgba(0, 0, 0, 0.15);
+  --paper-handwriting-strong: #2e4e38;
+  --paper-margin-line: rgba(220, 100, 100, 0.4);
+  --paper-margin-line-strong: rgba(220, 100, 100, 0.45);
+  --paper-attribution: rgba(0, 0, 0, 0.28);
+  --paper-text-faint: rgba(0, 0, 0, 0.18);
+  --paper-text-soft: rgba(0, 0, 0, 0.3);
+  --paper-skeleton-bg: rgba(0, 0, 0, 0.06);
+  --paper-skeleton-bg-soft: rgba(0, 0, 0, 0.04);
+  --paper-swatch-selected: #333;
+  --paper-swatch-ring: #fff;
+  --paper-error: #c0392b;
+  --paper-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), 0 12px 48px rgba(0, 0, 0, 0.5);
+
+  /* Inverse-on-accent text (e.g. small labels on solid accent buttons) */
+  --on-accent: #08110b;
+
+  /* Misc */
+  --scrim: rgba(0, 0, 0, 0.4);
+  --scrim-strong: rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+html[data-theme="light"] {
+  --bg: #fcfbf8;
+  --bg-elevated: #f2efe8;
+  --surface: rgba(32, 33, 36, 0.035);
+  --surface-2: rgba(32, 33, 36, 0.055);
+  --surface-3: rgba(32, 33, 36, 0.085);
+  --surface-hover: rgba(32, 33, 36, 0.07);
+  --surface-active: rgba(32, 33, 36, 0.1);
+  --surface-inset: rgba(32, 33, 36, 0.028);
+  --surface-accent: rgba(110, 183, 129, 0.14);
+  --nav-bg: rgba(252, 251, 248, 0.9);
+  --text: #1b1f24;
+  --text-muted: #30363d;
+  --text-soft: #5f6772;
+  --text-dim: #8b949e;
+  --text-faint: #b0b7c0;
+  --text-inverse: #ffffff;
+  --border: rgba(32, 33, 36, 0.1);
+  --border-strong: rgba(32, 33, 36, 0.16);
+  --accent: #4f8f61;
+  --accent-strong: #3d724d;
+  --accent-soft: rgba(79, 143, 97, 0.14);
+  --accent-border: rgba(79, 143, 97, 0.28);
+  --danger: #d94841;
+  --danger-soft: rgba(217, 72, 65, 0.12);
+  --shadow-lg: 0 20px 50px rgba(32, 33, 36, 0.1);
+  --overlay: rgba(12, 18, 28, 0.3);
+
+  /* Decorative palette — darker variants for contrast on light bg */
+  --color-yellow: #b8932f;
+  --color-yellow-text: #8a6d20;
+  --color-yellow-soft: rgba(184, 147, 47, 0.14);
+  --color-orange: #c95a30;
+  --color-blue: #2980d9;
+  --color-blue-soft: rgba(41, 128, 217, 0.08);
+  --color-blue-soft-strong: rgba(41, 128, 217, 0.18);
+  --color-blue-border: rgba(41, 128, 217, 0.22);
+  --color-blue-text: #1f6dbf;
+  --color-blue-text-strong: #1a5a9e;
+  --color-purple: #7e4e9b;
+  --color-purple-strong: #7340a8;
+  --color-pink: #c93060;
+  --color-pink-soft: rgba(201, 48, 96, 0.08);
+  --color-pink-border: rgba(201, 48, 96, 0.22);
+  --color-aqua: #2cb39a;
+  --color-aqua-soft: rgba(44, 179, 154, 0.08);
+  --color-aqua-ring: rgba(44, 179, 154, 0.18);
+
+  --avatar-gradient: linear-gradient(135deg, rgba(79, 143, 97, 0.45), rgba(41, 128, 217, 0.4));
+  --avatar-gradient-strong: linear-gradient(135deg, rgba(79, 143, 97, 0.85), rgba(41, 128, 217, 0.75));
+  --avatar-gradient-soft: linear-gradient(135deg, rgba(79, 143, 97, 0.22), rgba(41, 128, 217, 0.18));
+  --avatar-gradient-faint: linear-gradient(135deg, rgba(79, 143, 97, 0.32), rgba(41, 128, 217, 0.28));
+  --avatar-border: rgba(79, 143, 97, 0.25);
+
+  --mention-gradient: linear-gradient(135deg, rgba(79, 143, 97, 0.5), rgba(41, 128, 217, 0.4));
+
+  /* Paper card aesthetic stays the same — meant to read as paper in either theme */
+  --paper-bg: #f9f6f0;
+  --paper-ink: #1a1a1a;
+  --paper-handwriting: #3a5c45;
+  --paper-rule: rgba(0, 0, 0, 0.14);
+  --paper-button-bg: rgba(0, 0, 0, 0.06);
+  --paper-button-text: #555;
+  --paper-button-text-soft: #777;
+  --paper-textarea-bg: rgba(0, 0, 0, 0.04);
+  --paper-textarea-border: rgba(0, 0, 0, 0.15);
+  --paper-handwriting-strong: #2e4e38;
+  --paper-margin-line: rgba(220, 100, 100, 0.4);
+  --paper-margin-line-strong: rgba(220, 100, 100, 0.45);
+  --paper-attribution: rgba(0, 0, 0, 0.28);
+  --paper-text-faint: rgba(0, 0, 0, 0.18);
+  --paper-text-soft: rgba(0, 0, 0, 0.3);
+  --paper-skeleton-bg: rgba(0, 0, 0, 0.06);
+  --paper-skeleton-bg-soft: rgba(0, 0, 0, 0.04);
+  --paper-swatch-selected: #333;
+  --paper-swatch-ring: #fff;
+  --paper-error: #c0392b;
+  --paper-shadow: 0 2px 8px rgba(32, 33, 36, 0.08), 0 12px 48px rgba(32, 33, 36, 0.18);
+
+  --on-accent: #ffffff;
+
+  --scrim: rgba(12, 18, 28, 0.18);
+  --scrim-strong: rgba(12, 18, 28, 0.32);
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
 }
 
 * {
@@ -16,18 +193,143 @@
   box-sizing: border-box;
 }
 
+html {
+  background: var(--bg);
+}
+
 body {
   margin: 0;
-  background: #121212;
-  color: #ffffff;
+  background: var(--bg);
+  color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+a,
+button,
+input,
+textarea,
+select,
+nav,
+div,
+span {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.theme-page {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.theme-surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.theme-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+.theme-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.theme-input::placeholder,
+.theme-textarea::placeholder {
+  color: var(--text-dim);
+}
+
+.theme-input:focus,
+.theme-textarea:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.theme-input[readonly] {
+  color: var(--text-dim);
+  background: var(--surface-inset);
+  cursor: not-allowed;
+}
+
+.theme-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.theme-button-secondary {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.theme-button-secondary:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.theme-button-primary {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--text-inverse);
+}
+
+.theme-button-primary:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.theme-pill {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+.theme-icon-button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+}
+
+.theme-icon-button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.theme-divider {
+  border-color: var(--border);
 }
 
 /* Custom Scrollbar Global - Removed as per user request */

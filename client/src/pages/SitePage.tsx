@@ -43,14 +43,14 @@ const TIME_RANGE_OPTIONS = [
 ];
 
 const PaperSkeleton: React.FC = () => (
-  <div style={{ background: '#f9f6f0', borderRadius: '3px 8px 8px 3px', overflow: 'hidden', display: 'flex', boxShadow: '0 2px 8px rgba(0,0,0,0.2), 0 12px 48px rgba(0,0,0,0.4)' }}>
-    <div style={{ width: 4, background: 'rgba(220,100,100,0.4)', flexShrink: 0 }} />
+  <div style={{ background: 'var(--paper-bg)', borderRadius: '3px 8px 8px 3px', overflow: 'hidden', display: 'flex', boxShadow: 'var(--paper-shadow)' }}>
+    <div style={{ width: 4, background: 'var(--paper-margin-line)', flexShrink: 0 }} />
     <div style={{ flex: 1, padding: '28px 28px 28px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
       {[1, 2, 3].map(i => (
         <div key={i}>
-          <div style={{ height: 14, borderRadius: 3, background: 'rgba(0,0,0,0.06)', marginBottom: 8, width: '95%' }} />
-          <div style={{ height: 14, borderRadius: 3, background: 'rgba(0,0,0,0.06)', marginBottom: 8, width: '80%' }} />
-          <div style={{ height: 12, borderRadius: 3, background: 'rgba(0,0,0,0.04)', width: '40%' }} />
+          <div style={{ height: 14, borderRadius: 3, background: 'var(--paper-skeleton-bg)', marginBottom: 8, width: '95%' }} />
+          <div style={{ height: 14, borderRadius: 3, background: 'var(--paper-skeleton-bg)', marginBottom: 8, width: '80%' }} />
+          <div style={{ height: 12, borderRadius: 3, background: 'var(--paper-skeleton-bg-soft)', width: '40%' }} />
         </div>
       ))}
     </div>
@@ -176,25 +176,26 @@ const SitePage: React.FC = () => {
 
   if (!siteUrl) {
     return (
-      <div style={{ ...bodyFont, minHeight: '100vh', background: '#121212', color: '#fff' }}>
+      <div style={{ ...bodyFont, minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
         <Navbar />
         <div style={{ maxWidth: 640, padding: '60px 20px', margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: '#555' }}>No URL specified. Navigate here by clicking a domain name on any annotation.</p>
+          <p style={{ fontSize: 14, color: 'var(--text-dim)' }}>No URL specified. Navigate here by clicking a domain name on any annotation.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ ...bodyFont, minHeight: '100vh', background: '#121212', color: '#fff' }}>
+    <div style={{ ...bodyFont, minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
       <Navbar />
 
       <div style={{ maxWidth: 1280, padding: '32px 24px', margin: '0 auto' }}>
         {/* Back */}
         <button
           onClick={() => navigate(-1)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: 24, fontFamily: 'inherit', transition: 'color 0.15s' }}
-          className="hover:text-white"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: 24, fontFamily: 'inherit', transition: 'color 0.15s' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-dim)'; }}
         >
           <ArrowLeft style={{ width: 15, height: 15 }} />
           Back
@@ -203,28 +204,29 @@ const SitePage: React.FC = () => {
         {/* Page header — link preview */}
         <div style={{ marginBottom: uploadedDoc ? 16 : 32, display: 'flex', alignItems: 'center', gap: 14 }}>
           {uploadedDoc ? (
-            <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <FileText style={{ width: 14, height: 14, color: '#6EB781' }} />
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FileText style={{ width: 14, height: 14, color: 'var(--accent)' }} />
             </div>
           ) : linkMeta?.linkFavicon && (
             <img src={linkMeta.linkFavicon} style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0 }} alt="" />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontFamily: '"Outfit", sans-serif', fontSize: 20, fontWeight: 700, color: '#fff', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <h1 style={{ fontFamily: '"Outfit", sans-serif', fontSize: 20, fontWeight: 700, color: 'var(--text)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {uploadedDoc?.title || linkMeta?.linkTitle || domainName}
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: '#555' }}>{uploadedDoc ? `uploaded by @${uploadedDoc.user.username}` : domainName}</span>
-              <span style={{ fontSize: 12, color: '#333' }}>·</span>
-              <span style={{ fontSize: 12, color: '#555' }}>{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{uploadedDoc ? `uploaded by @${uploadedDoc.user.username}` : domainName}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>·</span>
+              <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{annotations.length} annotation{annotations.length !== 1 ? 's' : ''}</span>
             </div>
           </div>
           <a
             href={siteUrl}
             target="_blank"
             rel="noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555', textDecoration: 'none', flexShrink: 0, padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)', transition: 'all 0.15s' }}
-            className="hover:text-white hover:border-white/20"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-dim)', textDecoration: 'none', flexShrink: 0, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', transition: 'all 0.15s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-dim)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           >
             <ExternalLink style={{ width: 13, height: 13 }} />
             {uploadedDoc ? 'Open PDF' : 'Visit site'}
@@ -232,16 +234,16 @@ const SitePage: React.FC = () => {
         </div>
 
         {uploadedDoc && (
-          <div style={{ marginBottom: 32, padding: '14px 16px', borderRadius: 10, border: '1px solid rgba(110,183,129,0.20)', background: 'rgba(110,183,129,0.06)', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ marginBottom: 32, padding: '14px 16px', borderRadius: 10, border: '1px solid var(--accent-border)', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: '#6EB781', fontWeight: 600, marginBottom: 2 }}>Uploaded document</div>
-              <div style={{ fontSize: 11.5, color: '#888' }}>
+              <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600, marginBottom: 2 }}>Uploaded document</div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-soft)' }}>
                 {uploadedDoc.authors.length > 0 ? uploadedDoc.authors.join(', ') : 'View the document page for inline preview, metadata, and tags.'}
               </div>
             </div>
             <button
               onClick={() => navigate(`/document/${uploadedDoc.id}`)}
-              style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: '#08110b', background: '#6EB781', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--on-accent)', background: 'var(--accent)', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Open document page →
             </button>
@@ -256,16 +258,16 @@ const SitePage: React.FC = () => {
             {loading ? (
               <PaperSkeleton />
             ) : sortedAnnotations.length === 0 ? (
-              <div style={{ background: '#f9f6f0', borderRadius: '3px 8px 8px 3px', overflow: 'hidden', display: 'flex', boxShadow: '0 2px 8px rgba(0,0,0,0.2), 0 12px 48px rgba(0,0,0,0.4)' }}>
-                <div style={{ width: 4, background: 'rgba(220,100,100,0.4)', flexShrink: 0 }} />
-                <div style={{ flex: 1, padding: '40px 28px', textAlign: 'center', color: 'rgba(0,0,0,0.3)', fontSize: 13 }}>
+              <div style={{ background: 'var(--paper-bg)', borderRadius: '3px 8px 8px 3px', overflow: 'hidden', display: 'flex', boxShadow: 'var(--paper-shadow)' }}>
+                <div style={{ width: 4, background: 'var(--paper-margin-line)', flexShrink: 0 }} />
+                <div style={{ flex: 1, padding: '40px 28px', textAlign: 'center', color: 'var(--paper-text-soft)', fontSize: 13 }}>
                   No annotations match the current filters
                 </div>
               </div>
             ) : (
-              <div style={{ background: '#f9f6f0', borderRadius: '3px 8px 8px 3px', overflow: 'hidden', display: 'flex', boxShadow: '0 2px 8px rgba(0,0,0,0.2), 0 12px 48px rgba(0,0,0,0.4)' }}>
+              <div style={{ background: 'var(--paper-bg)', borderRadius: '3px 8px 8px 3px', overflow: 'hidden', display: 'flex', boxShadow: 'var(--paper-shadow)' }}>
                 {/* Red margin line */}
-                <div style={{ width: 4, background: 'rgba(220,100,100,0.45)', flexShrink: 0 }} />
+                <div style={{ width: 4, background: 'var(--paper-margin-line-strong)', flexShrink: 0 }} />
 
                 {/* Paper content */}
                 <div style={{ flex: 1, padding: '16px 16px 16px 12px' }}>
@@ -281,7 +283,7 @@ const SitePage: React.FC = () => {
                     return (
                       <React.Fragment key={annotation.id}>
                         {showGap && (
-                          <div style={{ textAlign: 'center', color: 'rgba(0,0,0,0.18)', fontSize: 18, padding: '8px 0', letterSpacing: 6, userSelect: 'none', opacity: anySelected && !isSelected ? 0.3 : 1, transition: 'opacity 0.25s' }}>
+                          <div style={{ textAlign: 'center', color: 'var(--paper-text-faint)', fontSize: 18, padding: '8px 0', letterSpacing: 6, userSelect: 'none', opacity: anySelected && !isSelected ? 0.3 : 1, transition: 'opacity 0.25s' }}>
                             ···
                           </div>
                         )}
@@ -301,7 +303,7 @@ const SitePage: React.FC = () => {
                             <p style={{
                               fontSize: 13,
                               lineHeight: 1.8,
-                              color: '#1a1a1a',
+                              color: 'var(--paper-ink)',
                               fontFamily: '"Georgia", "Times New Roman", serif',
                               margin: 0,
                               display: '-webkit-box',
@@ -332,7 +334,7 @@ const SitePage: React.FC = () => {
                             <p style={{
                               fontFamily: '"Caveat", cursive',
                               fontSize: 17,
-                              color: isSelected ? '#2e4e38' : '#3a5c45',
+                              color: isSelected ? 'var(--paper-handwriting-strong)' : 'var(--paper-handwriting)',
                               lineHeight: 1.5,
                               margin: 0,
                               transition: 'color 0.25s',
@@ -351,10 +353,10 @@ const SitePage: React.FC = () => {
                             <p style={{
                               fontFamily: '"Caveat", cursive',
                               fontSize: 17,
-                              color: isSelected ? '#2e4e38' : '#3a5c45',
+                              color: isSelected ? 'var(--paper-handwriting-strong)' : 'var(--paper-handwriting)',
                               lineHeight: 1.5,
                               margin: '8px 0 0',
-                              borderTop: '1px dashed rgba(0,0,0,0.1)',
+                              borderTop: '1px dashed var(--paper-rule)',
                               paddingTop: 6,
                               transition: 'color 0.25s',
                               display: '-webkit-box',
@@ -373,7 +375,7 @@ const SitePage: React.FC = () => {
                           )}
 
                           {/* Attribution */}
-                          <div style={{ marginTop: 6, fontSize: 10, color: 'rgba(0,0,0,0.28)' }}>
+                          <div style={{ marginTop: 6, fontSize: 10, color: 'var(--paper-attribution)' }}>
                             @{annotation.user?.username}
                           </div>
                         </div>
@@ -398,9 +400,9 @@ const SitePage: React.FC = () => {
                     style={{
                       padding: '5px 12px',
                       borderRadius: 20,
-                      border: `1px solid ${timeRange === opt.value ? 'rgba(110,183,129,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                      background: timeRange === opt.value ? 'rgba(110,183,129,0.1)' : 'rgba(255,255,255,0.02)',
-                      color: timeRange === opt.value ? '#6EB781' : '#666',
+                      border: `1px solid ${timeRange === opt.value ? 'var(--accent-border)' : 'var(--border)'}`,
+                      background: timeRange === opt.value ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                      color: timeRange === opt.value ? 'var(--accent)' : 'var(--text-dim)',
                       fontSize: 12,
                       fontWeight: 500,
                       cursor: 'pointer',
@@ -416,15 +418,15 @@ const SitePage: React.FC = () => {
               {/* Author filter */}
               {availableAuthors.length > 0 && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#444', fontWeight: 500 }}>Authors:</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 500 }}>Authors:</span>
                   <button
                     onClick={() => setSelectedAuthors([])}
                     style={{
                       padding: '4px 10px',
                       borderRadius: 20,
-                      border: `1px solid ${selectedAuthors.length === 0 ? 'rgba(110,183,129,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                      background: selectedAuthors.length === 0 ? 'rgba(110,183,129,0.1)' : 'rgba(255,255,255,0.02)',
-                      color: selectedAuthors.length === 0 ? '#6EB781' : '#666',
+                      border: `1px solid ${selectedAuthors.length === 0 ? 'var(--accent-border)' : 'var(--border)'}`,
+                      background: selectedAuthors.length === 0 ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                      color: selectedAuthors.length === 0 ? 'var(--accent)' : 'var(--text-dim)',
                       fontSize: 12,
                       cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -442,9 +444,9 @@ const SitePage: React.FC = () => {
                         style={{
                           padding: '4px 10px',
                           borderRadius: 20,
-                          border: `1px solid ${active ? 'rgba(110,183,129,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                          background: active ? 'rgba(110,183,129,0.1)' : 'rgba(255,255,255,0.02)',
-                          color: active ? '#6EB781' : '#666',
+                          border: `1px solid ${active ? 'var(--accent-border)' : 'var(--border)'}`,
+                          background: active ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                          color: active ? 'var(--accent)' : 'var(--text-dim)',
                           fontSize: 12,
                           cursor: 'pointer',
                           fontFamily: 'inherit',
@@ -463,13 +465,13 @@ const SitePage: React.FC = () => {
             {loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[1, 2, 3].map(i => (
-                  <div key={i} style={{ height: 100, borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }} className="pulse" />
+                  <div key={i} style={{ height: 100, borderRadius: 10, background: 'var(--surface-inset)', border: '1px solid var(--border)' }} className="pulse" />
                 ))}
               </div>
             ) : sortedAnnotations.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: '#444' }}>
+              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-faint)' }}>
                 <p style={{ fontSize: 14, marginBottom: 6 }}>No annotations yet</p>
-                <p style={{ fontSize: 12, color: '#333' }}>
+                <p style={{ fontSize: 12, color: 'var(--text-faint)' }}>
                   {selectedAuthors.length > 0 || timeRange !== 'all'
                     ? 'Try clearing some filters'
                     : 'Be the first to annotate this page with the Scholic extension!'}
@@ -501,7 +503,7 @@ const SitePage: React.FC = () => {
         /* Subtle scrollbar for left panel */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
       `}</style>
     </div>
   );

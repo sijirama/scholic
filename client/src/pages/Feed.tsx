@@ -61,47 +61,47 @@ const FriendsReadingItem: React.FC<{ site: FriendSite }> = ({ site }) => {
         borderRadius: 10,
         textDecoration: 'none',
         color: 'inherit',
-        border: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid var(--border)',
+        background: 'var(--surface-inset)',
         transition: 'background 0.15s, border-color 0.15s',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.035)';
+        e.currentTarget.style.background = 'var(--surface)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+        e.currentTarget.style.background = 'var(--surface-inset)';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, minWidth: 0 }}>
         {site.profilePicture ? (
           <img src={site.profilePicture} alt="" style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, objectFit: 'cover' }} />
         ) : (
-          <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(71,163,232,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9.5, fontWeight: 600, color: '#bcdcf3', flexShrink: 0 }}>
+          <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--color-blue-soft-strong)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9.5, fontWeight: 600, color: 'var(--color-blue-text-strong)', flexShrink: 0 }}>
             {initial}
           </div>
         )}
-        <span style={{ fontSize: 12, color: '#cfcfcf', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
           @{site.username}
         </span>
         {site.lastRead && (
-          <span style={{ fontSize: 10.5, color: '#555', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{sidebarTimeAgo(site.lastRead)}</span>
+          <span style={{ fontSize: 10.5, color: 'var(--text-dim)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{sidebarTimeAgo(site.lastRead)}</span>
         )}
       </div>
 
-      <div style={{ fontSize: 13, fontWeight: 500, color: '#e6e6e6', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: 7 }}>
+      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: 7 }}>
         {title}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
         {uploadedDoc ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.08)', fontSize: 10, color: '#6EB781', fontWeight: 500, flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'var(--accent-soft)', fontSize: 10, color: 'var(--accent)', fontWeight: 500, flexShrink: 0 }}>
             <FileText style={{ width: 9, height: 9 }} />
             PDF
           </span>
         ) : site.favicon ? (
           <img src={site.favicon} alt="" style={{ width: 11, height: 11, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
         ) : null}
-        <span style={{ fontSize: 10.5, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 10.5, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
           {displayDomain}
         </span>
       </div>
@@ -131,41 +131,41 @@ const SidebarRecentItem: React.FC<{ site: RecentSite }> = ({ site }) => {
         borderRadius: 10,
         textDecoration: 'none',
         color: 'inherit',
-        border: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid var(--border)',
+        background: 'var(--surface-inset)',
         transition: 'background 0.15s, border-color 0.15s',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.035)';
+        e.currentTarget.style.background = 'var(--surface)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+        e.currentTarget.style.background = 'var(--surface-inset)';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, minWidth: 0 }}>
         {uploadedDoc ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.08)', fontSize: 10, color: '#6EB781', fontWeight: 500, flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'var(--accent-soft)', fontSize: 10, color: 'var(--accent)', fontWeight: 500, flexShrink: 0 }}>
             <FileText style={{ width: 9, height: 9 }} />
             PDF
           </span>
         ) : site.favicon ? (
           <img src={site.favicon} alt="" style={{ width: 12, height: 12, borderRadius: 2, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
         ) : (
-          <div style={{ width: 12, height: 12, borderRadius: 2, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />
+          <div style={{ width: 12, height: 12, borderRadius: 2, background: 'var(--surface-2)', flexShrink: 0 }} />
         )}
-        <span style={{ fontSize: 11, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+        <span style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
           {uploadedDoc ? `by @${uploadedDoc.user.username}` : displayDomain}
         </span>
         {site.lastRead && (
-          <span style={{ fontSize: 10.5, color: '#555', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{sidebarTimeAgo(site.lastRead)}</span>
+          <span style={{ fontSize: 10.5, color: 'var(--text-dim)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{sidebarTimeAgo(site.lastRead)}</span>
         )}
       </div>
 
-      <div style={{ fontSize: 13, fontWeight: 500, color: '#e6e6e6', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: description ? 5 : 0 }}>
+      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: description ? 5 : 0 }}>
         {title}
       </div>
       {description && (
-        <div style={{ fontSize: 11, color: '#666', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {description}
         </div>
       )}
@@ -176,17 +176,17 @@ const SidebarRecentItem: React.FC<{ site: RecentSite }> = ({ site }) => {
 const FeedSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
     {[1, 2, 3].map(i => (
-      <div key={i} style={{ padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div key={i} style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', flexShrink: 0 }} className="pulse" />
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--surface-2)', flexShrink: 0 }} className="pulse" />
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-              <div style={{ width: '80px', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.04)' }} className="pulse" />
-              <div style={{ width: '40px', height: '14px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+              <div style={{ width: '80px', height: '14px', borderRadius: '4px', background: 'var(--surface-2)' }} className="pulse" />
+              <div style={{ width: '40px', height: '14px', borderRadius: '4px', background: 'var(--surface-inset)' }} className="pulse" />
             </div>
-            <div style={{ width: '100%', height: '16px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '8px' }} className="pulse" />
-            <div style={{ width: '60%', height: '16px', borderRadius: '4px', background: 'rgba(255,255,255,0.03)', marginBottom: '16px' }} className="pulse" />
-            <div style={{ width: '100%', height: '140px', borderRadius: '8px', background: 'rgba(255,255,255,0.02)' }} className="pulse" />
+            <div style={{ width: '100%', height: '16px', borderRadius: '4px', background: 'var(--surface)' , marginBottom: '8px' }} className="pulse" />
+            <div style={{ width: '60%', height: '16px', borderRadius: '4px', background: 'var(--surface)' , marginBottom: '16px' }} className="pulse" />
+            <div style={{ width: '100%', height: '140px', borderRadius: '8px', background: 'var(--surface-inset)' }} className="pulse" />
           </div>
         </div>
       </div>
@@ -449,9 +449,9 @@ const Feed: React.FC = () => {
     }
 
     if (annotation.text?.trim()) {
-      return <span>shared a thought on <a href={annotation.url} target="_blank" rel="noreferrer" style={{ color: '#6EB781', textDecoration: 'none' }} className="hover:underline">{domainName}</a></span>;
+      return <span>shared a thought on <a href={annotation.url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }} className="hover:underline">{domainName}</a></span>;
     }
-    return <span>annotated <a href={annotation.url} target="_blank" rel="noreferrer" style={{ color: '#6EB781', textDecoration: 'none' }} className="hover:underline">{domainName}</a></span>;
+    return <span>annotated <a href={annotation.url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }} className="hover:underline">{domainName}</a></span>;
   }, []);
 
   const renderAvatar = useCallback((annotationUser: AnnotationUser, size = 36) => {
@@ -466,13 +466,13 @@ const Feed: React.FC = () => {
 
   const renderSidebarHeader = (label: string, accent: string) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 2px' }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, boxShadow: `0 0 8px ${accent}` }} />
-      <span style={{ fontFamily: '"Outfit", sans-serif', fontSize: 14, color: '#e4e4e4', fontWeight: 500, letterSpacing: -0.1 }}>{label}</span>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, boxShadow: `0 0 8px color-mix(in srgb, ${accent} 60%, transparent)` }} />
+      <span style={{ fontFamily: '"Outfit", sans-serif', fontSize: 14, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: -0.1 }}>{label}</span>
     </div>
   );
 
   return (
-    <div style={{ ...bodyFont, minHeight: '100vh', background: '#121212', color: '#fff' }}>
+    <div className="theme-page" style={{ ...bodyFont }}>
       <Navbar />
 
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 16, padding: '0 20px' }}>
@@ -490,11 +490,11 @@ const Feed: React.FC = () => {
               overflowY: 'auto',
             }}
           >
-            {renderSidebarHeader('Continue reading', '#6EB781')}
+            {renderSidebarHeader('Continue reading', 'var(--accent)')}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {recentSidebarLoading && recentSidebar.length === 0
                 ? [0, 1, 2].map((i) => (
-                    <div key={i} style={{ height: 72, borderRadius: 10, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }} className="pulse" />
+                    <div key={i} style={{ height: 72, borderRadius: 10, background: 'var(--surface-inset)', border: '1px solid var(--border)' }} className="pulse" />
                   ))
                 : recentSidebar.map((site, idx) => (
                     <SidebarRecentItem key={idx} site={site} />
@@ -507,10 +507,10 @@ const Feed: React.FC = () => {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
-            <h1 style={{ ...brandFont, fontSize: '20px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>
+            <h1 style={{ ...brandFont, fontSize: '20px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
               The Feed
             </h1>
-            <p style={{ fontSize: '13px', color: '#555', margin: 0 }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-dim)', margin: 0 }}>
               Discover what the community is reading and analyzing
             </p>
           </div>
@@ -519,7 +519,7 @@ const Feed: React.FC = () => {
         {/* Tabs */}
         <div style={{
           display: 'flex', gap: 20, marginBottom: 24,
-          borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12,
+          borderBottom: '1px solid var(--border)', paddingBottom: 12,
         }}>
           {(['following', 'mine'] as const).map(t => (
             <button
@@ -527,14 +527,14 @@ const Feed: React.FC = () => {
               onClick={() => setTab(t)}
               style={{
                 background: 'none', border: 'none',
-                color: tab === t ? '#fff' : '#666',
+                color: tab === t ? 'var(--text)' : 'var(--text-dim)',
                 fontSize: 15, fontWeight: tab === t ? 600 : 500,
                 cursor: 'pointer', position: 'relative', padding: '0 4px',
                 fontFamily: 'inherit', textTransform: 'capitalize',
               }}
             >
               {t}
-              {tab === t && <div style={{ position: 'absolute', bottom: -13, left: 0, right: 0, height: 2, background: '#6EB781', borderRadius: 2 }} />}
+              {tab === t && <div style={{ position: 'absolute', bottom: -13, left: 0, right: 0, height: 2, background: 'var(--accent)', borderRadius: 2 }} />}
             </button>
           ))}
         </div>
@@ -543,33 +543,34 @@ const Feed: React.FC = () => {
         {loading ? (
           <FeedSkeleton />
         ) : feedError ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#555' }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-dim)' }}>
             <p style={{ fontSize: '14px', marginBottom: '16px' }}>Failed to load feed</p>
             <button
               onClick={() => { setFeedError(false); setAnnotations([]); setPage(0); setHasMore(true); fetchFeed(0, true); }}
-              style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, background: 'rgba(110,183,129,0.12)', color: '#6EB781', border: '1px solid rgba(110,183,129,0.25)', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}
+              className="theme-pill"
+              style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Try again
             </button>
           </div>
         ) : annotations.length === 0 ? (
           tab === 'mine' ? (
-            <div style={{ padding: '40px 0', color: '#888' }}>
-              <p style={{ fontSize: 14, marginBottom: 6, color: '#aaa' }}>You haven't annotated anything yet</p>
-              <p style={{ fontSize: 12, color: '#555' }}>
+            <div style={{ padding: '40px 0', color: 'var(--text-soft)' }}>
+              <p style={{ fontSize: 14, marginBottom: 6, color: 'var(--text-muted)' }}>You haven't annotated anything yet</p>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                 Install the Scholic extension and start highlighting on the web.
               </p>
             </div>
           ) : (
-            <div style={{ padding: '40px 0', color: '#888' }}>
-              <p style={{ fontSize: 14, marginBottom: 6, color: '#aaa' }}>Your feed is empty</p>
-              <p style={{ fontSize: 12, color: '#555', marginBottom: 24 }}>
+            <div style={{ padding: '40px 0', color: 'var(--text-soft)' }}>
+              <p style={{ fontSize: 14, marginBottom: 6, color: 'var(--text-muted)' }}>Your feed is empty</p>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 24 }}>
                 Follow other scholars to see their annotations here, or
-                {' '}<a href="/discover" style={{ color: '#6EB781', textDecoration: 'none' }}>browse Discover →</a>
+                {' '}<a href="/discover" style={{ color: 'var(--accent)', textDecoration: 'none' }}>browse Discover →</a>
               </p>
               {suggestions.length > 0 && (
                 <>
-                  <p style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
                     Suggested scholars
                   </p>
                   <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, margin: '0 -20px', padding: '0 20px 8px' }}>
@@ -608,7 +609,7 @@ const Feed: React.FC = () => {
             <div ref={observerTarget} style={{ padding: '40px 0', display: 'flex', flexDirection: 'column' }}>
               {fetchingMore && <FeedSkeleton />}
               {!hasMore && annotations.length > 0 && (
-                <p style={{ fontSize: '12px', color: '#444', textAlign: 'center' }}>You've reached the end of the feed</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center' }}>You've reached the end of the feed</p>
               )}
             </div>
           </div>
@@ -629,11 +630,11 @@ const Feed: React.FC = () => {
               overflowY: 'auto',
             }}
           >
-            {renderSidebarHeader('Friends reading', '#47A3E8')}
+            {renderSidebarHeader('Friends reading', 'var(--color-blue)')}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {friendsSidebarLoading && friendsSidebar.length === 0
                 ? [0, 1, 2].map((i) => (
-                    <div key={i} style={{ height: 96, borderRadius: 10, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }} className="pulse" />
+                    <div key={i} style={{ height: 96, borderRadius: 10, background: 'var(--surface-inset)', border: '1px solid var(--border)' }} className="pulse" />
                   ))
                 : friendsSidebar.map((site, idx) => (
                     <FriendsReadingItem key={`${site.url}-${idx}`} site={site} />
@@ -652,7 +653,7 @@ const Feed: React.FC = () => {
         }
         .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
-        input::placeholder { color: #444; }
+        input::placeholder { color: var(--text-faint); }
 
         /* Hide both sidebars when the viewport can't fit them either side of
            the centered 700px feed: 260 + 16 + 700 + 16 + 260 = 1252px, plus

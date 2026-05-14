@@ -187,8 +187,8 @@ const CarouselCard: React.FC<{ annotation: LandingAnnotation; isFake: boolean }>
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
         flexShrink: 0,
-        background: '#141414',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
         borderRadius: 14,
         display: 'flex',
         flexDirection: 'column',
@@ -199,15 +199,15 @@ const CarouselCard: React.FC<{ annotation: LandingAnnotation; isFake: boolean }>
         boxSizing: 'border-box',
       }}
       onMouseEnter={(e) => {
-        if (!isFake) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.18)';
+        if (!isFake) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-strong)';
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.07)';
+        (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)';
       }}
     >
       {/* Screenshot — shown at top for image annotations */}
       {isImage && (
-        <div style={{ height: 140, flexShrink: 0, overflow: 'hidden', background: '#0a0a0a' }}>
+        <div style={{ height: 140, flexShrink: 0, overflow: 'hidden', background: 'var(--surface-inset)' }}>
           <img
             src={annotation.imageUrl}
             alt="Screenshot"
@@ -225,7 +225,7 @@ const CarouselCard: React.FC<{ annotation: LandingAnnotation; isFake: boolean }>
             style={{
               margin: '0 0 12px',
               fontSize: 14,
-              color: '#d4d4d4',
+              color: 'var(--text-muted)',
               lineHeight: 1.75,
               fontStyle: 'italic',
               flex: 1,
@@ -256,7 +256,7 @@ const CarouselCard: React.FC<{ annotation: LandingAnnotation; isFake: boolean }>
           <p
             style={{
               fontSize: 12,
-              color: '#666',
+              color: 'var(--text-dim)',
               lineHeight: 1.6,
               margin: isImage ? '0 0 12px' : '0 0 14px',
               display: '-webkit-box',
@@ -273,7 +273,7 @@ const CarouselCard: React.FC<{ annotation: LandingAnnotation; isFake: boolean }>
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto', flexShrink: 0 }}>
           {avatarEl}
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#4a4a4a', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-soft)', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
             @{annotation.user.username}
           </span>
           {/* Source */}
@@ -282,7 +282,7 @@ const CarouselCard: React.FC<{ annotation: LandingAnnotation; isFake: boolean }>
               {annotation.linkFavicon && (
                 <img src={annotation.linkFavicon} alt="" style={{ width: 11, height: 11, borderRadius: 2, opacity: 0.5 }} />
               )}
-              <span style={{ fontSize: 10, color: '#333', maxWidth: 100, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+              <span style={{ fontSize: 10, color: 'var(--text-faint)', maxWidth: 100, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                 {domain}
               </span>
             </div>
@@ -405,12 +405,11 @@ const Landing: React.FC = () => {
 
   return (
     <div
+      className="theme-page"
       style={{
         minHeight: '100vh',
         width: '100%',
         fontFamily: '"Inter", sans-serif',
-        background: '#0e0e0e',
-        color: '#fff',
         overflowX: 'hidden',
       }}
     >
@@ -431,26 +430,26 @@ const Landing: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
           <div style={{ width: 0, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', overflow: 'visible' }}>
             <svg width="48" height="48" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 4, flexShrink: 0 }}>
-              <circle cx="28" cy="10" r="5" fill="#E8C547" />
-              <circle cx="42" cy="18" r="5" fill="#E87347" />
-              <circle cx="44" cy="34" r="5" fill="#6EB781" />
-              <circle cx="34" cy="46" r="5" fill="#47A3E8" />
-              <circle cx="18" cy="44" r="5" fill="#9B6EB7" />
-              <circle cx="12" cy="28" r="5" fill="#E8477A" />
-              <circle cx="18" cy="16" r="5" fill="#47E8C5" />
-              <circle cx="30" cy="28" r="3.5" fill="#6EB781" />
+              <circle cx="28" cy="10" r="5" fill="var(--color-yellow)" />
+              <circle cx="42" cy="18" r="5" fill="var(--color-orange)" />
+              <circle cx="44" cy="34" r="5" fill="var(--accent)" />
+              <circle cx="34" cy="46" r="5" fill="var(--color-blue)" />
+              <circle cx="18" cy="44" r="5" fill="var(--color-purple)" />
+              <circle cx="12" cy="28" r="5" fill="var(--color-pink)" />
+              <circle cx="18" cy="16" r="5" fill="var(--color-aqua)" />
+              <circle cx="30" cy="28" r="3.5" fill="var(--accent)" />
             </svg>
           </div>
-          <span style={{ ...brandFont, fontSize: 66, fontWeight: 700, letterSpacing: '-3px', lineHeight: 1, color: '#6EB781' }}>
+          <span style={{ ...brandFont, fontSize: 66, fontWeight: 700, letterSpacing: '-3px', lineHeight: 1, color: 'var(--accent)' }}>
             scholic
           </span>
         </div>
 
-        <h2 style={{ ...brandFont, fontSize: 22, fontWeight: 500, color: '#e0e0e0', letterSpacing: '0.2px', marginBottom: 14, margin: '0 0 14px' }}>
+        <h2 style={{ ...brandFont, fontSize: 22, fontWeight: 500, color: 'var(--text-muted)', letterSpacing: '0.2px', marginBottom: 14, margin: '0 0 14px' }}>
           A Social Annotation Platform.
         </h2>
 
-        <p style={{ fontSize: 16, color: '#888', maxWidth: 560, lineHeight: 1.7, margin: '0 0 36px' }}>
+        <p style={{ fontSize: 16, color: 'var(--text-soft)', maxWidth: 560, lineHeight: 1.7, margin: '0 0 36px' }}>
           Highlight any passage on the web, share your perspective, and discover
           what others are thinking. Scholic turns every page into a conversation
           and every reader into a collaborator.
@@ -459,17 +458,15 @@ const Landing: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={login}
+            className="theme-button-primary"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              backgroundColor: '#6EB781',
-              color: '#e0e0e0',
               padding: '11px 28px',
               fontSize: 14,
               fontWeight: 600,
               borderRadius: 10,
-              border: 'none',
               cursor: 'pointer',
             }}
           >
@@ -484,8 +481,8 @@ const Landing: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: '#ddd',
+              border: '1px solid var(--border-strong)',
+              color: 'var(--text-muted)',
               padding: '11px 28px',
               fontSize: 14,
               fontWeight: 500,
@@ -517,8 +514,8 @@ const Landing: React.FC = () => {
                   width: CARD_WIDTH,
                   height: CARD_HEIGHT,
                   borderRadius: 12,
-                  background: '#161616',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
                   flexShrink: 0,
                 }}
               />
@@ -531,8 +528,8 @@ const Landing: React.FC = () => {
             onMouseLeave={() => { pausedRef.current = false; }}
           >
             {/* Fade edges */}
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 100, background: 'linear-gradient(to right, #0e0e0e, transparent)', zIndex: 2, pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 100, background: 'linear-gradient(to left, #0e0e0e, transparent)', zIndex: 2, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 100, background: 'linear-gradient(to right, var(--bg), transparent)', zIndex: 2, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 100, background: 'linear-gradient(to left, var(--bg), transparent)', zIndex: 2, pointerEvents: 'none' }} />
 
             <div
               ref={trackRef}
@@ -548,27 +545,27 @@ const Landing: React.FC = () => {
 
       {/* ── Why Section ── */}
       <section style={{ padding: '80px 40px', maxWidth: 860, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
-        <p style={{ ...brandFont, fontSize: 34, fontWeight: 700, color: '#e0e0e0', letterSpacing: '-1px', lineHeight: 1.2, margin: '0 0 64px' }}>
+        <p style={{ ...brandFont, fontSize: 34, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '-1px', lineHeight: 1.2, margin: '0 0 64px' }}>
           The best thinkers don't just read.{' '}
-          <span style={{ color: '#6EB781' }}>They write back.</span>
+          <span style={{ color: 'var(--accent)' }}>They write back.</span>
         </p>
 
         {[
           {
             num: '01',
-            color: '#6EB781',
+            color: 'var(--accent)',
             title: 'Active reading is real learning.',
             body: 'Highlighting forces one decision: is this worth keeping? A note forces another: why? That loop — decide, articulate, connect — is how ideas move from the page into your head for good.',
           },
           {
             num: '02',
-            color: '#E8C547',
+            color: 'var(--color-yellow)',
             title: 'Your reading trail should follow you.',
             body: 'Notes in the margin of a physical book are permanent. On the web, they vanish the moment you close the tab. Scholic makes them stick — searchable, linked to the source, always yours.',
           },
           {
             num: '03',
-            color: '#47A3E8',
+            color: 'var(--color-blue)',
             title: 'Other people\'s lens on the same text is gold.',
             body: 'A biologist and a philosopher reading the same paper will annotate completely different things. Seeing what the person next to you highlighted — and why — doubles what you get from anything.',
           },
@@ -576,7 +573,7 @@ const Landing: React.FC = () => {
           <div
             key={item.num}
             style={{
-              borderTop: '1px solid rgba(255,255,255,0.06)',
+              borderTop: '1px solid var(--border)',
               padding: '28px 0',
               display: 'grid',
               gridTemplateColumns: '52px 1fr',
@@ -588,8 +585,8 @@ const Landing: React.FC = () => {
               {item.num}
             </span>
             <div>
-              <p style={{ fontSize: 16, fontWeight: 600, color: '#ddd', margin: '0 0 8px', lineHeight: 1.3 }}>{item.title}</p>
-              <p style={{ fontSize: 14, color: '#666', lineHeight: 1.75, margin: 0 }}>{item.body}</p>
+              <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-muted)', margin: '0 0 8px', lineHeight: 1.3 }}>{item.title}</p>
+              <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.75, margin: 0 }}>{item.body}</p>
             </div>
           </div>
         ))}
@@ -597,28 +594,28 @@ const Landing: React.FC = () => {
 
       {/* ── How to start ── */}
       <section style={{ padding: '0 40px 100px', maxWidth: 860, margin: '0 auto', boxSizing: 'border-box', width: '100%' }}>
-        <p style={{ ...brandFont, fontSize: 34, fontWeight: 700, color: '#e0e0e0', letterSpacing: '-1px', lineHeight: 1.2, margin: '0 0 64px' }}>
+        <p style={{ ...brandFont, fontSize: 34, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '-1px', lineHeight: 1.2, margin: '0 0 64px' }}>
           Up and running{' '}
-          <span style={{ color: '#6EB781' }}>in two minutes.</span>
+          <span style={{ color: 'var(--accent)' }}>in two minutes.</span>
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {[
             {
               num: '1',
-              color: '#6EB781',
+              color: 'var(--accent)',
               title: 'Create an account',
               body: 'Sign up with Google — one click, no form. Your profile is live immediately and your annotations are public by default, private if you choose.',
             },
             {
               num: '2',
-              color: '#E8C547',
+              color: 'var(--color-yellow)',
               title: 'Add the Chrome extension',
               body: 'Install from the Chrome Web Store in 30 seconds. Works on every site: news, research papers, PDFs, blogs. Anything with a URL.',
             },
             {
               num: '3',
-              color: '#47A3E8',
+              color: 'var(--color-blue)',
               title: 'Pin it. Select text. Start annotating.',
               body: 'Pin the extension so it\'s one click away. Then select any text on any page — a popup appears. Add a note, pick a color, save. Done.',
             },
@@ -631,8 +628,8 @@ const Landing: React.FC = () => {
                     width: 34,
                     height: 34,
                     borderRadius: '50%',
-                    background: `${step.color}18`,
-                    border: `1px solid ${step.color}44`,
+                    background: `color-mix(in srgb, ${step.color} 10%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${step.color} 27%, transparent)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -645,14 +642,14 @@ const Landing: React.FC = () => {
                   {step.num}
                 </div>
                 {i < arr.length - 1 && (
-                  <div style={{ width: 1, flex: 1, background: 'rgba(255,255,255,0.06)', margin: '8px 0' }} />
+                  <div style={{ width: 1, flex: 1, background: 'var(--border)', margin: '8px 0' }} />
                 )}
               </div>
 
               {/* Right: content */}
               <div style={{ paddingBottom: i < arr.length - 1 ? 36 : 0, paddingTop: 6 }}>
-                <p style={{ fontSize: 16, fontWeight: 600, color: '#ddd', margin: '0 0 8px', lineHeight: 1.3 }}>{step.title}</p>
-                <p style={{ fontSize: 14, color: '#666', lineHeight: 1.75, margin: 0 }}>{step.body}</p>
+                <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-muted)', margin: '0 0 8px', lineHeight: 1.3 }}>{step.title}</p>
+                <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.75, margin: 0 }}>{step.body}</p>
               </div>
             </div>
           ))}
@@ -661,11 +658,11 @@ const Landing: React.FC = () => {
         <div style={{ display: 'flex', gap: 12, marginTop: 52 }}>
           <button
             onClick={login}
+            className="theme-button-primary"
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              backgroundColor: '#6EB781', color: '#e0e0e0',
               padding: '11px 28px', fontSize: 14, fontWeight: 600,
-              borderRadius: 10, border: 'none', cursor: 'pointer',
+              borderRadius: 10, cursor: 'pointer',
             }}
           >
             Create account
@@ -677,7 +674,7 @@ const Landing: React.FC = () => {
             rel="noreferrer"
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              border: '1px solid rgba(255,255,255,0.12)', color: '#bbb',
+              border: '1px solid var(--border-strong)', color: 'var(--text-soft)',
               padding: '11px 28px', fontSize: 14, fontWeight: 500,
               borderRadius: 10, background: 'transparent', textDecoration: 'none',
             }}
@@ -697,7 +694,7 @@ const Landing: React.FC = () => {
       {/* ── Footer ── */}
       <footer
         style={{
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid var(--border)',
           padding: '24px 40px',
           display: 'flex',
           alignItems: 'center',
@@ -706,10 +703,10 @@ const Landing: React.FC = () => {
           gap: 12,
         }}
       >
-        <span style={{ ...brandFont, fontSize: 15, fontWeight: 600, color: '#444' }}>
-          <span style={{ color: '#6EB781' }}>#</span>scholic
+        <span style={{ ...brandFont, fontSize: 15, fontWeight: 600, color: 'var(--text-faint)' }}>
+          <span style={{ color: 'var(--accent)' }}>#</span>scholic
         </span>
-        <span style={{ fontSize: 12, color: '#333' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>
           © {new Date().getFullYear()} Scholic
         </span>
       </footer>

@@ -16,34 +16,34 @@ const statusConfig: Record<Status, {
   accent: string;
 }> = {
   loading: {
-    icon: <Sparkles style={{ width: 28, height: 28, color: '#47E8C5' }} className="pulse" />,
-    ringColor: 'rgba(71,232,197,0.15)',
-    bgColor: 'rgba(71,232,197,0.08)',
-    accent: '#47E8C5',
+    icon: <Sparkles style={{ width: 28, height: 28, color: 'var(--color-aqua)' }} className="pulse" />,
+    ringColor: 'var(--color-aqua-ring)',
+    bgColor: 'var(--color-aqua-soft)',
+    accent: 'var(--color-aqua)',
     title: 'Checking authentication…',
     description: 'Verifying your session before proceeding.',
   },
   syncing: {
-    icon: <Sparkles style={{ width: 28, height: 28, color: '#6EB781' }} className="pulse" />,
-    ringColor: 'rgba(110,183,129,0.15)',
-    bgColor: 'rgba(110,183,129,0.08)',
-    accent: '#6EB781',
+    icon: <Sparkles style={{ width: 28, height: 28, color: 'var(--accent)' }} className="pulse" />,
+    ringColor: 'var(--accent-soft)',
+    bgColor: 'var(--accent-soft)',
+    accent: 'var(--accent)',
     title: 'Syncing with Scholic…',
     description: 'Securely passing your credentials to the extension.',
   },
   success: {
-    icon: <ShieldCheck style={{ width: 28, height: 28, color: '#6EB781' }} />,
-    ringColor: 'rgba(110,183,129,0.2)',
-    bgColor: 'rgba(110,183,129,0.1)',
-    accent: '#6EB781',
+    icon: <ShieldCheck style={{ width: 28, height: 28, color: 'var(--accent)' }} />,
+    ringColor: 'var(--accent-border)',
+    bgColor: 'var(--accent-soft)',
+    accent: 'var(--accent)',
     title: 'Ready to annotate',
     description: 'Your extension is connected. You can close this tab and return to your page.',
   },
   error: {
-    icon: <AlertTriangle style={{ width: 28, height: 28, color: '#E8477A' }} />,
-    ringColor: 'rgba(232,71,122,0.15)',
-    bgColor: 'rgba(232,71,122,0.08)',
-    accent: '#E8477A',
+    icon: <AlertTriangle style={{ width: 28, height: 28, color: 'var(--color-pink)' }} />,
+    ringColor: 'var(--color-pink-soft)',
+    bgColor: 'var(--color-pink-soft)',
+    accent: 'var(--color-pink)',
     title: 'Sync failed',
     description: 'We couldn\'t reach the Scholic extension. Make sure it\'s installed and enabled, then try again.',
   },
@@ -97,9 +97,9 @@ const ExtensionLogin: React.FC = () => {
 
   return (
     <div
+      className="theme-page"
       style={{
         minHeight: '100vh',
-        background: '#0a0a0a',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -148,14 +148,14 @@ const ExtensionLogin: React.FC = () => {
         }}
       >
         <svg width="28" height="28" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="28" cy="10" r="5" fill="#E8C547" />
-          <circle cx="42" cy="18" r="5" fill="#E87347" />
-          <circle cx="44" cy="34" r="5" fill="#6EB781" />
-          <circle cx="34" cy="46" r="5" fill="#47A3E8" />
-          <circle cx="18" cy="44" r="5" fill="#9B6EB7" />
-          <circle cx="12" cy="28" r="5" fill="#E8477A" />
-          <circle cx="18" cy="16" r="5" fill="#47E8C5" />
-          <circle cx="30" cy="28" r="3.5" fill="#6EB781" />
+          <circle cx="28" cy="10" r="5" fill="var(--color-yellow)" />
+          <circle cx="42" cy="18" r="5" fill="var(--color-orange)" />
+          <circle cx="44" cy="34" r="5" fill="var(--accent)" />
+          <circle cx="34" cy="46" r="5" fill="var(--color-blue)" />
+          <circle cx="18" cy="44" r="5" fill="var(--color-purple)" />
+          <circle cx="12" cy="28" r="5" fill="var(--color-pink)" />
+          <circle cx="18" cy="16" r="5" fill="var(--color-aqua)" />
+          <circle cx="30" cy="28" r="3.5" fill="var(--accent)" />
         </svg>
         <span
           style={{
@@ -163,7 +163,7 @@ const ExtensionLogin: React.FC = () => {
             fontSize: '22px',
             fontWeight: 600,
             letterSpacing: '-0.4px',
-            color: '#fff',
+            color: 'var(--text)',
           }}
         >
           scholic
@@ -180,11 +180,11 @@ const ExtensionLogin: React.FC = () => {
           width: '100%',
           padding: '40px',
           borderRadius: '28px',
-          border: '1px solid rgba(255,255,255,0.08)',
-          background: 'rgba(255,255,255,0.025)',
+          border: '1px solid var(--border)',
+          background: 'var(--bg-elevated)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          boxShadow: '0 32px 64px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.03)',
+          boxShadow: 'var(--shadow-lg)',
           position: 'relative',
           zIndex: 10,
           textAlign: 'center',
@@ -227,7 +227,7 @@ const ExtensionLogin: React.FC = () => {
               fontFamily: 'Outfit, sans-serif',
               fontSize: '24px',
               fontWeight: 700,
-              color: '#fff',
+              color: 'var(--text)',
               letterSpacing: '-0.4px',
               margin: '0 0 12px 0',
               lineHeight: 1.2,
@@ -247,7 +247,7 @@ const ExtensionLogin: React.FC = () => {
             transition={{ duration: 0.3, delay: 0.05 }}
             style={{
               fontSize: '14px',
-              color: '#555',
+              color: 'var(--text-dim)',
               lineHeight: 1.65,
               margin: '0 0 28px 0',
             }}
@@ -297,14 +297,14 @@ const ExtensionLogin: React.FC = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '7px',
-                background: 'rgba(110,183,129,0.1)',
-                border: '1px solid rgba(110,183,129,0.25)',
+                background: 'var(--accent-soft)',
+                border: '1px solid var(--accent-border)',
                 borderRadius: '100px',
                 padding: '7px 14px',
               }}
             >
-              <Sparkles style={{ width: 13, height: 13, color: '#6EB781' }} />
-              <span style={{ fontSize: '12px', color: '#6EB781', fontWeight: 600 }}>
+              <Sparkles style={{ width: 13, height: 13, color: 'var(--accent)' }} />
+              <span style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600 }}>
                 Connected successfully
               </span>
             </motion.div>
@@ -319,11 +319,11 @@ const ExtensionLogin: React.FC = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '7px',
-                background: 'rgba(232,71,122,0.1)',
-                border: '1px solid rgba(232,71,122,0.25)',
+                background: 'var(--color-pink-soft)',
+                border: '1px solid var(--color-pink-border)',
                 borderRadius: '100px',
                 padding: '9px 18px',
-                color: '#E8477A',
+                color: 'var(--color-pink)',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -344,7 +344,7 @@ const ExtensionLogin: React.FC = () => {
             style={{
               marginTop: '32px',
               paddingTop: '24px',
-              borderTop: '1px solid rgba(255,255,255,0.05)',
+              borderTop: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -356,20 +356,20 @@ const ExtensionLogin: React.FC = () => {
                 width: '26px',
                 height: '26px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3))',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--avatar-gradient-soft)',
+                border: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '11px',
-                color: '#888',
+                color: 'var(--text-soft)',
                 fontWeight: 700,
                 flexShrink: 0,
               }}
             >
               {user.email[0].toUpperCase()}
             </div>
-            <span style={{ fontSize: '13px', color: '#444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user.email}
             </span>
           </div>

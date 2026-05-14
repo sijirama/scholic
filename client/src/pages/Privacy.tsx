@@ -5,10 +5,10 @@ const EFFECTIVE_DATE = 'March 28, 2025';
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <section style={{ marginBottom: 48 }}>
-    <h2 style={{ fontSize: 18, fontWeight: 600, color: '#e0e0e0', marginBottom: 16, letterSpacing: '-0.2px' }}>
+    <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 16, letterSpacing: '-0.2px' }}>
       {title}
     </h2>
-    <div style={{ fontSize: 15, color: '#888', lineHeight: 1.8 }}>
+    <div style={{ fontSize: 15, color: 'var(--text-soft)', lineHeight: 1.8 }}>
       {children}
     </div>
   </section>
@@ -30,24 +30,24 @@ const Privacy: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0e0e0e', color: '#fff', fontFamily: '"Inter", sans-serif' }}>
+    <div className="theme-page" style={{ fontFamily: '"Inter", sans-serif' }}>
       {/* Nav */}
-      <nav style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', height: 48, display: 'flex', alignItems: 'center', padding: '0 40px' }}>
+      <nav style={{ borderBottom: '1px solid var(--border)', height: 48, display: 'flex', alignItems: 'center', padding: '0 40px' }}>
         <span
           onClick={() => navigate('/')}
-          style={{ fontFamily: '"Outfit", sans-serif', fontSize: 18, fontWeight: 600, color: '#fff', letterSpacing: '-0.3px', cursor: 'pointer' }}
+          style={{ fontFamily: '"Outfit", sans-serif', fontSize: 18, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.3px', cursor: 'pointer' }}
         >
-          <span style={{ color: '#6EB781' }}>#</span>scholic
+          <span style={{ color: 'var(--accent)' }}>#</span>scholic
         </span>
       </nav>
 
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '64px 40px 120px' }}>
         {/* Header */}
         <div style={{ marginBottom: 56 }}>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px', margin: '0 0 12px' }}>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.5px', margin: '0 0 12px' }}>
             Privacy Policy
           </h1>
-          <p style={{ fontSize: 14, color: '#444', margin: 0 }}>Effective {EFFECTIVE_DATE}</p>
+          <p style={{ fontSize: 14, color: 'var(--text-faint)', margin: 0 }}>Effective {EFFECTIVE_DATE}</p>
         </div>
 
         <Section title="Overview">
@@ -60,12 +60,12 @@ const Privacy: React.FC = () => {
         </Section>
 
         <Section title="What we collect">
-          <P><strong style={{ color: '#ccc' }}>Account information</strong></P>
+          <P><strong style={{ color: 'var(--text-muted)' }}>Account information</strong></P>
           <P>
             When you sign in with Google, we receive your name, email address, and profile picture from Google. We store your name and profile picture to display on your public profile. Your email is used only for account identification and is never shown publicly.
           </P>
 
-          <P><strong style={{ color: '#ccc' }}>Annotations</strong></P>
+          <P><strong style={{ color: 'var(--text-muted)' }}>Annotations</strong></P>
           <P>
             When you create an annotation, we store:
           </P>
@@ -80,17 +80,17 @@ const Privacy: React.FC = () => {
             'Screenshots, if you used the screenshot annotation feature (stored in Cloudflare R2)',
           ]} />
 
-          <P><strong style={{ color: '#ccc' }}>Profile information</strong></P>
+          <P><strong style={{ color: 'var(--text-muted)' }}>Profile information</strong></P>
           <P>
             Your username, display name, bio, and profile picture are public and visible to anyone on Scholic. You can edit or remove them at any time in Settings.
           </P>
 
-          <P><strong style={{ color: '#ccc' }}>Browser extension</strong></P>
+          <P><strong style={{ color: 'var(--text-muted)' }}>Browser extension</strong></P>
           <P>
             The Scholic browser extension stores your authentication token locally in your browser using Chrome's storage API. This token is used to authenticate requests to our API. It is never sent to any third party. The extension reads the URL of the page you are currently visiting only to fetch annotations for that page — this data is not logged or stored on our servers.
           </P>
 
-          <P><strong style={{ color: '#ccc' }}>Follow relationships</strong></P>
+          <P><strong style={{ color: 'var(--text-muted)' }}>Follow relationships</strong></P>
           <P>
             When you follow another user, we store that relationship so we can build your feed and show follower counts on profiles.
           </P>
@@ -119,10 +119,10 @@ const Privacy: React.FC = () => {
 
         <Section title="Public vs. private annotations">
           <P>
-            Annotations are <strong style={{ color: '#ccc' }}>public by default</strong>. Public annotations are visible to anyone — signed in or not — and appear in search results, user profiles, and the feed.
+            Annotations are <strong style={{ color: 'var(--text-muted)' }}>public by default</strong>. Public annotations are visible to anyone — signed in or not — and appear in search results, user profiles, and the feed.
           </P>
           <P>
-            You can mark any annotation as <strong style={{ color: '#ccc' }}>private</strong> when creating or editing it. Private annotations are visible only to you when signed in. They do not appear in search results or on your public profile.
+            You can mark any annotation as <strong style={{ color: 'var(--text-muted)' }}>private</strong> when creating or editing it. Private annotations are visible only to you when signed in. They do not appear in search results or on your public profile.
           </P>
         </Section>
 
@@ -147,7 +147,7 @@ const Privacy: React.FC = () => {
             Your annotations, profile, and account data are retained for as long as your account exists.
           </P>
           <P>
-            To delete your account and all associated data, contact us at <span style={{ color: '#6EB781' }}>gbemilesanmi@gmail.com</span>. We will permanently delete your account, annotations, comments, and follow relationships within 30 days.
+            To delete your account and all associated data, contact us at <span style={{ color: 'var(--accent)' }}>gbemilesanmi@gmail.com</span>. We will permanently delete your account, annotations, comments, and follow relationships within 30 days.
           </P>
           <P>
             You can delete individual annotations at any time from the extension sidebar or from your profile on the website.
@@ -174,17 +174,17 @@ const Privacy: React.FC = () => {
 
         <Section title="Contact">
           <P>
-            Questions about this policy or your data: <span style={{ color: '#6EB781' }}>gbemilesanmi@gmail.com</span>
+            Questions about this policy or your data: <span style={{ color: 'var(--accent)' }}>gbemilesanmi@gmail.com</span>
           </P>
         </Section>
 
         {/* Footer */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 32, marginTop: 16 }}>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 32, marginTop: 16 }}>
           <span
             onClick={() => navigate('/')}
-            style={{ fontSize: 13, color: '#444', cursor: 'pointer', transition: 'color 0.15s' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#888')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#444')}
+            style={{ fontSize: 13, color: 'var(--text-faint)', cursor: 'pointer', transition: 'color 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-soft)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
           >
             ← Back to Scholic
           </span>

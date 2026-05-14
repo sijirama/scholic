@@ -37,11 +37,11 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
       style={{
         padding: '14px 16px',
         borderRadius: 10,
-        border: `1px solid ${isSelected ? 'rgba(110,183,129,0.45)' : 'rgba(255,255,255,0.06)'}`,
-        background: isSelected ? 'rgba(110,183,129,0.06)' : 'rgba(255,255,255,0.015)',
+        border: `1px solid ${isSelected ? 'var(--accent-border)' : 'var(--border)'}`,
+        background: isSelected ? 'var(--accent-soft)' : 'var(--surface-inset)',
         cursor: 'pointer',
         transition: 'all 0.2s',
-        boxShadow: isSelected ? '0 0 0 1px rgba(110,183,129,0.2), 0 4px 16px rgba(110,183,129,0.08)' : 'none',
+        boxShadow: isSelected ? '0 0 0 1px var(--accent-border), 0 4px 16px var(--accent-soft)' : 'none',
         marginBottom: 10,
       }}
     >
@@ -51,19 +51,19 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
         <a
           href={`/u/${annotation.user?.username}`}
           onClick={e => e.stopPropagation()}
-          style={{ fontSize: 13, fontWeight: 600, color: '#e0e0e0', textDecoration: 'none' }}
+          style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', textDecoration: 'none' }}
           className="hover:underline"
         >
           @{annotation.user?.username}
         </a>
-        <span style={{ fontSize: 11, color: '#555', marginLeft: 'auto' }}>{timeAgo(annotation.createdAt)}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 'auto' }}>{timeAgo(annotation.createdAt)}</span>
       </div>
 
       {/* Quote snippet */}
       {annotation.quoteText && (
         <p style={{
           fontSize: 12,
-          color: '#888',
+          color: 'var(--text-soft)',
           fontStyle: 'italic',
           margin: '0 0 7px',
           lineHeight: 1.6,
@@ -83,7 +83,7 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
       {annotation.text && (
         <p style={{
           fontSize: 16,
-          color: '#bbb',
+          color: 'var(--text-soft)',
           margin: 0,
           lineHeight: 1.5,
           display: '-webkit-box',
@@ -101,7 +101,7 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
       {/* Footer */}
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 10, gap: 12, flexWrap: 'wrap' }}>
         {(annotation.commentCount || 0) > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#555' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-dim)' }}>
             <MessageCircle style={{ width: 12, height: 12 }} />
             <span style={{ fontSize: 11 }}>{annotation.commentCount}</span>
           </div>
@@ -115,8 +115,9 @@ const SiteAnnotationCard: React.FC<SiteAnnotationCardProps> = ({ annotation, isS
           />
           <a
             href={`/annotation/${annotation.id}`}
-            style={{ fontSize: 11, color: '#555', textDecoration: 'none' }}
-            className="hover:text-green-400"
+            style={{ fontSize: 11, color: 'var(--text-dim)', textDecoration: 'none' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-dim)'; }}
           >
             view →
           </a>

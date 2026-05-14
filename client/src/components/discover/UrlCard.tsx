@@ -30,8 +30,8 @@ const UrlCard: React.FC<{ page: TrendingPage }> = ({ page }) => {
       style={{
         flex: '0 0 280px',
         scrollSnapAlign: 'start',
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: 12,
         overflow: 'hidden',
         cursor: 'pointer',
@@ -39,10 +39,11 @@ const UrlCard: React.FC<{ page: TrendingPage }> = ({ page }) => {
         display: 'flex',
         flexDirection: 'column',
       }}
-      className="hover:bg-white/5"
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
     >
       {page.image ? (
-        <div style={{ width: '100%', aspectRatio: '16/9', background: '#1a1a1a', overflow: 'hidden' }}>
+        <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--surface-inset)', overflow: 'hidden' }}>
           <img
             src={page.image}
             alt={title}
@@ -52,9 +53,9 @@ const UrlCard: React.FC<{ page: TrendingPage }> = ({ page }) => {
         </div>
       ) : null}
       <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#888' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-soft)' }}>
           {uploadedDoc ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0px 5px', borderRadius: 3, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 9.5, color: '#6EB781', fontWeight: 600 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '0px 5px', borderRadius: 3, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', fontSize: 9.5, color: 'var(--accent)', fontWeight: 600 }}>
               <FileText style={{ width: 8, height: 8 }} />
               PDF
             </span>
@@ -69,13 +70,13 @@ const UrlCard: React.FC<{ page: TrendingPage }> = ({ page }) => {
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{domainText}</span>
         </div>
         <div style={{
-          fontSize: 14, fontWeight: 600, color: '#e0e0e0',
+          fontSize: 14, fontWeight: 600, color: 'var(--text-muted)',
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
           overflow: 'hidden', lineHeight: 1.3,
         }}>
           {title}
         </div>
-        <div style={{ marginTop: 'auto', display: 'flex', gap: 12, fontSize: 11, color: '#666' }}>
+        <div style={{ marginTop: 'auto', display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-dim)' }}>
           <span>{page.annotators} {page.annotators === 1 ? 'annotator' : 'annotators'}</span>
           <span>·</span>
           <span>{page.annotations} {page.annotations === 1 ? 'annotation' : 'annotations'}</span>

@@ -7,7 +7,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (loading) {
     return (
-      <div style={{ background: '#121212', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="theme-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <style>{`
           @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.5; } 100% { opacity: 0.3; } }
           .pulse-bg { animation: pulse 2s infinite; width: 100%; height: 100%; }

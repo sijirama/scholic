@@ -111,13 +111,13 @@ const DropdownMenu: React.FC<{
         right: 0,
         top: '100%',
         marginTop: '4px',
-        background: '#1a1a1a',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
         borderRadius: '8px',
         padding: '4px',
         zIndex: 50,
         minWidth: '120px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+        boxShadow: 'var(--shadow-lg)',
       }}
     >
       <button
@@ -130,14 +130,15 @@ const DropdownMenu: React.FC<{
           padding: '6px 10px',
           background: 'none',
           border: 'none',
-          color: '#ccc',
+          color: 'var(--text-muted)',
           fontSize: '12px',
           cursor: 'pointer',
           borderRadius: '6px',
           fontFamily: 'inherit',
           transition: 'background 0.15s',
         }}
-        className="hover:bg-white/5"
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
       >
         <Pencil style={{ width: 12, height: 12 }} />
         Edit
@@ -152,15 +153,15 @@ const DropdownMenu: React.FC<{
           padding: '6px 10px',
           background: 'none',
           border: 'none',
-          color: '#ccc',
+          color: 'var(--text-muted)',
           fontSize: '12px',
           cursor: 'pointer',
           borderRadius: '6px',
           fontFamily: 'inherit',
           transition: 'all 0.15s',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = '#ff5f57'; e.currentTarget.style.background = 'rgba(255,95,87,0.08)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.background = 'none'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-soft)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'none'; }}
       >
         <Trash2 style={{ width: 12, height: 12 }} />
         Delete
@@ -178,7 +179,7 @@ const TruncatedText: React.FC<{ text: string }> = ({ text }) => {
 
   return (
     <div>
-      <p style={{ fontSize: '14px', color: '#ccc', lineHeight: 1.65, margin: '0 0 12px 0', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+      <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.65, margin: '0 0 12px 0', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
         <MentionText text={displayText} />
       </p>
       {isTruncated && (
@@ -190,7 +191,7 @@ const TruncatedText: React.FC<{ text: string }> = ({ text }) => {
           style={{
             background: 'none',
             border: 'none',
-            color: '#6EB781',
+            color: 'var(--accent)',
             fontSize: '12px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -268,11 +269,17 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
             <a href={`/u/${annotation.user?.username}`} style={{ textDecoration: 'none' }}>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0' }} className="hover:underline">
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }} className="hover:underline">
                 @{annotation.user?.username || 'unknown'}
               </span>
             </a>
-            <a href={`/annotation/${annotation.id}`} style={{ fontSize: '12px', color: '#444', textDecoration: 'none', transition: 'color 0.15s' }} className="hover:underline">
+            <a
+              href={`/annotation/${annotation.id}`}
+              style={{ fontSize: '12px', color: 'var(--text-faint)', textDecoration: 'none', transition: 'color 0.15s' }}
+              className="hover:underline"
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-soft)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-faint)'; }}
+            >
               {timeAgo(annotation.createdAt)}
             </a>
             {annotation.isPrivate && (
@@ -283,13 +290,13 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                   gap: '4px',
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)'
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)'
                 }}
                 title="Private Annotation"
               >
-                <Lock style={{ width: 10, height: 10, color: '#666' }} />
-                <span style={{ fontSize: '10px', fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private</span>
+                <Lock style={{ width: 10, height: 10, color: 'var(--text-dim)' }} />
+                <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private</span>
               </div>
             )}
             {isAnnotationOwner && (onEditAnnotation || onDeleteAnnotation) && (
@@ -307,11 +314,10 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                     opacity: 0.4,
                     transition: 'opacity 0.15s',
                   }}
-                  className="hover:bg-white/5"
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; e.currentTarget.style.opacity = '1'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.opacity = '0.4'; }}
                 >
-                  <MoreHorizontal style={{ width: 16, height: 16, color: '#888' }} />
+                  <MoreHorizontal style={{ width: 16, height: 16, color: 'var(--text-soft)' }} />
                 </button>
                 {annotationMenuOpen && (
                   <DropdownMenu
@@ -327,7 +333,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             )}
           </div>
           
-          <div style={{ fontSize: '12px', color: '#666', marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginBottom: '12px' }}>
             {renderAnnotationAction(annotation)}
           </div>
 
@@ -339,8 +345,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 borderRadius: '8px',
                 overflow: 'hidden',
                 marginBottom: '10px',
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid var(--border)',
+                background: 'var(--surface-inset)',
                 cursor: 'zoom-in',
               }}
             >
@@ -354,7 +360,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             <p style={{
               margin: '0 0 10px 0',
               fontSize: '13px',
-              color: '#ddd',
+              color: 'var(--text-muted)',
               lineHeight: 1.7,
               fontStyle: 'italic',
               display: '-webkit-box',
@@ -384,20 +390,20 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 rows={3}
                 textareaStyle={{
                   width: '100%',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border-strong)',
                   borderRadius: '8px',
                   padding: '10px 12px',
                   fontSize: '14px',
-                  color: '#fff',
+                  color: 'var(--text)',
                   resize: 'vertical',
                   fontFamily: 'inherit',
                   lineHeight: 1.65,
                   outline: 'none',
                   boxSizing: 'border-box',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(110,183,129,0.4)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-border)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
                 autoFocus
               />
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -410,8 +416,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                     padding: '4px 12px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    background: '#6EB781',
-                    color: '#fff',
+                    background: 'var(--accent)',
+                    color: 'var(--text-inverse)',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
@@ -426,8 +432,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                     padding: '4px 12px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    background: 'rgba(255,255,255,0.06)',
-                    color: '#999',
+                    background: 'var(--surface-3)',
+                    color: 'var(--text-soft)',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
@@ -443,35 +449,42 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
           ) : null}
 
           {/* Link Card */}
-          <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.02)', margin: '0 0 16px 0' }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-inset)', margin: '0 0 16px 0' }}>
             {annotation.linkImage && !linkImageFailed && annotation.type !== 'image' && (
               <a href={annotation.url} target="_blank" rel="noreferrer">
-                <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid rgba(255,255,255,0.08)' }} />
+                <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid var(--border)' }} />
               </a>
             )}
             <div style={{ padding: '12px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                 {uploadedDoc ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '1px 6px', borderRadius: 4, background: 'rgba(110,183,129,0.10)', border: '1px solid rgba(110,183,129,0.22)', fontSize: 10, color: '#6EB781', fontWeight: 600 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '1px 6px', borderRadius: 4, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', fontSize: 10, color: 'var(--accent)', fontWeight: 600 }}>
                     <FileText style={{ width: 10, height: 10 }} />
                     uploaded PDF
                   </span>
                 ) : annotation.linkFavicon && <img src={annotation.linkFavicon} style={{ width: '14px', height: '14px', borderRadius: '2px' }} alt="" />}
                 <a
                   href={`/page?url=${encodeURIComponent(annotation.url)}`}
-                  style={{ fontSize: '12px', color: '#888', fontWeight: 500, textDecoration: 'none' }}
+                  style={{ fontSize: '12px', color: 'var(--text-soft)', fontWeight: 500, textDecoration: 'none' }}
                   className="hover:underline"
                 >
                   {uploadedDoc ? `by @${uploadedDoc.user.username}` : (annotation.linkDomain || (() => { try { return new URL(annotation.url).hostname.replace('www.', ''); } catch { return annotation.url; } })())}
                 </a>
               </div>
-              <a href={annotation.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }} className="hover:bg-white/5">
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#e0e0e0', margin: '0 0 4px 0', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{uploadedDoc?.title || annotation.linkTitle || annotation.url}</h3>
+              <a
+                href={annotation.url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', margin: '0 0 4px 0', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{uploadedDoc?.title || annotation.linkTitle || annotation.url}</h3>
                 {!uploadedDoc && annotation.linkDescription && (
-                  <p style={{ fontSize: '12px', color: '#888', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{annotation.linkDescription}</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-soft)', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{annotation.linkDescription}</p>
                 )}
                 {uploadedDoc && uploadedDoc.authors.length > 0 && (
-                  <p style={{ fontSize: '12px', color: '#888', margin: 0, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{uploadedDoc.authors.join(', ')}</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-soft)', margin: 0, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{uploadedDoc.authors.join(', ')}</p>
                 )}
               </a>
             </div>
@@ -488,7 +501,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                color: openComments[annotation.id] ? '#6EB781' : '#555',
+                color: openComments[annotation.id] ? 'var(--accent)' : 'var(--text-dim)',
                 fontSize: '13px',
                 padding: '0',
                 transition: 'color 0.15s',
@@ -513,17 +526,17 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 14 }}>
             <a
               href={`/annotation/${annotation.id}`}
-              style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#444'; }}
+              style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; }}
             >
               view annotation →
             </a>
             <a
               href={`/page?url=${encodeURIComponent(annotation.url)}`}
-              style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#444'; }}
+              style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-faint)'; }}
             >
               all on {(() => { try { return annotation.linkDomain || new URL(annotation.url).hostname.replace('www.', ''); } catch { return 'site'; } })()} →
             </a>
@@ -542,7 +555,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 <div style={{
                   marginTop: '16px',
                   paddingTop: '16px',
-                  borderTop: '1px solid rgba(255,255,255,0.05)',
+                  borderTop: '1px solid var(--border)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px'
@@ -555,8 +568,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                           flex: 1,
                           display: 'flex',
                           alignItems: 'center',
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.08)',
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
                           borderRadius: '12px',
                           padding: '4px 4px 4px 14px',
                           gap: '6px',
@@ -583,7 +596,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                             border: 'none',
                             outline: 'none',
                             fontSize: '13px',
-                            color: '#fff',
+                            color: 'var(--text)',
                             resize: 'none',
                             fontFamily: 'inherit',
                             lineHeight: 1.5,
@@ -598,7 +611,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                             }
                           }}
                           style={{
-                            background: commentText.trim() ? '#6EB781' : 'rgba(255,255,255,0.06)',
+                            background: commentText.trim() ? 'var(--accent)' : 'var(--surface-3)',
                             border: 'none',
                             borderRadius: '8px',
                             width: '28px',
@@ -612,7 +625,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                             flexShrink: 0,
                           }}
                         >
-                          <Send style={{ width: 14, height: 14, color: commentText.trim() ? '#fff' : '#555' }} />
+                          <Send style={{ width: 14, height: 14, color: commentText.trim() ? 'var(--text-inverse)' : 'var(--text-dim)' }} />
                         </button>
                       </div>
                     </div>
@@ -631,8 +644,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                         {renderAvatar(comment.user, 24)}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#eee' }}>@{comment.user.username}</span>
-                            <span style={{ fontSize: '11px', color: '#444' }}>{timeAgo(comment.createdAt)}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>@{comment.user.username}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>{timeAgo(comment.createdAt)}</span>
                             {isCommentOwner && (onEditComment || onDeleteComment) && (
                               <div style={{ marginLeft: 'auto', position: 'relative' }}>
                                 <button
@@ -648,11 +661,10 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                                     opacity: 0.4,
                                     transition: 'opacity 0.15s',
                                   }}
-                                  className="hover:bg-white/5"
-                                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4'; }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; e.currentTarget.style.opacity = '1'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.opacity = '0.4'; }}
                                 >
-                                  <MoreHorizontal style={{ width: 14, height: 14, color: '#888' }} />
+                                  <MoreHorizontal style={{ width: 14, height: 14, color: 'var(--text-soft)' }} />
                                 </button>
                                 {commentMenuOpen === comment.id && (
                                   <DropdownMenu
@@ -676,20 +688,20 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                                 rows={2}
                                 textareaStyle={{
                                   width: '100%',
-                                  background: 'rgba(255,255,255,0.03)',
-                                  border: '1px solid rgba(255,255,255,0.12)',
+                                  background: 'var(--surface)',
+                                  border: '1px solid var(--border-strong)',
                                   borderRadius: '8px',
                                   padding: '8px 10px',
                                   fontSize: '13px',
-                                  color: '#fff',
+                                  color: 'var(--text)',
                                   resize: 'vertical',
                                   fontFamily: 'inherit',
                                   lineHeight: 1.5,
                                   outline: 'none',
                                   boxSizing: 'border-box',
                                 }}
-                                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(110,183,129,0.4)'; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-border)'; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
                                 autoFocus
                               />
                               <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
@@ -702,8 +714,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                                     padding: '3px 10px',
                                     fontSize: '11px',
                                     fontWeight: 600,
-                                    background: '#6EB781',
-                                    color: '#fff',
+                                    background: 'var(--accent)',
+                                    color: 'var(--text-inverse)',
                                     border: 'none',
                                     borderRadius: '6px',
                                     cursor: 'pointer',
@@ -718,8 +730,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                                     padding: '3px 10px',
                                     fontSize: '11px',
                                     fontWeight: 600,
-                                    background: 'rgba(255,255,255,0.06)',
-                                    color: '#999',
+                                    background: 'var(--surface-3)',
+                                    color: 'var(--text-soft)',
                                     border: 'none',
                                     borderRadius: '6px',
                                     cursor: 'pointer',
@@ -731,7 +743,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                               </div>
                             </div>
                           ) : (
-                            <p style={{ fontSize: '13px', color: '#bbb', margin: 0, lineHeight: 1.5 }}>
+                            <p style={{ fontSize: '13px', color: 'var(--text-soft)', margin: 0, lineHeight: 1.5 }}>
                               <MentionText text={comment.text} />
                             </p>
                           )}
@@ -748,7 +760,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#6EB781',
+                          color: 'var(--accent)',
                           fontSize: '12px',
                           fontWeight: 500,
                           cursor: 'pointer',

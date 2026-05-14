@@ -91,10 +91,10 @@ const ReactionStrip: React.FC<ReactionStripProps> = ({
               gap: '4px',
               padding: '4px 7px',
               fontSize: '12px',
-              background: active ? 'rgba(110,183,129,0.16)' : 'rgba(255,255,255,0.04)',
-              border: active ? '1px solid rgba(110,183,129,0.35)' : '1px solid rgba(255,255,255,0.08)',
+              background: active ? 'var(--accent-soft)' : 'var(--surface-2)',
+              border: active ? '1px solid var(--accent-border)' : '1px solid var(--border)',
               borderRadius: '6px',
-              color: '#ccc',
+              color: 'var(--text-muted)',
               cursor: canReact ? 'pointer' : 'default',
               fontFamily: 'inherit',
               transition: 'background 0.15s, border-color 0.15s',
@@ -102,7 +102,7 @@ const ReactionStrip: React.FC<ReactionStripProps> = ({
             }}
           >
             <span>{emoji}</span>
-            {count > 0 && <span style={{ fontSize: '11px', color: active ? '#6EB781' : '#888', fontWeight: 600 }}>{count}</span>}
+            {count > 0 && <span style={{ fontSize: '11px', color: active ? 'var(--accent)' : 'var(--text-soft)', fontWeight: 600 }}>{count}</span>}
           </button>
         );
       })}
@@ -117,10 +117,10 @@ const ReactionStrip: React.FC<ReactionStripProps> = ({
             width: '24px',
             height: '24px',
             padding: '0',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
             borderRadius: '6px',
-            color: '#888',
+            color: 'var(--text-soft)',
             cursor: 'pointer',
             fontFamily: 'inherit',
           }}
@@ -137,10 +137,10 @@ const ReactionStrip: React.FC<ReactionStripProps> = ({
             display: 'flex',
             gap: '2px',
             padding: '6px 8px',
-            background: '#1a1a1a',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-strong)',
             borderRadius: '10px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 10,
           }}
           onMouseLeave={() => setPickerOpen(false)}
@@ -151,7 +151,7 @@ const ReactionStrip: React.FC<ReactionStripProps> = ({
               onClick={() => handleReact(emoji)}
               style={{
                 fontSize: '18px',
-                background: myReaction === emoji ? 'rgba(110,183,129,0.16)' : 'none',
+                background: myReaction === emoji ? 'var(--accent-soft)' : 'none',
                 border: 'none',
                 borderRadius: '6px',
                 padding: '4px 6px',
@@ -159,7 +159,7 @@ const ReactionStrip: React.FC<ReactionStripProps> = ({
                 transition: 'background 0.1s',
                 lineHeight: 1,
               }}
-              onMouseEnter={(e) => { if (myReaction !== emoji) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+              onMouseEnter={(e) => { if (myReaction !== emoji) e.currentTarget.style.background = 'var(--surface-hover)'; }}
               onMouseLeave={(e) => { if (myReaction !== emoji) e.currentTarget.style.background = 'none'; }}
             >
               {emoji}

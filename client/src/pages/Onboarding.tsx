@@ -79,6 +79,7 @@ const Onboarding: React.FC = () => {
 
   return (
     <div
+      className="theme-page"
       style={{
         minHeight: '100vh',
         width: '100%',
@@ -86,7 +87,6 @@ const Onboarding: React.FC = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#0a0a0a',
         fontFamily: "'Inter', sans-serif",
         position: 'relative',
         overflow: 'hidden',
@@ -103,7 +103,7 @@ const Onboarding: React.FC = () => {
           transform: 'translate(-50%, -50%)',
           width: '800px',
           height: '800px',
-          background: 'radial-gradient(circle, rgba(110,183,129,0.08) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, var(--accent-soft) 0%, transparent 70%)',
           borderRadius: '50%',
           pointerEvents: 'none',
         }}
@@ -115,7 +115,7 @@ const Onboarding: React.FC = () => {
           right: '15%',
           width: '300px',
           height: '300px',
-          background: 'radial-gradient(circle, rgba(232,197,71,0.04) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, var(--surface-accent) 0%, transparent 70%)',
           borderRadius: '50%',
           pointerEvents: 'none',
         }}
@@ -141,14 +141,14 @@ const Onboarding: React.FC = () => {
           }}
         >
           <svg width="32" height="32" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="28" cy="10" r="5" fill="#E8C547" />
-            <circle cx="42" cy="18" r="5" fill="#E87347" />
-            <circle cx="44" cy="34" r="5" fill="#6EB781" />
-            <circle cx="34" cy="46" r="5" fill="#47A3E8" />
-            <circle cx="18" cy="44" r="5" fill="#9B6EB7" />
-            <circle cx="12" cy="28" r="5" fill="#E8477A" />
-            <circle cx="18" cy="16" r="5" fill="#47E8C5" />
-            <circle cx="30" cy="28" r="3.5" fill="#6EB781" />
+            <circle cx="28" cy="10" r="5" fill="var(--color-yellow)" />
+            <circle cx="42" cy="18" r="5" fill="var(--color-orange)" />
+            <circle cx="44" cy="34" r="5" fill="var(--accent)" />
+            <circle cx="34" cy="46" r="5" fill="var(--color-blue)" />
+            <circle cx="18" cy="44" r="5" fill="var(--color-purple)" />
+            <circle cx="12" cy="28" r="5" fill="var(--color-pink)" />
+            <circle cx="18" cy="16" r="5" fill="var(--color-aqua)" />
+            <circle cx="30" cy="28" r="3.5" fill="var(--accent)" />
           </svg>
           <span
             style={{
@@ -156,7 +156,7 @@ const Onboarding: React.FC = () => {
               fontSize: '26px',
               fontWeight: 600,
               letterSpacing: '-0.5px',
-              color: '#fff',
+              color: 'var(--text)',
             }}
           >
             scholic
@@ -171,11 +171,11 @@ const Onboarding: React.FC = () => {
           style={{
             padding: '40px',
             borderRadius: '28px',
-            border: '1px solid rgba(255,255,255,0.08)',
-            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--border)',
+            background: 'var(--bg-elevated)',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
-            boxShadow: '0 32px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset',
+            boxShadow: 'var(--shadow-lg)',
           }}
         >
           {/* Title */}
@@ -185,8 +185,8 @@ const Onboarding: React.FC = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                background: 'rgba(110,183,129,0.1)',
-                border: '1px solid rgba(110,183,129,0.2)',
+                background: 'var(--accent-soft)',
+                border: '1px solid var(--accent-border)',
                 borderRadius: '100px',
                 padding: '4px 12px',
                 marginBottom: '16px',
@@ -197,11 +197,11 @@ const Onboarding: React.FC = () => {
                   width: '6px',
                   height: '6px',
                   borderRadius: '50%',
-                  background: '#6EB781',
-                  boxShadow: '0 0 6px #6EB781',
+                  background: 'var(--accent)',
+                  boxShadow: '0 0 6px var(--accent)',
                 }}
               />
-              <span style={{ fontSize: '11px', color: '#6EB781', fontWeight: 600, letterSpacing: '0.06em' }}>
+              <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.06em' }}>
                 ALMOST THERE
               </span>
             </div>
@@ -211,7 +211,7 @@ const Onboarding: React.FC = () => {
                 fontFamily: 'Outfit, sans-serif',
                 fontSize: '28px',
                 fontWeight: 700,
-                color: '#fff',
+                color: 'var(--text)',
                 letterSpacing: '-0.5px',
                 lineHeight: 1.2,
                 margin: '0 0 10px 0',
@@ -219,7 +219,7 @@ const Onboarding: React.FC = () => {
             >
               Claim your handle
             </h1>
-            <p style={{ fontSize: '14px', color: '#666', lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-dim)', lineHeight: 1.6, margin: 0 }}>
               Pick a username that'll represent you everywhere on scholic.
             </p>
           </div>
@@ -232,7 +232,7 @@ const Onboarding: React.FC = () => {
                 style={{
                   fontSize: '11px',
                   fontWeight: 700,
-                  color: '#444',
+                  color: 'var(--text-faint)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.12em',
                 }}
@@ -252,11 +252,11 @@ const Onboarding: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRight: '1px solid rgba(255,255,255,0.06)',
+                    borderRight: '1px solid var(--border)',
                     pointerEvents: 'none',
                   }}
                 >
-                  <span style={{ fontSize: '16px', color: '#555', fontWeight: 500 }}>@</span>
+                  <span style={{ fontSize: '16px', color: 'var(--text-dim)', fontWeight: 500 }}>@</span>
                 </div>
 
                 <input
@@ -270,11 +270,11 @@ const Onboarding: React.FC = () => {
                   placeholder="yourname"
                   style={{
                     width: '100%',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${error ? 'rgba(248,113,113,0.4)' : (isValid && isAvailable) ? 'rgba(110,183,129,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                    background: 'var(--surface-2)',
+                    border: `1px solid ${error ? 'var(--danger)' : (isValid && isAvailable) ? 'var(--accent-border)' : 'var(--border)'}`,
                     borderRadius: '14px',
                     padding: '15px 16px 15px 64px',
-                    color: '#fff',
+                    color: 'var(--text)',
                     fontSize: '15px',
                     fontWeight: 500,
                     letterSpacing: '-0.2px',
@@ -285,14 +285,14 @@ const Onboarding: React.FC = () => {
                   }}
                   onFocus={(e) => {
                     if (!error && !isValid) {
-                      e.target.style.borderColor = 'rgba(255,255,255,0.18)';
-                      e.target.style.background = 'rgba(255,255,255,0.06)';
+                      e.target.style.borderColor = 'var(--border-strong)';
+                      e.target.style.background = 'var(--surface-hover)';
                     }
                   }}
                   onBlur={(e) => {
                     if (!error && !isValid) {
-                      e.target.style.borderColor = 'rgba(255,255,255,0.08)';
-                      e.target.style.background = 'rgba(255,255,255,0.04)';
+                      e.target.style.borderColor = 'var(--border)';
+                      e.target.style.background = 'var(--surface-2)';
                     }
                   }}
                 />
@@ -310,15 +310,15 @@ const Onboarding: React.FC = () => {
                         top: '50%',
                         transform: 'translateY(-50%)',
                         fontSize: '11px',
-                        color: isValid ? '#6EB781' : '#444',
+                        color: isValid ? 'var(--accent)' : 'var(--text-faint)',
                         fontWeight: 600,
                         fontVariantNumeric: 'tabular-nums',
                       }}
                     >
                       {checking ? (
-                        <span className="pulse" style={{ color: '#6EB781' }}>Checking…</span>
+                        <span className="pulse" style={{ color: 'var(--accent)' }}>Checking…</span>
                       ) : isAvailable === true ? (
-                        <span style={{ color: '#6EB781' }}>Available</span>
+                        <span style={{ color: 'var(--accent)' }}>Available</span>
                       ) : (
                         `${username.length}/20`
                       )}
@@ -337,7 +337,7 @@ const Onboarding: React.FC = () => {
                     exit={{ opacity: 0, y: -4 }}
                     style={{
                       fontSize: '12px',
-                      color: '#f87171',
+                      color: 'var(--danger)',
                       margin: '2px 0 0 2px',
                     }}
                   >
@@ -351,7 +351,7 @@ const Onboarding: React.FC = () => {
                     exit={{ opacity: 0 }}
                     style={{
                       fontSize: '12px',
-                      color: '#444',
+                      color: 'var(--text-faint)',
                       margin: '2px 0 0 2px',
                     }}
                   >
@@ -368,10 +368,10 @@ const Onboarding: React.FC = () => {
               style={{
                 width: '100%',
                 padding: '15px 20px',
-                background: (isValid && isAvailable && !loading && !checking) ? '#6EB781' : 'rgba(110,183,129,0.15)',
-                border: `1px solid ${(isValid && isAvailable && !loading && !checking) ? 'transparent' : 'rgba(110,183,129,0.15)'}`,
+                background: (isValid && isAvailable && !loading && !checking) ? 'var(--accent)' : 'var(--accent-soft)',
+                border: `1px solid ${(isValid && isAvailable && !loading && !checking) ? 'transparent' : 'var(--accent-soft)'}`,
                 borderRadius: '14px',
-                color: (isValid && isAvailable && !loading && !checking) ? '#0a0a0a' : '#3a3a3a',
+                color: (isValid && isAvailable && !loading && !checking) ? 'var(--text-inverse)' : 'var(--text-dim)',
                 fontSize: '14px',
                 fontWeight: 700,
                 letterSpacing: '-0.1px',
@@ -381,7 +381,7 @@ const Onboarding: React.FC = () => {
                 justifyContent: 'center',
                 gap: '8px',
                 transition: 'all 0.2s',
-                boxShadow: isValid && !loading ? '0 8px 24px rgba(110,183,129,0.25)' : 'none',
+                boxShadow: isValid && !loading ? '0 8px 24px var(--accent-soft)' : 'none',
                 fontFamily: 'inherit',
               }}
               onMouseEnter={(e) => {
@@ -415,20 +415,20 @@ const Onboarding: React.FC = () => {
           </form>
 
           {/* Divider + signed in as */}
-          <div style={{ marginTop: '28px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ marginTop: '28px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div
                 style={{
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, rgba(110,183,129,0.3), rgba(71,163,232,0.3))',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'linear-gradient(135deg, var(--accent-soft), var(--surface-2))',
+                  border: '1px solid var(--border)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '13px',
-                  color: '#aaa',
+                  color: 'var(--text-soft)',
                   fontWeight: 600,
                   flexShrink: 0,
                 }}
@@ -436,10 +436,10 @@ const Onboarding: React.FC = () => {
                 {user?.email?.[0]?.toUpperCase() ?? '?'}
               </div>
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: '10px', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px 0' }}>
+                <p style={{ fontSize: '10px', color: 'var(--text-faint)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px 0' }}>
                   Signed in as
                 </p>
-                <p style={{ fontSize: '13px', color: '#666', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-dim)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user?.email}
                 </p>
               </div>
@@ -450,7 +450,7 @@ const Onboarding: React.FC = () => {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        input::placeholder { color: #333; }
+        input::placeholder { color: var(--text-faint); }
       `}</style>
     </div>
   );

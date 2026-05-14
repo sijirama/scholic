@@ -57,15 +57,15 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserId, isAuthed }) =>
       style={{
         flex: '0 0 280px',
         minHeight: 250,
-        background: '#141414',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
         borderRadius: 16,
         padding: '16px 16px 14px',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        boxShadow: '0 16px 42px rgba(0,0,0,0.2)',
+        boxShadow: 'var(--shadow-lg)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
@@ -74,16 +74,16 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserId, isAuthed }) =>
             width: 56,
             height: 56,
             borderRadius: '50%',
-            background: user.profilePicture ? '#111' : 'linear-gradient(135deg, rgba(110,183,129,0.9), rgba(71,163,232,0.85))',
+            background: user.profilePicture ? 'var(--surface-inset)' : 'var(--avatar-gradient-strong)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#fff',
+            color: 'var(--text-inverse)',
             fontSize: 20,
             fontWeight: 700,
             overflow: 'hidden',
             flexShrink: 0,
-            boxShadow: '0 0 0 3px rgba(255,255,255,0.04)',
+            boxShadow: '0 0 0 3px var(--surface)',
           }}
         >
           {user.profilePicture ? (
@@ -104,7 +104,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserId, isAuthed }) =>
                 fontFamily: '"Outfit", sans-serif',
                 fontSize: 16,
                 fontWeight: 600,
-                color: '#ededed',
+                color: 'var(--text-muted)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -113,9 +113,9 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserId, isAuthed }) =>
             >
               {displayName}
             </div>
-            <ArrowUpRight style={{ width: 14, height: 14, color: '#555', flexShrink: 0 }} />
+            <ArrowUpRight style={{ width: 14, height: 14, color: 'var(--text-dim)', flexShrink: 0 }} />
           </div>
-          <div style={{ fontSize: 12, color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
             @{user.username}
           </div>
         </div>
@@ -124,7 +124,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserId, isAuthed }) =>
       <div
         style={{
           fontSize: 12,
-          color: '#999',
+          color: 'var(--text-soft)',
           lineHeight: 1.5,
           minHeight: 54,
           marginBottom: 14,
@@ -146,9 +146,9 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserId, isAuthed }) =>
             padding: '4px 9px',
             borderRadius: 999,
             fontSize: 11,
-            color: '#aaa',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            color: 'var(--text-soft)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
           }}
         >
           <Users style={{ width: 11, height: 11 }} />
@@ -162,9 +162,9 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserId, isAuthed }) =>
             padding: '4px 9px',
             borderRadius: 999,
             fontSize: 11,
-            color: '#aaa',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            color: 'var(--text-soft)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
           }}
         >
           <Highlighter style={{ width: 11, height: 11 }} />
@@ -183,9 +183,9 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUserId, isAuthed }) =>
             fontSize: 12,
             fontWeight: 600,
             borderRadius: 10,
-            border: following ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(110,183,129,0.35)',
-            background: following ? 'rgba(255,255,255,0.02)' : '#6EB781',
-            color: following ? '#bbb' : '#0d0d0d',
+            border: following ? '1px solid var(--border-strong)' : '1px solid var(--accent-border)',
+            background: following ? 'var(--surface-inset)' : 'var(--accent)',
+            color: following ? 'var(--text-soft)' : 'var(--text-inverse)',
             cursor: isAuthed ? 'pointer' : 'not-allowed',
             opacity: !isAuthed ? 0.5 : 1,
             fontFamily: 'inherit',

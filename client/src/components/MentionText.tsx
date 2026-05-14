@@ -106,18 +106,18 @@ const MentionPopover: React.FC<{
         left,
         width,
         zIndex: 10000,
-        background: '#1a1a1a',
-        border: '1px solid rgba(255,255,255,0.1)',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
         borderRadius: 10,
-        boxShadow: '0 18px 48px rgba(0,0,0,0.45)',
+        boxShadow: 'var(--shadow-lg)',
         padding: 14,
-        color: '#fff',
+        color: 'var(--text)',
         fontFamily: '"Inter", sans-serif',
         pointerEvents: 'auto',
       }}
     >
       {loading ? (
-        <span style={{ display: 'block', fontSize: 12, color: '#777' }}>Loading profile...</span>
+        <span style={{ display: 'block', fontSize: 12, color: 'var(--text-dim)' }}>Loading profile...</span>
       ) : profile ? (
         <>
           <span style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -128,11 +128,11 @@ const MentionPopover: React.FC<{
                 borderRadius: '50%',
                 overflow: 'hidden',
                 flexShrink: 0,
-                background: 'linear-gradient(135deg, rgba(110,183,129,0.55), rgba(71,163,232,0.45))',
+                background: 'var(--mention-gradient)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: 'var(--text-inverse)',
                 fontSize: 14,
                 fontWeight: 700,
               }}
@@ -143,20 +143,20 @@ const MentionPopover: React.FC<{
             </span>
             <span style={{ display: 'block', minWidth: 0, flex: 1 }}>
               {displayName && (
-                <span style={{ display: 'block', color: '#eee', fontSize: 13, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 13, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {displayName}
                 </span>
               )}
-              <span style={{ display: 'block', color: '#6EB781', fontSize: 12, fontWeight: 700, lineHeight: 1.4 }}>
+              <span style={{ display: 'block', color: 'var(--accent)', fontSize: 12, fontWeight: 700, lineHeight: 1.4 }}>
                 @{profile.username}
               </span>
-              <span style={{ display: 'block', color: '#666', fontSize: 11, lineHeight: 1.4, marginTop: 2 }}>
+              <span style={{ display: 'block', color: 'var(--text-dim)', fontSize: 11, lineHeight: 1.4, marginTop: 2 }}>
                 {profile.followersCount ?? 0} followers
               </span>
             </span>
           </span>
           {profile.bio && (
-            <span style={{ display: 'block', color: '#aaa', fontSize: 12, lineHeight: 1.5, marginTop: 10, overflowWrap: 'break-word' }}>
+            <span style={{ display: 'block', color: 'var(--text-soft)', fontSize: 12, lineHeight: 1.5, marginTop: 10, overflowWrap: 'break-word' }}>
               {profile.bio}
             </span>
           )}
@@ -178,9 +178,9 @@ const MentionPopover: React.FC<{
             style={{
               display: 'inline-flex',
               marginTop: 12,
-              color: '#fff',
-              background: 'rgba(110,183,129,0.18)',
-              border: '1px solid rgba(110,183,129,0.28)',
+              color: 'var(--text-inverse)',
+              background: 'var(--accent)',
+              border: '1px solid var(--accent)',
               borderRadius: 7,
               padding: '5px 10px',
               fontSize: 12,
@@ -194,8 +194,8 @@ const MentionPopover: React.FC<{
         </>
       ) : (
         <>
-          <span style={{ display: 'block', color: '#eee', fontSize: 13, fontWeight: 700 }}>@{username}</span>
-          <span style={{ display: 'block', color: '#777', fontSize: 12, marginTop: 4 }}>Profile not found</span>
+          <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: 13, fontWeight: 700 }}>@{username}</span>
+          <span style={{ display: 'block', color: 'var(--text-dim)', fontSize: 12, marginTop: 4 }}>Profile not found</span>
         </>
       )}
     </div>,
@@ -295,9 +295,9 @@ const MentionToken: React.FC<{ username: string; label: string }> = ({ username,
         }}
         style={{
           display: 'inline',
-          color: '#6EB781',
-          background: 'rgba(110,183,129,0.14)',
-          border: '1px solid rgba(110,183,129,0.22)',
+          color: 'var(--accent)',
+          background: 'var(--accent-soft)',
+          border: '1px solid var(--accent-border)',
           borderRadius: 5,
           padding: '0 4px',
           fontWeight: 700,
