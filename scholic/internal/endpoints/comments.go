@@ -37,6 +37,11 @@ func CreateComment(c *gin.Context) {
 		return
 	}
 
+	if err := validateMentionCount(req.Text); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	comment := models.Comment{
 		AnnotationID: annotation.ID,
 		UserID:       userID.(uint),
@@ -97,6 +102,11 @@ func UpdateComment(c *gin.Context) {
 
 	var req UpdateCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := validateMentionCount(req.Text); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

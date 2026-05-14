@@ -80,6 +80,10 @@ func main() {
 
 	r.Use(cors.New(config))
 
+	// Per-IP token-bucket throttle. Sits in front of every route so even
+	// unauthenticated traffic gets bounded.
+	r.Use(middleware.IPRateLimit())
+
 	// ── Auth Routes (Outside /api to match Turva's Google Callback) ──
 	auth := r.Group("/auth")
 	{
@@ -163,16 +167,23 @@ func main() {
 		annotationsProtected := api.Group("/annotations")
 		annotationsProtected.Use(middleware.AuthMiddleware())
 		{
-			annotationsProtected.POST("", endpoints.CreateAnnotation)
-			annotationsProtected.PUT("/:id", endpoints.UpdateAnnotation)
-			annotationsProtected.DELETE("/:id", endpoints.DeleteAnnotation)
-			annotationsProtected.POST("/:id/comments", endpoints.CreateComment)
+			// Reads + deletes don't go through the write throttle.
 			annotationsProtected.GET("/:id/comments", endpoints.GetComments)
-			annotationsProtected.PUT("/:id/comments/:commentId", endpoints.UpdateComment)
+			annotationsProtected.DELETE("/:id", endpoints.DeleteAnnotation)
 			annotationsProtected.DELETE("/:id/comments/:commentId", endpoints.DeleteComment)
-
-			annotationsProtected.POST("/:id/reactions", endpoints.ToggleReaction)
 			annotationsProtected.DELETE("/:id/reactions", endpoints.ClearReaction)
+
+			// Per-user write throttle protects feeds and notification fan-out
+			// from spam without affecting reads.
+			writes := annotationsProtected.Group("")
+			writes.Use(middleware.UserWriteRateLimit())
+			{
+				writes.POST("", endpoints.CreateAnnotation)
+				writes.PUT("/:id", endpoints.UpdateAnnotation)
+				writes.POST("/:id/comments", endpoints.CreateComment)
+				writes.PUT("/:id/comments/:commentId", endpoints.UpdateComment)
+				writes.POST("/:id/reactions", endpoints.ToggleReaction)
+			}
 		}
 
 		// ── Upload Routes ──

@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"scholic/internal/database"
+	"scholic/internal/limits"
 	"scholic/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -44,6 +46,17 @@ func createNotification(userID, actorID uint, notificationType string, annotatio
 
 func uintPtr(v uint) *uint {
 	return &v
+}
+
+// validateMentionCount returns an error if `text` contains more than
+// limits.MaxMentionsPerText unique @mentions. Counts the same way the
+// notification fan-out does (case-insensitive, deduped).
+func validateMentionCount(text string) error {
+	count := len(extractMentionUsernames(text))
+	if count > limits.MaxMentionsPerText {
+		return fmt.Errorf("Too many mentions: maximum is %d unique users per post", limits.MaxMentionsPerText)
+	}
+	return nil
 }
 
 func extractMentionUsernames(text string) []string {

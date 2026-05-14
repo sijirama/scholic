@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"scholic/internal/database"
+	"scholic/internal/limits"
 	"scholic/internal/models"
 	"scholic/internal/services/ai"
 	"scholic/internal/services/media"
@@ -24,9 +25,7 @@ import (
 )
 
 const (
-	maxDocumentUploadSize = 15 * 1024 * 1024
-	maxDocumentsPerUser   = 10
-	documentPageLimit     = 20
+	documentPageLimit = 20
 )
 
 type DocumentResponse struct {
@@ -80,11 +79,6 @@ func UploadDocumentPreview(c *gin.Context) {
 		return
 	}
 
-	if countDocumentsForUser(userID.(uint)) >= maxDocumentsPerUser {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Document limit reached"})
-		return
-	}
-
 	file, header, err := c.Request.FormFile("document")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No document provided"})
@@ -97,8 +91,16 @@ func UploadDocumentPreview(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if header.Size > maxDocumentUploadSize {
+	if header.Size > limits.MaxDocumentUploadBytes {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large. Maximum size is 15MB"})
+		return
+	}
+	if used := sumDocumentBytesForUser(userID.(uint)); used+header.Size > limits.MaxDocumentTotalBytes {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":     "Storage limit reached. Delete some documents to upload more.",
+			"usedBytes": used,
+			"capBytes":  limits.MaxDocumentTotalBytes,
+		})
 		return
 	}
 
@@ -171,11 +173,6 @@ func CreateDocument(c *gin.Context) {
 	}
 	userID := userIDVal.(uint)
 
-	if countDocumentsForUser(userID) >= maxDocumentsPerUser {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Document limit reached"})
-		return
-	}
-
 	var req CreateDocumentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -186,8 +183,16 @@ func CreateDocument(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document key"})
 		return
 	}
-	if req.FileSize <= 0 || req.FileSize > maxDocumentUploadSize {
+	if req.FileSize <= 0 || req.FileSize > limits.MaxDocumentUploadBytes {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file size"})
+		return
+	}
+	if used := sumDocumentBytesForUser(userID); used+req.FileSize > limits.MaxDocumentTotalBytes {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":     "Storage limit reached. Delete some documents to upload more.",
+			"usedBytes": used,
+			"capBytes":  limits.MaxDocumentTotalBytes,
+		})
 		return
 	}
 	if req.MimeType == "" {
@@ -371,10 +376,17 @@ func formatDocument(document models.Document) DocumentResponse {
 	}
 }
 
-func countDocumentsForUser(userID uint) int64 {
-	var count int64
-	database.DB.Model(&models.Document{}).Where("user_id = ? AND deleted_at IS NULL", userID).Count(&count)
-	return count
+// sumDocumentBytesForUser returns the total file_size (bytes) of a user's
+// non-deleted documents. Used to gate uploads against limits.MaxDocumentTotalBytes.
+func sumDocumentBytesForUser(userID uint) int64 {
+	var result struct {
+		Total int64
+	}
+	database.DB.Model(&models.Document{}).
+		Where("user_id = ? AND deleted_at IS NULL", userID).
+		Select("COALESCE(SUM(file_size), 0) AS total").
+		Scan(&result)
+	return result.Total
 }
 
 func decodeStringArray(raw string) []string {

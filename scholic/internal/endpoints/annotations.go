@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"scholic/internal/database"
+	"scholic/internal/limits"
 	"scholic/internal/models"
 	"scholic/internal/scraper"
 	"scholic/internal/services/media"
@@ -54,6 +55,11 @@ func CreateAnnotation(c *gin.Context) {
 		return
 	}
 
+	if err := validateMentionCount(req.Text); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Scrape metadata for rich link previews
 	var linkTitle, linkDesc, linkImage, linkFavicon, linkDomain string
 	meta, err := scraper.ExtractMetadata(req.URL)
@@ -76,8 +82,19 @@ func CreateAnnotation(c *gin.Context) {
 		parts := strings.Split(req.Image, ",")
 		if len(parts) == 2 {
 			base64Data := parts[1]
+			// Reject obviously oversized payloads before paying the
+			// allocation/CPU cost of a full base64 decode. Base64 inflates by
+			// ~4/3, so this slightly over-allows but never under-rejects.
+			if len(base64Data) > (limits.MaxImageAnnotationBytes*4/3)+8 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Image too large. Maximum size is 5MB"})
+				return
+			}
 			data, err := base64.StdEncoding.DecodeString(base64Data)
 			if err == nil {
+				if len(data) > limits.MaxImageAnnotationBytes {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Image too large. Maximum size is 5MB"})
+					return
+				}
 				// Upload to R2
 				r2 := media.GetR2Service()
 				// Construct a pseudo-multipart header for the name/type
@@ -298,6 +315,11 @@ func UpdateAnnotation(c *gin.Context) {
 
 	var req UpdateAnnotationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := validateMentionCount(req.Text); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
