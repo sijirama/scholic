@@ -428,6 +428,7 @@ async function createAnnotation(data: any): Promise<any> {
       pdfHash: data.pdfHash,
       pdfPage: data.pdfPage,
       highlightColor: data.highlightColor || '#A8D5B5',
+      linkPreviewImageMode: data.linkPreviewImageMode || 'default',
     }),
   });
 

@@ -32,6 +32,7 @@ export interface AnnotationData {
   imageUrl?: string;
   image?: string; // base64 data for creation
   highlightColor?: string; // user-chosen pastel hex color
+  linkPreviewImageMode?: 'default' | 'show' | 'hide';
   reactionCounts?: Record<string, number>;
   myReaction?: string;
   _isPending?: boolean; // optimistic: not yet saved to backend
@@ -962,6 +963,23 @@ export class Sidebar {
       }
       .note-input::placeholder { color: #555; }
 
+      .preview-image-select {
+        width: 100%;
+        background: #1a1a1a;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 10px 12px;
+        color: #d7d7d7;
+        font-size: 13px;
+        font-family: inherit;
+        margin-bottom: 12px;
+        box-sizing: border-box;
+      }
+      .preview-image-select:focus {
+        outline: none;
+        border-color: #6EB781;
+      }
+
       .mention-autocomplete-wrapper {
         position: relative;
         width: 100%;
@@ -1498,6 +1516,7 @@ export class Sidebar {
 
     let isPrivate = false;
     let selectedColor = HIGHLIGHT_COLORS[0].hex;
+    let linkPreviewImageMode: 'default' | 'show' | 'hide' = 'default';
 
     const form = document.createElement('div');
     form.className = 'annotation-form';
@@ -1531,6 +1550,14 @@ export class Sidebar {
       <div class="form-label">Your Note</div>
       <textarea class="note-input" placeholder="Add your thoughts..." maxlength="5000"></textarea>
       ${type === 'text' ? swatchesHtml : ''}
+      ${type === 'text' ? `
+        <div class="form-label">Preview Image</div>
+        <select class="preview-image-select">
+          <option value="default">Automatic${this.userData?.defaultLinkPreviewImageVisibility === false ? ' (currently hidden)' : ' (currently shown)'}</option>
+          <option value="show">Show</option>
+          <option value="hide">Hide</option>
+        </select>
+      ` : ''}
       <div class="privacy-toggle">
         <div class="toggle-switch" id="privacy-switch">
           <div class="toggle-knob"></div>
@@ -1585,6 +1612,16 @@ export class Sidebar {
       });
     });
 
+    const previewImageSelect = form.querySelector('.preview-image-select') as HTMLSelectElement | null;
+    previewImageSelect?.addEventListener('change', () => {
+      const value = previewImageSelect.value;
+      if (value === 'show' || value === 'hide') {
+        linkPreviewImageMode = value;
+        return;
+      }
+      linkPreviewImageMode = 'default';
+    });
+
     const discard = () => {
       form.remove();
       this.pendingQuoteText = '';
@@ -1617,6 +1654,7 @@ export class Sidebar {
         type: type,
         image: type === 'image' ? imageData : undefined,
         highlightColor: selectedColor,
+        linkPreviewImageMode,
       } as any);
       form.remove();
       this.pendingQuoteText = '';

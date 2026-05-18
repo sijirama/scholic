@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"scholic/internal/database"
+	"scholic/internal/discover"
 	"scholic/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -17,11 +18,12 @@ import (
 
 // UpdateProfileRequest is the JSON body for updating user profile.
 type UpdateProfileRequest struct {
-	FirstName        *string `json:"firstName"`
-	LastName         *string `json:"lastName"`
-	Username         *string `json:"username"`
-	Bio              *string `json:"bio"`
-	ShowMemberNumber *bool   `json:"showMemberNumber"`
+	FirstName                         *string `json:"firstName"`
+	LastName                          *string `json:"lastName"`
+	Username                          *string `json:"username"`
+	Bio                               *string `json:"bio"`
+	ShowMemberNumber                  *bool   `json:"showMemberNumber"`
+	DefaultLinkPreviewImageVisibility *bool   `json:"defaultLinkPreviewImageVisibility"`
 }
 
 // UpdateProfile handles PUT /api/auth/profile
@@ -52,6 +54,9 @@ func UpdateProfile(c *gin.Context) {
 	}
 	if req.ShowMemberNumber != nil {
 		updates["show_member_number"] = *req.ShowMemberNumber
+	}
+	if req.DefaultLinkPreviewImageVisibility != nil {
+		updates["default_link_preview_image_visibility"] = *req.DefaultLinkPreviewImageVisibility
 	}
 
 	// Fetch current user to check against
@@ -87,6 +92,13 @@ func UpdateProfile(c *gin.Context) {
 
 	// Invalidate the public profile cache for this user
 	go database.CacheDelete(context.Background(), database.UserProfileKey(user.Username))
+	if req.DefaultLinkPreviewImageVisibility != nil {
+		go func() {
+			if err := discover.RefreshAll(context.Background()); err != nil {
+				log.Printf("[Profile] Discover refresh after preview-image preference change failed: %v", err)
+			}
+		}()
+	}
 
 	c.JSON(http.StatusOK, user)
 }
@@ -204,6 +216,7 @@ func GetUserProfile(c *gin.Context) {
 	}
 
 	populateReactions(c, annotations)
+	models.ResolveLinkPreviewImageVisibility(annotations)
 
 	// Fetch follower counts
 	var followersCount, followingCount int64

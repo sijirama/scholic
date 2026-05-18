@@ -10,6 +10,7 @@ const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'general' | 'annotations'>('general');
 
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -21,6 +22,7 @@ const Settings: React.FC = () => {
   const [bio, setBio] = useState('');
   const [showMemberNumber, setShowMemberNumber] = useState(true);
   const [memberNumber, setMemberNumber] = useState(0);
+  const [defaultLinkPreviewImageVisibility, setDefaultLinkPreviewImageVisibility] = useState(true);
 
   // Avatar upload
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +47,7 @@ const Settings: React.FC = () => {
       setBio(data.bio || '');
       setShowMemberNumber(data.showMemberNumber ?? true);
       setMemberNumber(data.memberNumber || 0);
+      setDefaultLinkPreviewImageVisibility(data.defaultLinkPreviewImageVisibility ?? true);
     } catch (e) {
       console.error('Failed to fetch profile:', e);
     }
@@ -59,6 +62,7 @@ const Settings: React.FC = () => {
         lastName,
         bio,
         showMemberNumber,
+        defaultLinkPreviewImageVisibility,
       });
       await refreshUser();
       setSaveMessage('Saved!');
@@ -133,6 +137,24 @@ const Settings: React.FC = () => {
         </div>
 
         <div>
+            <div className="flex items-center gap-2" style={{ marginBottom: '24px' }}>
+              <button
+                onClick={() => setActiveTab('general')}
+                className={activeTab === 'general' ? 'theme-pill' : 'theme-button-secondary'}
+                style={{ padding: '7px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                General
+              </button>
+              <button
+                onClick={() => setActiveTab('annotations')}
+                className={activeTab === 'annotations' ? 'theme-pill' : 'theme-button-secondary'}
+                style={{ padding: '7px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Annotations
+              </button>
+            </div>
+            {activeTab === 'general' ? (
+              <>
             {/* Avatar */}
             <div className="flex items-center gap-4" style={{ marginBottom: '28px' }}>
               <div
@@ -335,6 +357,77 @@ const Settings: React.FC = () => {
                 className="theme-textarea"
               />
             </div>
+              </>
+            ) : (
+              <div>
+                <div
+                  className="flex items-center justify-between"
+                  style={{
+                    padding: '14px 0',
+                    borderTop: '1px solid var(--border)',
+                    borderBottom: '1px solid var(--border)',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)' }}>Preview images on link cards</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '2px', maxWidth: '420px' }}>
+                      Controls whether annotations show the article preview image by default. Annotations set to Automatic will follow this.
+                    </div>
+                  </div>
+                  <label
+                    className="relative cursor-pointer"
+                    style={{ display: 'inline-flex', alignItems: 'center' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={defaultLinkPreviewImageVisibility}
+                      onChange={(e) => setDefaultLinkPreviewImageVisibility(e.target.checked)}
+                      className="hidden"
+                    />
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '20px',
+                        borderRadius: '10px',
+                        background: defaultLinkPreviewImageVisibility ? 'var(--accent)' : 'var(--surface-active)',
+                        transition: 'background 0.2s',
+                        position: 'relative',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          background: 'var(--text-inverse)',
+                          position: 'absolute',
+                          top: '2px',
+                          left: defaultLinkPreviewImageVisibility ? '18px' : '2px',
+                          transition: 'left 0.2s',
+                        }}
+                      />
+                    </div>
+                  </label>
+                </div>
+
+                <div
+                  style={{
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                    background: 'var(--surface-inset)',
+                  }}
+                >
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-soft)', marginBottom: '6px' }}>
+                    How it works
+                  </div>
+                  <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.6, color: 'var(--text-dim)' }}>
+                    New and existing annotations set to Automatic will update immediately when you change this. You can still override individual annotations to always show or always hide the image.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
       </div>

@@ -47,21 +47,26 @@ type Annotation struct {
 
 	// Type distinguishes between text, image, html, and pdf annotations.
 	// Defaults to "text" for backwards compatibility.
-	Type      string `gorm:"default:text" json:"type"`
+	Type string `gorm:"default:text" json:"type"`
 
 	// ImageURL is the location of the screenshot in R2 (only for type="image")
-	ImageURL  string `json:"imageUrl"`
-	PDFHash   string `gorm:"index" json:"pdfHash"` // Digital fingerprint of the PDF
-	PDFPage   int    `json:"pdfPage"`               // Page number within the PDF
+	ImageURL string `json:"imageUrl"`
+	PDFHash  string `gorm:"index" json:"pdfHash"` // Digital fingerprint of the PDF
+	PDFPage  int    `json:"pdfPage"`              // Page number within the PDF
 
 	// LinkMetadata stores scraped OpenGraph data for rich previews in the Feed
-	LinkTitle       string `json:"linkTitle"`
-	LinkDescription string `json:"linkDescription"`
-	LinkImage       string `json:"linkImage"`
-	LinkFavicon     string `json:"linkFavicon"`
-	LinkDomain      string `json:"linkDomain"`
+	LinkTitle            string `json:"linkTitle"`
+	LinkDescription      string `json:"linkDescription"`
+	LinkImage            string `json:"linkImage"`
+	LinkPreviewImageMode string `gorm:"default:'default';size:16" json:"linkPreviewImageMode"`
+	LinkFavicon          string `json:"linkFavicon"`
+	LinkDomain           string `json:"linkDomain"`
 	// HighlightColor is the user-chosen pastel color for the highlight (hex, e.g. "#A8D5B5")
 	HighlightColor string `gorm:"default:'#A8D5B5'" json:"highlightColor"`
+
+	// ShowLinkPreviewImage is resolved on reads using the annotation-level mode
+	// plus the annotation owner's account default.
+	ShowLinkPreviewImage bool `gorm:"-" json:"showLinkPreviewImage"`
 
 	// CommentCount is a virtual field showing the total number of comments
 	CommentCount int64 `gorm:"-" json:"commentCount"`
@@ -73,4 +78,22 @@ type Annotation struct {
 	// MyReaction is the current viewer's active emoji on this annotation,
 	// or "" if they haven't reacted (or aren't signed in).
 	MyReaction string `gorm:"-" json:"myReaction,omitempty"`
+}
+
+func ResolveLinkPreviewImageVisibility(annotations []Annotation) {
+	for i := range annotations {
+		mode := annotations[i].LinkPreviewImageMode
+		switch mode {
+		case "show":
+			annotations[i].ShowLinkPreviewImage = true
+		case "hide":
+			annotations[i].ShowLinkPreviewImage = false
+		default:
+			annotations[i].LinkPreviewImageMode = "default"
+			annotations[i].ShowLinkPreviewImage = annotations[i].User.DefaultLinkPreviewImageVisibility
+			if annotations[i].User.ID == 0 {
+				annotations[i].ShowLinkPreviewImage = true
+			}
+		}
+	}
 }

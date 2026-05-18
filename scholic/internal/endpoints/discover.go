@@ -213,6 +213,7 @@ func filterOnPagesYouveRead(viewerID uint, poolJSON string) []models.Annotation 
 			out[i].MyReaction = mine[out[i].ID]
 		}
 	}
+	models.ResolveLinkPreviewImageVisibility(out)
 	return out
 }
 

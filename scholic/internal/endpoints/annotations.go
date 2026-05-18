@@ -21,16 +21,17 @@ import (
 
 // CreateAnnotationRequest is the JSON body for creating a new annotation.
 type CreateAnnotationRequest struct {
-	URL            string `json:"url" binding:"required"`
-	Selectors      string `json:"selectors" binding:"required"`
-	Text           string `json:"text"`
-	QuoteText      string `json:"quoteText"`
-	IsPrivate      bool   `json:"isPrivate"`
-	Type           string `json:"type"`           // text, image, html, etc.
-	Image          string `json:"image"`          // base64 encoded image data (for type="image")
-	PDFHash        string `json:"pdfHash"`        // Digital fingerprint of the PDF
-	PDFPage        int    `json:"pdfPage"`        // Page number within the PDF
-	HighlightColor string `json:"highlightColor"` // User-chosen pastel highlight color (hex)
+	URL                  string `json:"url" binding:"required"`
+	Selectors            string `json:"selectors" binding:"required"`
+	Text                 string `json:"text"`
+	QuoteText            string `json:"quoteText"`
+	IsPrivate            bool   `json:"isPrivate"`
+	Type                 string `json:"type"`           // text, image, html, etc.
+	Image                string `json:"image"`          // base64 encoded image data (for type="image")
+	PDFHash              string `json:"pdfHash"`        // Digital fingerprint of the PDF
+	PDFPage              int    `json:"pdfPage"`        // Page number within the PDF
+	HighlightColor       string `json:"highlightColor"` // User-chosen pastel highlight color (hex)
+	LinkPreviewImageMode string `json:"linkPreviewImageMode"`
 }
 
 // CreateAnnotation handles POST /api/annotations
@@ -57,6 +58,10 @@ func CreateAnnotation(c *gin.Context) {
 
 	if err := validateMentionCount(req.Text); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if !isValidLinkPreviewImageMode(req.LinkPreviewImageMode) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid linkPreviewImageMode"})
 		return
 	}
 
@@ -116,22 +121,23 @@ func CreateAnnotation(c *gin.Context) {
 	}
 
 	annotation := models.Annotation{
-		UserID:          userID.(uint),
-		URL:             req.URL,
-		Selectors:       req.Selectors,
-		Text:            req.Text,
-		QuoteText:       req.QuoteText,
-		IsPrivate:       req.IsPrivate,
-		Type:            req.Type,
-		ImageURL:        imageUrl,
-		PDFHash:         req.PDFHash,
-		PDFPage:         req.PDFPage,
-		LinkTitle:       linkTitle,
-		LinkDescription: linkDesc,
-		LinkImage:       linkImage,
-		LinkFavicon:     linkFavicon,
-		LinkDomain:      linkDomain,
-		HighlightColor:  highlightColor,
+		UserID:               userID.(uint),
+		URL:                  req.URL,
+		Selectors:            req.Selectors,
+		Text:                 req.Text,
+		QuoteText:            req.QuoteText,
+		IsPrivate:            req.IsPrivate,
+		Type:                 req.Type,
+		ImageURL:             imageUrl,
+		PDFHash:              req.PDFHash,
+		PDFPage:              req.PDFPage,
+		LinkTitle:            linkTitle,
+		LinkDescription:      linkDesc,
+		LinkImage:            linkImage,
+		LinkPreviewImageMode: normalizeLinkPreviewImageMode(req.LinkPreviewImageMode),
+		LinkFavicon:          linkFavicon,
+		LinkDomain:           linkDomain,
+		HighlightColor:       highlightColor,
 	}
 
 	if err := database.DB.Create(&annotation).Error; err != nil {
@@ -144,6 +150,9 @@ func CreateAnnotation(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Annotation created but failed to reload"})
 		return
 	}
+	created := []models.Annotation{annotation}
+	models.ResolveLinkPreviewImageVisibility(created)
+	annotation = created[0]
 
 	// Invalidate caches — annotations for this URL, and (only for public annotations)
 	// ALL recently-read pages for this user and all feed caches.
@@ -214,6 +223,7 @@ func GetAnnotations(c *gin.Context) {
 		Order("created_at DESC").Limit(limit).Offset(offset).Find(&annotations)
 
 	populateReactions(c, annotations)
+	models.ResolveLinkPreviewImageVisibility(annotations)
 
 	c.JSON(http.StatusOK, gin.H{
 		"annotations": annotations,
@@ -282,8 +292,9 @@ func DeleteAnnotation(c *gin.Context) {
 }
 
 type UpdateAnnotationRequest struct {
-	Text           string `json:"text"`
-	HighlightColor string `json:"highlightColor"`
+	Text                 string `json:"text"`
+	HighlightColor       string `json:"highlightColor"`
+	LinkPreviewImageMode string `json:"linkPreviewImageMode"`
 }
 
 // UpdateAnnotation handles PUT /api/annotations/:id
@@ -323,10 +334,17 @@ func UpdateAnnotation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if req.LinkPreviewImageMode != "" && !isValidLinkPreviewImageMode(req.LinkPreviewImageMode) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid linkPreviewImageMode"})
+		return
+	}
 
 	annotation.Text = req.Text
 	if req.HighlightColor != "" {
 		annotation.HighlightColor = req.HighlightColor
+	}
+	if req.LinkPreviewImageMode != "" {
+		annotation.LinkPreviewImageMode = normalizeLinkPreviewImageMode(req.LinkPreviewImageMode)
 	}
 	if err := database.DB.Save(&annotation).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update annotation"})
@@ -337,6 +355,9 @@ func UpdateAnnotation(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Updated but failed to reload"})
 		return
 	}
+	updated := []models.Annotation{annotation}
+	models.ResolveLinkPreviewImageVisibility(updated)
+	annotation = updated[0]
 
 	if !annotation.IsPrivate {
 		notifyMentionedUsers(annotation.UserID, annotation.Text, uintPtr(annotation.ID), nil, previousText)
@@ -380,6 +401,7 @@ func GetAnnotation(c *gin.Context) {
 	// surface the same shape as list reads.
 	one := []models.Annotation{annotation}
 	populateReactions(c, one)
+	models.ResolveLinkPreviewImageVisibility(one)
 	annotation = one[0]
 
 	c.JSON(http.StatusOK, annotation)
@@ -446,6 +468,7 @@ func GetFeed(c *gin.Context) {
 	}
 
 	populateReactions(c, annotations)
+	models.ResolveLinkPreviewImageVisibility(annotations)
 
 	c.JSON(http.StatusOK, gin.H{
 		"annotations": annotations,
@@ -534,6 +557,7 @@ func GetSitePage(c *gin.Context) {
 	}
 
 	populateReactions(c, annotations)
+	models.ResolveLinkPreviewImageVisibility(annotations)
 
 	c.JSON(http.StatusOK, gin.H{
 		"annotations": annotations,

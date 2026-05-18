@@ -9,6 +9,7 @@ interface User {
   lastName: string;
   profilePicture: string;
   onboarded: boolean;
+  defaultLinkPreviewImageVisibility: boolean;
 }
 
 interface AuthContextType {

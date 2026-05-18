@@ -111,6 +111,7 @@ const AnnotationPage: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [editLinkPreviewImageMode, setEditLinkPreviewImageMode] = useState<'default' | 'show' | 'hide'>('default');
   const [saving, setSaving] = useState(false);
 
   // Delete modal state
@@ -222,6 +223,7 @@ const AnnotationPage: React.FC = () => {
     if (!annotation) return;
     setEditText(annotation.text || '');
     setEditColor(annotation.highlightColor || '#A8D5B5');
+    setEditLinkPreviewImageMode(annotation.linkPreviewImageMode || 'default');
     setEditing(true);
   };
 
@@ -236,6 +238,7 @@ const AnnotationPage: React.FC = () => {
       const response = await api.put(`/annotations/${annotation.id}`, {
         text: editText,
         highlightColor: editColor,
+        linkPreviewImageMode: editLinkPreviewImageMode,
       });
       setAnnotation(response.data);
       setEditing(false);
@@ -478,6 +481,31 @@ const AnnotationPage: React.FC = () => {
                       boxSizing: 'border-box',
                     }}
                   />
+                  {annotation.type !== 'image' && annotation.linkImage && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.3, textTransform: 'uppercase', color: 'var(--paper-rule)', marginBottom: 6 }}>
+                        Preview image
+                      </div>
+                      <select
+                        value={editLinkPreviewImageMode}
+                        onChange={(e) => setEditLinkPreviewImageMode(e.target.value as 'default' | 'show' | 'hide')}
+                        style={{
+                          width: '100%',
+                          borderRadius: 6,
+                          border: '1px dashed var(--paper-textarea-border)',
+                          background: 'var(--paper-textarea-bg)',
+                          color: 'var(--paper-handwriting)',
+                          fontSize: 14,
+                          padding: '8px 10px',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        <option value="default">Automatic</option>
+                        <option value="show">Always show</option>
+                        <option value="hide">Always hide</option>
+                      </select>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
                     <button
                       onClick={cancelEditing}

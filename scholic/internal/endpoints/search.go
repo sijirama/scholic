@@ -157,6 +157,7 @@ func doAnnotationSearch(
 		}
 	}
 	populateReactionsForUser(viewerID, results)
+	models.ResolveLinkPreviewImageVisibility(results)
 
 	return results, total
 }

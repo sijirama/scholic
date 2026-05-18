@@ -287,10 +287,10 @@ const Feed: React.FC = () => {
     }
   };
 
-  const editAnnotation = async (id: number, text: string) => {
+  const editAnnotation = async (id: number, text: string, linkPreviewImageMode: 'default' | 'show' | 'hide') => {
     try {
-      await api.put(`/annotations/${id}`, { text });
-      setAnnotations(prev => prev.map(a => a.id === id ? { ...a, text } : a));
+      const response = await api.put(`/annotations/${id}`, { text, linkPreviewImageMode });
+      setAnnotations(prev => prev.map(a => a.id === id ? response.data : a));
       toast.success('Annotation updated');
     } catch {
       toast.error('Failed to update annotation');

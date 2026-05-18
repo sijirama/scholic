@@ -59,8 +59,10 @@ export interface Annotation {
   linkTitle?: string;
   linkDescription?: string;
   linkImage?: string;
+  linkPreviewImageMode?: 'default' | 'show' | 'hide';
   linkFavicon?: string;
   linkDomain?: string;
+  showLinkPreviewImage?: boolean;
   createdAt: string;
   user: User;
   commentCount?: number;
@@ -81,7 +83,7 @@ interface AnnotationCardProps {
   fetchingComments?: { [key: number]: boolean };
   currentUser?: User | null;
   onDeleteAnnotation?: (id: number) => void;
-  onEditAnnotation?: (id: number, text: string) => void;
+  onEditAnnotation?: (id: number, text: string, linkPreviewImageMode: 'default' | 'show' | 'hide') => void;
   onDeleteComment?: (annotationId: number, commentId: number) => void;
   onEditComment?: (annotationId: number, commentId: number, text: string) => void;
 }
@@ -229,6 +231,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   const [annotationMenuOpen, setAnnotationMenuOpen] = React.useState(false);
   const [editingAnnotation, setEditingAnnotation] = React.useState(false);
   const [editAnnotationText, setEditAnnotationText] = React.useState('');
+  const [editLinkPreviewImageMode, setEditLinkPreviewImageMode] = React.useState<'default' | 'show' | 'hide'>('default');
   const [commentMenuOpen, setCommentMenuOpen] = React.useState<number | null>(null);
   const [editingCommentId, setEditingCommentId] = React.useState<number | null>(null);
   const [editCommentText, setEditCommentText] = React.useState('');
@@ -243,13 +246,13 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   // for an image that never paints. Mark failed so we skip the slot entirely.
   const [linkImageFailed, setLinkImageFailed] = React.useState(false);
   React.useEffect(() => {
-    if (!annotation.linkImage) return;
+    if (!annotation.linkImage || annotation.showLinkPreviewImage === false) return;
     setLinkImageFailed(false);
     const img = new Image();
     img.onload = () => setLinkImageFailed(false);
     img.onerror = () => setLinkImageFailed(true);
     img.src = annotation.linkImage;
-  }, [annotation.linkImage]);
+  }, [annotation.linkImage, annotation.showLinkPreviewImage]);
 
 
   const isFetching = fetchingComments?.[annotation.id];
@@ -324,6 +327,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                     onEdit={() => {
                       setEditingAnnotation(true);
                       setEditAnnotationText(annotation.text || '');
+                      setEditLinkPreviewImageMode(annotation.linkPreviewImageMode || 'default');
                     }}
                     onDelete={() => onDeleteAnnotation?.(annotation.id)}
                     onClose={() => setAnnotationMenuOpen(false)}
@@ -407,9 +411,28 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 autoFocus
               />
               <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                {annotation.type !== 'image' && annotation.linkImage && (
+                  <select
+                    value={editLinkPreviewImageMode}
+                    onChange={(e) => setEditLinkPreviewImageMode(e.target.value as 'default' | 'show' | 'hide')}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-strong)',
+                      background: 'var(--surface)',
+                      color: 'var(--text-soft)',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <option value="default">Preview image: Automatic</option>
+                    <option value="show">Preview image: Show</option>
+                    <option value="hide">Preview image: Hide</option>
+                  </select>
+                )}
                 <button
                   onClick={() => {
-                    onEditAnnotation?.(annotation.id, editAnnotationText);
+                    onEditAnnotation?.(annotation.id, editAnnotationText, editLinkPreviewImageMode);
                     setEditingAnnotation(false);
                   }}
                   style={{
@@ -450,7 +473,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
 
           {/* Link Card */}
           <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', background: 'var(--surface-inset)', margin: '0 0 16px 0' }}>
-            {annotation.linkImage && !linkImageFailed && annotation.type !== 'image' && (
+            {annotation.linkImage && !linkImageFailed && annotation.type !== 'image' && annotation.showLinkPreviewImage !== false && (
               <a href={annotation.url} target="_blank" rel="noreferrer">
                 <div style={{ width: '100%', height: '180px', background: `url(${annotation.linkImage}) center/cover no-repeat`, borderBottom: '1px solid var(--border)' }} />
               </a>

@@ -74,11 +74,11 @@ type TopAuthor struct {
 // Used by the "On pages you've read" rail — the handler keeps only entries
 // whose URL also appears in the viewer's annotation history.
 type PoolURL struct {
-	URL         string               `json:"url"`
-	Title       string               `json:"title"`
-	Favicon     string               `json:"favicon"`
-	Domain      string               `json:"domain"`
-	Annotations []models.Annotation  `json:"annotations"`
+	URL         string              `json:"url"`
+	Title       string              `json:"title"`
+	Favicon     string              `json:"favicon"`
+	Domain      string              `json:"domain"`
+	Annotations []models.Annotation `json:"annotations"`
 }
 
 // Run kicks off the precompute loop. Calls RefreshAll once immediately so the
@@ -183,6 +183,7 @@ func refreshTopAnnotations(ctx context.Context) error {
 		sorted[i].CommentCount = commentCounts[sorted[i].ID]
 	}
 	populateAnonymousReactions(sorted)
+	models.ResolveLinkPreviewImageVisibility(sorted)
 
 	return writeJSON(ctx, KeyTopAnnotations, sorted)
 }

@@ -29369,9 +29369,9 @@
       "use strict";
       CONFIG = {
         // The backend API endpoint
-        API_BASE: "https://api.scholic.com/api",
+        API_BASE: "http://localhost:8081/api",
         // The frontend web application URL (for profile links and login)
-        WEB_URL: "https://scholic.com"
+        WEB_URL: "http://localhost:5173"
       };
     }
   });
@@ -30172,6 +30172,23 @@
       }
       .note-input::placeholder { color: #555; }
 
+      .preview-image-select {
+        width: 100%;
+        background: #1a1a1a;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 10px 12px;
+        color: #d7d7d7;
+        font-size: 13px;
+        font-family: inherit;
+        margin-bottom: 12px;
+        box-sizing: border-box;
+      }
+      .preview-image-select:focus {
+        outline: none;
+        border-color: #6EB781;
+      }
+
       .mention-autocomplete-wrapper {
         position: relative;
         width: 100%;
@@ -30696,6 +30713,7 @@
           container.innerHTML = "";
           let isPrivate = false;
           let selectedColor = HIGHLIGHT_COLORS[0].hex;
+          let linkPreviewImageMode = "default";
           const form = document.createElement("div");
           form.className = "annotation-form";
           let previewHtml = "";
@@ -30725,6 +30743,14 @@
       <div class="form-label">Your Note</div>
       <textarea class="note-input" placeholder="Add your thoughts..." maxlength="5000"></textarea>
       ${type === "text" ? swatchesHtml : ""}
+      ${type === "text" ? `
+        <div class="form-label">Preview Image</div>
+        <select class="preview-image-select">
+          <option value="default">Automatic${this.userData?.defaultLinkPreviewImageVisibility === false ? " (currently hidden)" : " (currently shown)"}</option>
+          <option value="show">Show</option>
+          <option value="hide">Hide</option>
+        </select>
+      ` : ""}
       <div class="privacy-toggle">
         <div class="toggle-switch" id="privacy-switch">
           <div class="toggle-knob"></div>
@@ -30766,6 +30792,15 @@
               selectedColor = btn.dataset.color || HIGHLIGHT_COLORS[0].hex;
             });
           });
+          const previewImageSelect = form.querySelector(".preview-image-select");
+          previewImageSelect?.addEventListener("change", () => {
+            const value = previewImageSelect.value;
+            if (value === "show" || value === "hide") {
+              linkPreviewImageMode = value;
+              return;
+            }
+            linkPreviewImageMode = "default";
+          });
           const discard = () => {
             form.remove();
             this.pendingQuoteText = "";
@@ -30790,7 +30825,8 @@
               isPrivate,
               type,
               image: type === "image" ? imageData : void 0,
-              highlightColor: selectedColor
+              highlightColor: selectedColor,
+              linkPreviewImageMode
             });
             form.remove();
             this.pendingQuoteText = "";

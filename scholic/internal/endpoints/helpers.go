@@ -32,6 +32,22 @@ func batchCommentCounts(annotationIDs []uint) map[uint]int64 {
 	return result
 }
 
+func isValidLinkPreviewImageMode(mode string) bool {
+	switch mode {
+	case "", "default", "show", "hide":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeLinkPreviewImageMode(mode string) string {
+	if mode == "" {
+		return "default"
+	}
+	return mode
+}
+
 // batchFollowCounts fetches follower and following counts for multiple user IDs in two queries.
 // Returns followersMap[userID] and followingMap[userID].
 func batchFollowCounts(userIDs []uint) (followers map[uint]int64, following map[uint]int64) {
