@@ -224,12 +224,13 @@ const NotificationsMenu: React.FC = () => {
             top: 38,
             width: 360,
             maxWidth: 'calc(100vw - 32px)',
-            background: 'var(--bg-elevated)',
+            background: 'var(--bg)',
             border: '1px solid var(--border)',
             borderRadius: 10,
             boxShadow: 'var(--shadow-lg)',
             overflow: 'hidden',
             zIndex: 100,
+            isolation: 'isolate',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>

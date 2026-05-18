@@ -141,14 +141,14 @@ const Settings: React.FC = () => {
               <button
                 onClick={() => setActiveTab('general')}
                 className={activeTab === 'general' ? 'theme-pill' : 'theme-button-secondary'}
-                style={{ padding: '7px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '7px 11px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
               >
                 General
               </button>
               <button
                 onClick={() => setActiveTab('annotations')}
                 className={activeTab === 'annotations' ? 'theme-pill' : 'theme-button-secondary'}
-                style={{ padding: '7px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '7px 11px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
               >
                 Annotations
               </button>
@@ -261,7 +261,6 @@ const Settings: React.FC = () => {
               style={{
                 padding: '14px 0',
                 borderTop: '1px solid var(--border)',
-                borderBottom: '1px solid var(--border)',
                 marginBottom: '20px',
               }}
             >
@@ -296,7 +295,6 @@ const Settings: React.FC = () => {
               className="flex items-center justify-between"
               style={{
                 padding: '14px 0',
-                borderTop: '1px solid var(--border)',
                 borderBottom: '1px solid var(--border)',
                 marginBottom: '20px',
               }}
@@ -365,7 +363,6 @@ const Settings: React.FC = () => {
                   style={{
                     padding: '14px 0',
                     borderTop: '1px solid var(--border)',
-                    borderBottom: '1px solid var(--border)',
                     marginBottom: '16px',
                   }}
                 >
