@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Scholic",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A social annotation platform for the web.",
   "permissions": [
     "storage",
