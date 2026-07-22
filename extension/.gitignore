@@ -11,6 +11,10 @@ background.js.map
 content.js
 content.js.map
 /content.css
+viewer.js
+viewer.js.map
+pdf.worker.min.mjs
+pdf_viewer.css
 !build.mjs
 
 # Env files
