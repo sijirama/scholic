@@ -220,7 +220,7 @@ const BookmarkFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
   const title = bookmark.title || displayDomain || bookmark.url;
 
   return (
-    <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+    <div style={{ padding: '20px 0' }}>
       <div style={{ display: 'flex', gap: 12 }}>
         <Avatar user={event.actor} size={36} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -257,7 +257,7 @@ const BookmarkFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
 const FollowFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
   if (!event.targetUser) return null;
   return (
-    <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+    <div style={{ padding: '20px 0' }}>
       <div style={{ display: 'flex', gap: 12 }}>
         <Avatar user={event.actor} size={36} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -295,7 +295,7 @@ const DocumentFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
     : documentRecord.fileName;
 
   return (
-    <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+    <div style={{ padding: '20px 0' }}>
       <div style={{ display: 'flex', gap: 12 }}>
         <Avatar user={event.actor} size={36} />
         <div style={{ flex: 1, minWidth: 0 }}>
