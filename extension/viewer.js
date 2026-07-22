@@ -29376,6 +29376,28 @@
     }
   });
 
+  // src/url.ts
+  function canonicalAnnotationUrl(rawUrl) {
+    try {
+      const url = new URL(rawUrl);
+      url.hash = "";
+      url.search = "";
+      url.protocol = url.protocol.toLowerCase();
+      url.hostname = url.hostname.toLowerCase();
+      if (url.pathname.length > 1) {
+        url.pathname = url.pathname.replace(/\/+$/, "");
+      }
+      return url.toString();
+    } catch {
+      return rawUrl.split("#", 1)[0].split("?", 1)[0];
+    }
+  }
+  var init_url = __esm({
+    "src/url.ts"() {
+      "use strict";
+    }
+  });
+
   // src/sidebar.ts
   function timeAgo(dateStr) {
     const date = new Date(dateStr);
@@ -29397,6 +29419,7 @@
     "src/sidebar.ts"() {
       "use strict";
       init_config();
+      init_url();
       REACTION_EMOJIS = ["\u{1F44D}", "\u2764\uFE0F", "\u{1F525}", "\u{1F4A1}", "\u{1F914}", "\u{1F602}", "\u{1F4DD}", "\u{1F480}", "\u{1F440}", "\u{1F92F}"];
       HIGHLIGHT_COLORS = [
         // Pastels (light backgrounds)
@@ -30818,7 +30841,7 @@
           form.querySelector(".save-btn")?.addEventListener("click", () => {
             const note = textarea?.value || "";
             this.callbacks.onSave({
-              url: window.location.href,
+              url: canonicalAnnotationUrl(window.location.href),
               quoteText: type === "text" ? this.pendingQuoteText : "Screenshot",
               text: note,
               selectors: type === "text" ? this.pendingSelectors : [],
@@ -33177,6 +33200,7 @@
       init_popover();
       init_highlight_popup();
       init_snipper();
+      init_url();
       __webpack_exports__GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("pdf.worker.min.mjs");
       function applyHighlightColor(elements, hex) {
         const color = hex && hex.startsWith("#") && hex.length === 7 ? hex : "#A8D5B5";
@@ -33247,7 +33271,7 @@
               this.pendingHighlightElements = highlightRange(range, "scholic-highlight scholic-private", tempId);
               window.getSelection()?.removeAllRanges();
               await this.handleSave({
-                url: this.pdfUrl,
+                url: canonicalAnnotationUrl(this.pdfUrl),
                 pdfHash: this.pdfHash,
                 type: "pdf",
                 quoteText,
@@ -33377,7 +33401,7 @@
         async loadAnnotations() {
           const response = await chrome.runtime.sendMessage({
             type: "FETCH_ANNOTATIONS",
-            data: { url: this.pdfUrl }
+            data: { url: canonicalAnnotationUrl(this.pdfUrl) }
           });
           if (response?.annotations) {
             this.annotations = response.annotations;
@@ -33442,7 +33466,7 @@
           }
         }
         async handleSave(annotation) {
-          annotation.url = this.pdfUrl;
+          annotation.url = canonicalAnnotationUrl(this.pdfUrl);
           annotation.pdfHash = this.pdfHash;
           annotation.pdfPage = this.pdfViewer.currentPageNumber;
           if (annotation.type !== "image") {

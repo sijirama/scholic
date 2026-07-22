@@ -64,6 +64,7 @@ func CreateAnnotation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid linkPreviewImageMode"})
 		return
 	}
+	req.URL = canonicalAnnotationURL(req.URL)
 
 	// Scrape metadata for rich link previews
 	var linkTitle, linkDesc, linkImage, linkFavicon, linkDomain string
@@ -191,6 +192,7 @@ func GetAnnotations(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "url query parameter is required"})
 		return
 	}
+	url = canonicalAnnotationURL(url)
 
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	if err != nil || limit <= 0 || limit > 100 {
@@ -489,6 +491,7 @@ func GetSitePage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "url query parameter is required"})
 		return
 	}
+	urlStr = canonicalAnnotationURL(urlStr)
 
 	authors := c.QueryArray("author") // ?author=user1&author=user2
 	timeRange := c.DefaultQuery("timeRange", "all")

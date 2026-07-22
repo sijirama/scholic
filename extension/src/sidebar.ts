@@ -12,6 +12,7 @@
 
 import type { Selector } from './anchoring/types';
 import { CONFIG } from './config';
+import { canonicalAnnotationUrl } from './url';
 
 export interface AnnotationData {
   id?: string | number;
@@ -1646,7 +1647,7 @@ export class Sidebar {
     form.querySelector('.save-btn')?.addEventListener('click', () => {
       const note = textarea?.value || '';
       this.callbacks.onSave({
-        url: window.location.href,
+        url: canonicalAnnotationUrl(window.location.href),
         quoteText: type === 'text' ? this.pendingQuoteText : 'Screenshot',
         text: note,
         selectors: type === 'text' ? this.pendingSelectors : [],

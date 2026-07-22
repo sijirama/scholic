@@ -21,6 +21,7 @@ import type { AnnotationData } from './sidebar';
 import { HighlightPopup } from './highlight-popup';
 import { Snipper, Area } from './snipper';
 import { hydrateBlocklist, isBlockedUrl, watchBlocklistStorage } from './blocklist';
+import { canonicalAnnotationUrl } from './url';
 
 // Hydrate the in-memory blocklist from chrome.storage.local (populated by the
 // background SW). Watch for live updates so a fresh blocklist landing in
@@ -149,6 +150,10 @@ const snipper = new Snipper(
 // ─────────────────────────────────────────────────────────────────────────────
 
 let isEnabled = false;
+
+function currentAnnotationUrl(): string {
+  return canonicalAnnotationUrl(window.location.href);
+}
 
 /**
  * Periodically check if all annotations have visible highlights.
@@ -536,7 +541,7 @@ function handleHighlight(range: Range, quoteText: string): void {
 
   // Save to backend as a private highlight
   handleSaveAnnotation({
-    url: window.location.href,
+    url: currentAnnotationUrl(),
     quoteText,
     text: '',
     selectors,
@@ -881,7 +886,7 @@ async function loadAnnotations(): Promise<void> {
 
     const response = await chrome.runtime.sendMessage({
       type: 'FETCH_ANNOTATIONS',
-      data: { url: window.location.href, limit: ANNOTATIONS_PAGE_SIZE, offset: 0 },
+      data: { url: currentAnnotationUrl(), limit: ANNOTATIONS_PAGE_SIZE, offset: 0 },
     });
 
     if (response?.annotations && Array.isArray(response.annotations)) {
@@ -920,7 +925,7 @@ async function loadMoreAnnotations(): Promise<void> {
   try {
     const response = await chrome.runtime.sendMessage({
       type: 'FETCH_ANNOTATIONS',
-      data: { url: window.location.href, limit: ANNOTATIONS_PAGE_SIZE, offset: annotationsOffset },
+      data: { url: currentAnnotationUrl(), limit: ANNOTATIONS_PAGE_SIZE, offset: annotationsOffset },
     });
 
     if (response?.annotations && Array.isArray(response.annotations)) {

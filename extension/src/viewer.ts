@@ -13,6 +13,7 @@ import { highlightRange, removeHighlights } from './highlighter';
 import { SelectionPopover } from './popover';
 import { HighlightPopup } from './highlight-popup';
 import { Snipper, Area } from './snipper';
+import { canonicalAnnotationUrl } from './url';
 
 // Load the worker from the local extension package
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('pdf.worker.min.mjs');
@@ -102,7 +103,7 @@ class ScholicPdfViewer {
         
         // Save direct private highlight
         await this.handleSave({
-          url: this.pdfUrl,
+          url: canonicalAnnotationUrl(this.pdfUrl),
           pdfHash: this.pdfHash,
           type: 'pdf',
           quoteText,
@@ -267,7 +268,7 @@ class ScholicPdfViewer {
   async loadAnnotations() {
     const response = await chrome.runtime.sendMessage({
       type: 'FETCH_ANNOTATIONS',
-      data: { url: this.pdfUrl }
+      data: { url: canonicalAnnotationUrl(this.pdfUrl) }
     });
 
     if (response?.annotations) {
@@ -360,7 +361,7 @@ class ScholicPdfViewer {
 
   async handleSave(annotation: any) {
     // Override the sidebar's default window.location.href with the actual PDF URL
-    annotation.url = this.pdfUrl;
+    annotation.url = canonicalAnnotationUrl(this.pdfUrl);
     annotation.pdfHash = this.pdfHash;
     annotation.pdfPage = this.pdfViewer.currentPageNumber;
     
