@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import api from '../lib/api';
-import { ArrowLeft, Settings, FileText } from 'lucide-react';
+import { ArrowLeft, Settings, FileText, Bookmark as BookmarkIcon, Lock } from 'lucide-react';
 import AnnotationCard from '../components/AnnotationCard';
 import type { Annotation, User as BaseUser, Comment } from '../components/AnnotationCard';
 import FollowersModal from '../components/FollowersModal';
@@ -60,6 +60,16 @@ interface UploadedDocument {
     lastName?: string;
     profilePicture?: string;
   };
+}
+
+interface BookmarkRecord {
+  id: number;
+  createdAt: string;
+  url: string;
+  title: string;
+  favicon: string;
+  domain: string;
+  isPrivate: boolean;
 }
 
 interface RecentlyReadCardProps {
@@ -157,6 +167,50 @@ const RecentlyReadCard: React.FC<RecentlyReadCardProps> = ({ site, username }) =
   );
 };
 
+const BookmarkCard: React.FC<{ bookmark: BookmarkRecord }> = ({ bookmark }) => {
+  let displayDomain = bookmark.domain;
+  if (!displayDomain) {
+    try { displayDomain = new URL(bookmark.url).hostname.replace('www.', ''); } catch { displayDomain = bookmark.url; }
+  }
+  const displayTitle = bookmark.title || displayDomain || bookmark.url;
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--surface-inset)' }}>
+      <a
+        href={bookmark.url}
+        target="_blank"
+        rel="noreferrer"
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      >
+        {bookmark.favicon ? (
+          <img src={bookmark.favicon} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        ) : (
+          <div style={{ width: 18, height: 18, borderRadius: 4, background: 'var(--color-yellow-soft)', color: 'var(--color-yellow-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <BookmarkIcon style={{ width: 11, height: 11 }} />
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayDomain}</span>
+            {bookmark.isPrivate && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--text-faint)', flexShrink: 0 }}>
+                <Lock style={{ width: 10, height: 10 }} />
+                private
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {displayTitle}
+          </div>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--text-faint)', flexShrink: 0 }}>{timeAgo(bookmark.createdAt)}</span>
+      </a>
+    </div>
+  );
+};
+
 const ProfileSkeleton: React.FC = () => (
   <div style={{ maxWidth: '700px', padding: '32px 20px', margin: '0 auto' }}>
     <div style={{ display: 'flex', alignItems: 'start', gap: '16px', marginBottom: '32px' }}>
@@ -232,6 +286,12 @@ const Profile: React.FC = () => {
   const [documentsHasMore, setDocumentsHasMore] = useState(false);
   const [documentsOffset, setDocumentsOffset] = useState(0);
   const DOCUMENTS_LIMIT = 12;
+  const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>([]);
+  const [bookmarksLoading, setBookmarksLoading] = useState(false);
+  const [bookmarksFetchingMore, setBookmarksFetchingMore] = useState(false);
+  const [bookmarksHasMore, setBookmarksHasMore] = useState(false);
+  const [bookmarksOffset, setBookmarksOffset] = useState(0);
+  const BOOKMARKS_LIMIT = 20;
 
   const toggleFollow = async () => {
     if (!profileUser || followLoading) return;
@@ -355,6 +415,9 @@ const Profile: React.FC = () => {
     setDocuments([]);
     setDocumentsOffset(0);
     setDocumentsHasMore(false);
+    setBookmarks([]);
+    setBookmarksOffset(0);
+    setBookmarksHasMore(false);
     setActiveTab('Annotations');
     fetchProfile(0, true);
   }, [username, fetchProfile]);
@@ -376,7 +439,7 @@ const Profile: React.FC = () => {
   }, [hasMore, fetchingMore, loading, page, username, activeTab, fetchProfile]);
 
   const isOwnProfile = currentUser?.username === username;
-  const tabs = ['Annotations', 'Recently Read', 'Uploaded'];
+  const tabs = ['Annotations', 'Recently Read', 'Bookmarks', 'Uploaded'];
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -403,6 +466,18 @@ const Profile: React.FC = () => {
         })
         .catch(() => toast.error('Failed to load documents'))
         .finally(() => setDocumentsLoading(false));
+    }
+    if (tab === 'Bookmarks' && bookmarks.length === 0 && !bookmarksLoading) {
+      setBookmarksLoading(true);
+      api.get(`/users/${username}/bookmarks?limit=${BOOKMARKS_LIMIT}&offset=0`)
+        .then(res => {
+          const rows = res.data.bookmarks || [];
+          setBookmarks(rows);
+          setBookmarksHasMore(res.data.hasMore ?? false);
+          setBookmarksOffset(rows.length);
+        })
+        .catch(() => toast.error('Failed to load bookmarks'))
+        .finally(() => setBookmarksLoading(false));
     }
   };
 
@@ -432,6 +507,20 @@ const Profile: React.FC = () => {
       })
       .catch(() => toast.error('Failed to load more documents'))
       .finally(() => setDocumentsFetchingMore(false));
+  };
+
+  const loadMoreBookmarks = () => {
+    if (bookmarksFetchingMore || !bookmarksHasMore) return;
+    setBookmarksFetchingMore(true);
+    api.get(`/users/${username}/bookmarks?limit=${BOOKMARKS_LIMIT}&offset=${bookmarksOffset}`)
+      .then(res => {
+        const rows = res.data.bookmarks || [];
+        setBookmarks(prev => [...prev, ...rows]);
+        setBookmarksHasMore(res.data.hasMore ?? false);
+        setBookmarksOffset(prev => prev + rows.length);
+      })
+      .catch(() => toast.error('Failed to load more bookmarks'))
+      .finally(() => setBookmarksFetchingMore(false));
   };
 
 
@@ -792,6 +881,65 @@ const Profile: React.FC = () => {
                   </div>
                 )}
                 {!recentlyReadHasMore && recentlyRead.length > 0 && (
+                  <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center', paddingTop: '20px' }}>You've reached the end</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'Bookmarks' && (
+          <div>
+            {bookmarksLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', background: 'var(--surface-inset)', padding: '12px 14px' }}>
+                    <div style={{ width: '40%', height: '11px', borderRadius: '3px', background: 'var(--surface-2)', marginBottom: '8px' }} className="pulse" />
+                    <div style={{ width: '72%', height: '13px', borderRadius: '3px', background: 'var(--surface-3)' }} className="pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : bookmarks.length === 0 ? (
+              <div className="text-center" style={{ padding: '60px 0', color: 'var(--text-dim)' }}>
+                <p style={{ fontSize: '14px', marginBottom: '6px' }}>
+                  {isOwnProfile ? "You haven't bookmarked any pages yet" : 'No public bookmarks yet'}
+                </p>
+                {isOwnProfile && (
+                  <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Use the star in the Scholic extension to save pages.</p>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                    color: 'var(--text-dim)',
+                    padding: '0 2px 4px',
+                  }}
+                >
+                  <BookmarkIcon style={{ width: 11, height: 11, opacity: 0.7 }} />
+                  <span>{isOwnProfile ? 'Public and private saved pages' : 'Public saved pages'}</span>
+                </div>
+                {bookmarks.map((bookmark) => (
+                  <BookmarkCard key={bookmark.id} bookmark={bookmark} />
+                ))}
+
+                {bookmarksHasMore && (
+                  <div style={{ paddingTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={loadMoreBookmarks}
+                      disabled={bookmarksFetchingMore}
+                      className="theme-pill"
+                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, borderRadius: '20px', cursor: bookmarksFetchingMore ? 'not-allowed' : 'pointer', opacity: bookmarksFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
+                    >
+                      {bookmarksFetchingMore ? 'Loading...' : 'Load more'}
+                    </button>
+                  </div>
+                )}
+                {!bookmarksHasMore && bookmarks.length > 0 && (
                   <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center', paddingTop: '20px' }}>You've reached the end</p>
                 )}
               </div>

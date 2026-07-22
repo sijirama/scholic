@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"scholic/internal/database"
+	feedlog "scholic/internal/feed"
 	"scholic/internal/limits"
 	"scholic/internal/models"
 	"scholic/internal/services/ai"
@@ -271,6 +272,13 @@ func CreateDocument(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Document created but failed to reload"})
 		return
 	}
+	feedlog.CreateEventAsync(feedlog.EventInput{
+		ActorID:    document.UserID,
+		Type:       models.FeedEventDocumentUploaded,
+		TargetType: models.FeedTargetDocument,
+		TargetID:   document.ID,
+		IsPrivate:  false,
+	})
 
 	c.JSON(http.StatusCreated, formatDocument(document))
 }

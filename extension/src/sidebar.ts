@@ -87,6 +87,10 @@ export interface SidebarCallbacks {
   onDiscard?: () => void;
   /** User clicked a reaction emoji. Content script handles API call + state. */
   onReact?: (annotationId: string | number, emoji: string) => Promise<void>;
+  /** Canonical page URL for features that operate on the whole page. */
+  getCurrentUrl?: () => string;
+  /** Current page title for bookmark metadata. */
+  getPageTitle?: () => string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -120,6 +124,7 @@ const ICONS = {
   pen: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
   trash: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
   camera: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  star: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
 };
 
 /**
@@ -148,6 +153,11 @@ export class Sidebar {
   /** Active tab: 'mine' | 'community' | 'all' */
   private activeTab: 'mine' | 'community' | 'all' = 'community';
   private isAuthenticated: boolean = false;
+  private bookmarkUrl: string = '';
+  private isBookmarked: boolean = false;
+  private bookmarkIsPrivate: boolean = true;
+  private bookmarkLoading: boolean = false;
+  private bookmarkMenuOpen: boolean = false;
   /** Stored document click handler for cleanup */
   private menuCloseHandler: (() => void) | null = null;
 
@@ -505,6 +515,7 @@ export class Sidebar {
       });
       if (response && !response.error) {
         this.userData = response;
+        this.refreshBookmarkState(true);
         // Only re-render if we have cached annotations (avoid double render on initial load)
         if (this.lastAnnotations.length > 0) {
           this.renderAnnotationList(this.lastAnnotations);
@@ -513,6 +524,164 @@ export class Sidebar {
     } catch (err) {
       console.error('[Scholic] Failed to fetch user data:', err);
     }
+  }
+
+  private getCurrentPageUrl(): string {
+    return this.callbacks.getCurrentUrl?.() || canonicalAnnotationUrl(window.location.href);
+  }
+
+  private getCurrentPageTitle(): string {
+    return this.callbacks.getPageTitle?.() || document.title || '';
+  }
+
+  private async refreshBookmarkState(force = false): Promise<void> {
+    if (!this.isAuthenticated) {
+      this.bookmarkUrl = '';
+      this.isBookmarked = false;
+      this.bookmarkIsPrivate = true;
+      this.bookmarkLoading = false;
+      this.bookmarkMenuOpen = false;
+      return;
+    }
+
+    const url = this.getCurrentPageUrl();
+    if (!url) return;
+    if (!force && this.bookmarkUrl === url) return;
+
+    this.bookmarkUrl = url;
+    this.bookmarkLoading = true;
+    this.renderBookmarkButton();
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'FETCH_BOOKMARK',
+        data: { url },
+      });
+      if (this.bookmarkUrl !== url) return;
+      this.isBookmarked = !!response?.bookmarked;
+      this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? true;
+    } catch (err) {
+      console.error('[Scholic] Failed to fetch bookmark state:', err);
+      if (this.bookmarkUrl === url) this.isBookmarked = false;
+    } finally {
+      if (this.bookmarkUrl === url) {
+        this.bookmarkLoading = false;
+        this.renderBookmarkButton();
+      }
+    }
+  }
+
+  private toggleBookmarkMenu(): void {
+    if (!this.isAuthenticated || this.bookmarkLoading) return;
+    this.bookmarkMenuOpen = !this.bookmarkMenuOpen;
+    this.renderHeader();
+  }
+
+  private async createBookmark(isPrivate: boolean): Promise<void> {
+    if (!this.isAuthenticated || this.bookmarkLoading) return;
+
+    const url = this.getCurrentPageUrl();
+    if (!url) return;
+    this.bookmarkUrl = url;
+    this.isBookmarked = true;
+    this.bookmarkIsPrivate = isPrivate;
+    this.bookmarkLoading = true;
+    this.bookmarkMenuOpen = false;
+    this.renderBookmarkButton();
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'CREATE_BOOKMARK',
+        data: { url, title: this.getCurrentPageTitle(), isPrivate },
+      });
+      if (this.bookmarkUrl !== url) return;
+      this.isBookmarked = !!response?.bookmarked;
+      this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? isPrivate;
+    } catch (err) {
+      console.error('[Scholic] Failed to update bookmark:', err);
+      if (this.bookmarkUrl === url) this.isBookmarked = false;
+    } finally {
+      if (this.bookmarkUrl === url) {
+        this.bookmarkLoading = false;
+        this.renderBookmarkButton();
+      }
+    }
+  }
+
+  private async updateBookmarkVisibility(isPrivate: boolean): Promise<void> {
+    if (!this.isAuthenticated || this.bookmarkLoading || !this.isBookmarked) return;
+
+    const url = this.getCurrentPageUrl();
+    if (!url) return;
+    const previous = this.bookmarkIsPrivate;
+    this.bookmarkUrl = url;
+    this.bookmarkIsPrivate = isPrivate;
+    this.bookmarkLoading = true;
+    this.bookmarkMenuOpen = false;
+    this.renderBookmarkButton();
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'UPDATE_BOOKMARK',
+        data: { url, isPrivate },
+      });
+      if (this.bookmarkUrl !== url) return;
+      this.isBookmarked = !!response?.bookmarked;
+      this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? isPrivate;
+    } catch (err) {
+      console.error('[Scholic] Failed to update bookmark visibility:', err);
+      if (this.bookmarkUrl === url) this.bookmarkIsPrivate = previous;
+    } finally {
+      if (this.bookmarkUrl === url) {
+        this.bookmarkLoading = false;
+        this.renderHeader();
+      }
+    }
+  }
+
+  private async removeBookmark(): Promise<void> {
+    if (!this.isAuthenticated || this.bookmarkLoading || !this.isBookmarked) return;
+
+    const url = this.getCurrentPageUrl();
+    if (!url) return;
+    const previousPrivate = this.bookmarkIsPrivate;
+    this.bookmarkUrl = url;
+    this.isBookmarked = false;
+    this.bookmarkIsPrivate = true;
+    this.bookmarkLoading = true;
+    this.bookmarkMenuOpen = false;
+    this.renderBookmarkButton();
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'DELETE_BOOKMARK',
+        data: { url },
+      });
+      if (this.bookmarkUrl !== url) return;
+      this.isBookmarked = !!response?.bookmarked;
+    } catch (err) {
+      console.error('[Scholic] Failed to remove bookmark:', err);
+      if (this.bookmarkUrl === url) {
+        this.isBookmarked = true;
+        this.bookmarkIsPrivate = previousPrivate;
+      }
+    } finally {
+      if (this.bookmarkUrl === url) {
+        this.bookmarkLoading = false;
+        this.renderHeader();
+      }
+    }
+  }
+
+  private renderBookmarkButton(): void {
+    const button = this.shadow.querySelector<HTMLButtonElement>('.bookmark-btn');
+    if (!button) return;
+    button.classList.toggle('active', this.isBookmarked);
+    button.classList.toggle('loading', this.bookmarkLoading);
+    button.setAttribute('aria-pressed', String(this.isBookmarked));
+    button.title = this.isBookmarked
+      ? (this.bookmarkIsPrivate ? 'Private bookmark' : 'Public bookmark')
+      : 'Bookmark page';
   }
 
   /** Render the sidebar header with title and user menu */
@@ -561,6 +730,27 @@ export class Sidebar {
         <span class="sidebar-title" style="text-transform: lowercase; font-weight: 700; font-size: 15px; color: #6EB781;">scholic</span>
       </div>
       <div style="display: flex; align-items: center; gap: 12px;">
+        ${this.isAuthenticated ? `
+          <div class="bookmark-wrap">
+            <button class="bookmark-btn ${this.isBookmarked ? 'active' : ''}" title="${this.isBookmarked ? (this.bookmarkIsPrivate ? 'Private bookmark' : 'Public bookmark') : 'Bookmark page'}" aria-pressed="${this.isBookmarked}">
+              ${ICONS.star}
+            </button>
+            ${this.bookmarkMenuOpen ? `
+              <div class="bookmark-menu">
+                ${this.isBookmarked ? `
+                  <div class="bookmark-menu-status">${this.bookmarkIsPrivate ? 'Private bookmark' : 'Public bookmark'}</div>
+                  <button class="bookmark-menu-item" data-bookmark-action="${this.bookmarkIsPrivate ? 'make-public' : 'make-private'}">
+                    ${this.bookmarkIsPrivate ? 'Make public' : 'Make private'}
+                  </button>
+                  <button class="bookmark-menu-item danger" data-bookmark-action="remove">Remove bookmark</button>
+                ` : `
+                  <button class="bookmark-menu-item" data-bookmark-action="create-private">Bookmark privately</button>
+                  <button class="bookmark-menu-item" data-bookmark-action="create-public">Bookmark publicly</button>
+                `}
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
         <button class="screenshot-btn" title="Take a screenshot annotation" style="background:none; border:none; color:#888; cursor:pointer; padding:4px; display:flex; align-items:center;">
           ${ICONS.camera}
         </button>
@@ -572,6 +762,22 @@ export class Sidebar {
     // Close button
     header.querySelector('.sidebar-close')?.addEventListener('click', () => {
       this.close();
+    });
+
+    header.querySelector('.bookmark-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleBookmarkMenu();
+    });
+    header.querySelectorAll<HTMLElement>('[data-bookmark-action]').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = item.dataset.bookmarkAction;
+        if (action === 'create-private') this.createBookmark(true);
+        if (action === 'create-public') this.createBookmark(false);
+        if (action === 'make-private') this.updateBookmarkVisibility(true);
+        if (action === 'make-public') this.updateBookmarkVisibility(false);
+        if (action === 'remove') this.removeBookmark();
+      });
     });
 
     // User menu toggle
@@ -594,10 +800,17 @@ export class Sidebar {
     if (this.menuCloseHandler) {
       document.removeEventListener('click', this.menuCloseHandler);
     }
-    this.menuCloseHandler = () => menu?.classList.remove('show');
+    this.menuCloseHandler = () => {
+      menu?.classList.remove('show');
+      if (this.bookmarkMenuOpen) {
+        this.bookmarkMenuOpen = false;
+        this.renderHeader();
+      }
+    };
     document.addEventListener('click', this.menuCloseHandler);
 
     container.appendChild(header);
+    this.refreshBookmarkState();
 
     // ── Tabs Header ──
     const tabsContainer = this.panel.querySelector('.sidebar-tabs-container');
@@ -780,6 +993,75 @@ export class Sidebar {
         line-height: 1;
       }
       .sidebar-close:hover { color: #fff; }
+
+      .bookmark-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+      .bookmark-btn {
+        background: transparent;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s, background 0.2s, transform 0.2s;
+      }
+      .bookmark-btn:hover {
+        color: #E8C547;
+        background: rgba(232,197,71,0.1);
+      }
+      .bookmark-btn.active {
+        color: #E8C547;
+      }
+      .bookmark-btn.active svg {
+        fill: currentColor;
+      }
+      .bookmark-btn.loading {
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .bookmark-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        min-width: 160px;
+        padding: 6px;
+        border-radius: 8px;
+        background: #1d1d1d;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+        z-index: 20;
+      }
+      .bookmark-menu-status {
+        padding: 7px 8px 6px;
+        font-size: 11px;
+        color: #aaa;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        margin-bottom: 4px;
+      }
+      .bookmark-menu-item {
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        color: #ddd;
+        font-family: inherit;
+        font-size: 12px;
+        padding: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .bookmark-menu-item:hover {
+        background: rgba(255,255,255,0.06);
+      }
+      .bookmark-menu-item.danger {
+        color: #ff8f8f;
+      }
 
       /* Tabs */
       .sidebar-tabs {

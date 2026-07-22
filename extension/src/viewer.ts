@@ -72,6 +72,8 @@ class ScholicPdfViewer {
       },
       onDiscard: () => this.discardPendingAnnotation(),
       onReact: (id, emoji) => this.handleReact(id, emoji),
+      getCurrentUrl: () => canonicalAnnotationUrl(this.pdfUrl),
+      getPageTitle: () => document.title,
     });
 
     this.popover = new SelectionPopover({

@@ -124,6 +124,8 @@ const sidebar = new Sidebar({
   onLoadMore: () => loadMoreAnnotations(),
   onDiscard: () => discardPendingAnnotation(),
   onReact: (annotationId, emoji) => handleReact(annotationId, emoji),
+  getCurrentUrl: () => currentAnnotationUrl(),
+  getPageTitle: () => document.title,
 });
 
 /**

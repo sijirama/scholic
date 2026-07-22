@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"scholic/internal/database"
+	feedlog "scholic/internal/feed"
 	"scholic/internal/limits"
 	"scholic/internal/models"
 	"scholic/internal/scraper"
@@ -165,6 +166,13 @@ func CreateAnnotation(c *gin.Context) {
 		notifyMentionedUsers(annotation.UserID, annotation.Text, uintPtr(annotation.ID), nil, "")
 		notifySharedDocAnnotators(annotation.UserID, annotation.ID, annotation.URL, annotation.Text)
 	}
+	feedlog.CreateEventAsync(feedlog.EventInput{
+		ActorID:    annotation.UserID,
+		Type:       models.FeedEventAnnotationCreated,
+		TargetType: models.FeedTargetAnnotation,
+		TargetID:   annotation.ID,
+		IsPrivate:  annotation.IsPrivate,
+	})
 	go func() {
 		ctx := context.Background()
 		database.CacheDelete(ctx, database.AnnotationsURLKey(annotationURL))
@@ -278,6 +286,10 @@ func DeleteAnnotation(c *gin.Context) {
 	deletedURL := annotation.URL
 	deletedUserID := annotation.UserID
 	deletedIsPublic := !annotation.IsPrivate
+	if err := feedlog.DeleteEvents(c.Request.Context(), models.FeedEventAnnotationCreated, models.FeedTargetAnnotation, annotation.ID); err != nil {
+		// The annotation is already deleted; keep the request successful and
+		// let the feed endpoint filter missing targets if cleanup fails.
+	}
 	go func() {
 		ctx := context.Background()
 		database.CacheDelete(ctx, database.AnnotationsURLKey(deletedURL))
@@ -409,11 +421,24 @@ func GetAnnotation(c *gin.Context) {
 	c.JSON(http.StatusOK, annotation)
 }
 
-// GetFeed handles GET /api/feed
+type FeedEventResponse struct {
+	ID         uint               `json:"id"`
+	Type       string             `json:"type"`
+	TargetType string             `json:"targetType"`
+	TargetID   uint               `json:"targetId"`
+	CreatedAt  time.Time          `json:"createdAt"`
+	Actor      models.User        `json:"actor"`
+	Annotation *models.Annotation `json:"annotation,omitempty"`
+	Bookmark   *models.Bookmark   `json:"bookmark,omitempty"`
+	Document   *DocumentResponse  `json:"document,omitempty"`
+	TargetUser *models.User       `json:"targetUser,omitempty"`
+}
+
+// GetFeed handles GET /api/feed.
 //
-// tab=following (default): public annotations from authors the viewer follows.
-// tab=mine: the viewer's own annotations (public + private).
-// Auth is required either way — anonymous viewers are pointed at /discover.
+// tab=following (default): public activity from authors the viewer follows.
+// tab=mine: the viewer's own activity, including private events.
+// Targets are hydrated server-side so clients can render mixed feed cards.
 func GetFeed(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "20")
 	offsetStr := c.DefaultQuery("offset", "0")
@@ -434,50 +459,139 @@ func GetFeed(c *gin.Context) {
 		return
 	}
 
-	var annotations []models.Annotation
 	var total int64
-
 	var query *gorm.DB
 	if tab == "mine" {
-		query = database.DB.Model(&models.Annotation{}).
-			Where("annotations.user_id = ?", userID)
+		query = database.DB.Model(&models.FeedEvent{}).
+			Where("actor_id = ?", userID)
 	} else {
-		query = database.DB.Model(&models.Annotation{}).
-			Where("annotations.is_private = ?", false).
-			Joins("JOIN follows ON follows.following_id = annotations.user_id").
+		query = database.DB.Model(&models.FeedEvent{}).
+			Where("feed_events.is_private = ?", false).
+			Joins("JOIN follows ON follows.following_id = feed_events.actor_id").
 			Where("follows.follower_id = ?", userID)
 	}
 
-	// Count total annotations for the given query
 	query.Count(&total)
 
-	// Fetch results with related models, but limit comments to 3
-	query.Preload("User").
-		Preload("Comments", func(db *gorm.DB) *gorm.DB {
-			return db.Order("created_at ASC").Limit(5)
-		}).
-		Preload("Comments.User").
-		Order("annotations.created_at DESC").Limit(limit).Offset(offset).Find(&annotations)
+	var events []models.FeedEvent
+	query.Preload("Actor").
+		Order("feed_events.created_at DESC").Limit(limit).Offset(offset).Find(&events)
 
-	// Batch-load comment counts (single query instead of N+1)
-	annotationIDs := make([]uint, len(annotations))
-	for i, a := range annotations {
-		annotationIDs[i] = a.ID
-	}
-	commentCounts := batchCommentCounts(annotationIDs)
-	for i := range annotations {
-		annotations[i].CommentCount = commentCounts[annotations[i].ID]
-	}
-
-	populateReactions(c, annotations)
-	models.ResolveLinkPreviewImageVisibility(annotations)
+	responses := hydrateFeedEvents(c, events)
 
 	c.JSON(http.StatusOK, gin.H{
-		"annotations": annotations,
-		"total":       total,
-		"limit":       limit,
-		"offset":      offset,
+		"events": responses,
+		"total":  total,
+		"limit":  limit,
+		"offset": offset,
 	})
+}
+
+func hydrateFeedEvents(c *gin.Context, events []models.FeedEvent) []FeedEventResponse {
+	annotationIDs := make([]uint, 0)
+	bookmarkIDs := make([]uint, 0)
+	documentIDs := make([]uint, 0)
+	userIDs := make([]uint, 0)
+	for _, event := range events {
+		switch event.TargetType {
+		case models.FeedTargetAnnotation:
+			annotationIDs = append(annotationIDs, event.TargetID)
+		case models.FeedTargetBookmark:
+			bookmarkIDs = append(bookmarkIDs, event.TargetID)
+		case models.FeedTargetDocument:
+			documentIDs = append(documentIDs, event.TargetID)
+		case models.FeedTargetUser:
+			userIDs = append(userIDs, event.TargetID)
+		}
+	}
+
+	annotationsByID := map[uint]models.Annotation{}
+	if len(annotationIDs) > 0 {
+		var annotations []models.Annotation
+		database.DB.Preload("User").
+			Preload("Comments", func(db *gorm.DB) *gorm.DB {
+				return db.Order("created_at ASC").Limit(5)
+			}).
+			Preload("Comments.User").
+			Where("id IN ?", annotationIDs).
+			Find(&annotations)
+		commentCounts := batchCommentCounts(annotationIDs)
+		populateReactions(c, annotations)
+		models.ResolveLinkPreviewImageVisibility(annotations)
+		for i := range annotations {
+			annotations[i].CommentCount = commentCounts[annotations[i].ID]
+			annotationsByID[annotations[i].ID] = annotations[i]
+		}
+	}
+
+	bookmarksByID := map[uint]models.Bookmark{}
+	if len(bookmarkIDs) > 0 {
+		var bookmarks []models.Bookmark
+		database.DB.Where("id IN ?", bookmarkIDs).Find(&bookmarks)
+		for _, bookmark := range bookmarks {
+			bookmarksByID[bookmark.ID] = bookmark
+		}
+	}
+
+	documentsByID := map[uint]DocumentResponse{}
+	if len(documentIDs) > 0 {
+		var documents []models.Document
+		database.DB.Preload("User").Where("id IN ?", documentIDs).Find(&documents)
+		for _, document := range documents {
+			documentsByID[document.ID] = formatDocument(document)
+		}
+	}
+
+	usersByID := map[uint]models.User{}
+	if len(userIDs) > 0 {
+		var users []models.User
+		database.DB.Where("id IN ?", userIDs).Find(&users)
+		for _, user := range users {
+			usersByID[user.ID] = user
+		}
+	}
+
+	out := make([]FeedEventResponse, 0, len(events))
+	for _, event := range events {
+		item := FeedEventResponse{
+			ID:         event.ID,
+			Type:       event.Type,
+			TargetType: event.TargetType,
+			TargetID:   event.TargetID,
+			CreatedAt:  event.CreatedAt,
+			Actor:      event.Actor,
+		}
+		switch event.TargetType {
+		case models.FeedTargetAnnotation:
+			target, ok := annotationsByID[event.TargetID]
+			if !ok {
+				continue
+			}
+			item.Annotation = &target
+		case models.FeedTargetBookmark:
+			target, ok := bookmarksByID[event.TargetID]
+			if !ok {
+				continue
+			}
+			item.Bookmark = &target
+		case models.FeedTargetDocument:
+			target, ok := documentsByID[event.TargetID]
+			if !ok {
+				continue
+			}
+			item.Document = &target
+		case models.FeedTargetUser:
+			target, ok := usersByID[event.TargetID]
+			if !ok {
+				continue
+			}
+			item.TargetUser = &target
+		default:
+			continue
+		}
+		out = append(out, item)
+	}
+	return out
 }
 
 // GetSitePage handles GET /api/site?url=...&author=...&timeRange=...

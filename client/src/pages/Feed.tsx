@@ -7,7 +7,7 @@ import type { Annotation, User as AnnotationUser, Comment } from '../components/
 import Avatar from '../components/Avatar';
 import UserCard from '../components/discover/UserCard';
 import type { DiscoverAuthor } from '../components/discover/UserCard';
-import { FileText } from 'lucide-react';
+import { Bookmark as BookmarkIcon, FileText, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUploadedDoc } from '../lib/uploadedDocs';
 
@@ -26,6 +26,43 @@ interface FriendSite extends RecentSite {
   firstName: string;
   lastName: string;
   profilePicture: string;
+}
+
+interface BookmarkRecord {
+  id: number;
+  createdAt: string;
+  url: string;
+  title: string;
+  favicon: string;
+  domain: string;
+  isPrivate: boolean;
+}
+
+interface DocumentRecord {
+  id: number;
+  createdAt: string;
+  title: string;
+  description: string;
+  authors: string[];
+  tags: string[];
+  publishedYear?: number;
+  publisher?: string;
+  pageCount?: number;
+  fileUrl: string;
+  fileName: string;
+}
+
+interface FeedEvent {
+  id: number;
+  type: 'annotation_created' | 'bookmark_created' | 'document_uploaded' | 'follow_created';
+  targetType: 'annotation' | 'bookmark' | 'document' | 'user';
+  targetId: number;
+  createdAt: string;
+  actor: AnnotationUser;
+  annotation?: Annotation;
+  bookmark?: BookmarkRecord;
+  document?: DocumentRecord;
+  targetUser?: AnnotationUser;
 }
 
 function sidebarTimeAgo(dateStr: string): string {
@@ -173,6 +210,129 @@ const SidebarRecentItem: React.FC<{ site: RecentSite }> = ({ site }) => {
   );
 };
 
+const BookmarkFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
+  const bookmark = event.bookmark;
+  if (!bookmark) return null;
+  let displayDomain = bookmark.domain;
+  if (!displayDomain) {
+    try { displayDomain = new URL(bookmark.url).hostname.replace('www.', ''); } catch { displayDomain = bookmark.url; }
+  }
+  const title = bookmark.title || displayDomain || bookmark.url;
+
+  return (
+    <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <Avatar user={event.actor} size={36} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 13, color: 'var(--text-muted)' }}>
+            <a href={`/u/${event.actor.username}`} style={{ color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>@{event.actor.username}</a>
+            <span>bookmarked</span>
+            {bookmark.isPrivate && <span style={{ color: 'var(--text-faint)' }}>privately</span>}
+            <span style={{ color: 'var(--text-faint)' }}>· {sidebarTimeAgo(event.createdAt)}</span>
+          </div>
+          <a
+            href={bookmark.url}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-inset)', textDecoration: 'none', color: 'inherit' }}
+          >
+            {bookmark.favicon ? (
+              <img src={bookmark.favicon} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            ) : (
+              <div style={{ width: 18, height: 18, borderRadius: 4, background: 'var(--color-yellow-soft)', color: 'var(--color-yellow-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <BookmarkIcon style={{ width: 11, height: 11 }} />
+              </div>
+            )}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayDomain}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FollowFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
+  if (!event.targetUser) return null;
+  return (
+    <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <Avatar user={event.actor} size={36} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, fontSize: 13, color: 'var(--text-muted)' }}>
+            <a href={`/u/${event.actor.username}`} style={{ color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>@{event.actor.username}</a>
+            <span>followed</span>
+            <a href={`/u/${event.targetUser.username}`} style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>@{event.targetUser.username}</a>
+            <span style={{ color: 'var(--text-faint)' }}>· {sidebarTimeAgo(event.createdAt)}</span>
+          </div>
+          <a href={`/u/${event.targetUser.username}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-inset)', textDecoration: 'none', color: 'inherit' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+              <UserPlus style={{ width: 15, height: 15 }} />
+            </div>
+            <Avatar user={event.targetUser} size={32} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>@{event.targetUser.username}</div>
+              {(event.targetUser.firstName || event.targetUser.lastName) && (
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {[event.targetUser.firstName, event.targetUser.lastName].filter(Boolean).join(' ')}
+                </div>
+              )}
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DocumentFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
+  const documentRecord = event.document;
+  if (!documentRecord) return null;
+  const subtitle = documentRecord.authors?.length
+    ? documentRecord.authors.join(', ')
+    : documentRecord.fileName;
+
+  return (
+    <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <Avatar user={event.actor} size={36} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 13, color: 'var(--text-muted)' }}>
+            <a href={`/u/${event.actor.username}`} style={{ color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>@{event.actor.username}</a>
+            <span>uploaded a document</span>
+            <span style={{ color: 'var(--text-faint)' }}>· {sidebarTimeAgo(event.createdAt)}</span>
+          </div>
+          <a
+            href={`/document/${documentRecord.id}`}
+            style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-inset)', textDecoration: 'none', color: 'inherit' }}
+          >
+            <div style={{ width: 38, height: 38, borderRadius: 8, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <FileText style={{ width: 17, height: 17 }} />
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>
+                {documentRecord.title}
+              </div>
+              {subtitle && (
+                <div style={{ fontSize: 12, color: 'var(--text-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: documentRecord.description ? 7 : 0 }}>
+                  {subtitle}
+                </div>
+              )}
+              {documentRecord.description && (
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {documentRecord.description}
+                </div>
+              )}
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FeedSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
     {[1, 2, 3].map(i => (
@@ -196,7 +356,7 @@ const FeedSkeleton: React.FC = () => (
 
 const Feed: React.FC = () => {
   const { user } = useAuth();
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedError, setFeedError] = useState(false);
   const [suggestions, setSuggestions] = useState<DiscoverAuthor[]>([]);
@@ -220,6 +380,13 @@ const Feed: React.FC = () => {
 
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
+  const updateAnnotationEvent = (annotationId: number, updater: (annotation: Annotation) => Annotation) => {
+    setEvents(prev => prev.map(event => {
+      if (event.annotation?.id !== annotationId) return event;
+      return { ...event, annotation: updater(event.annotation) };
+    }));
+  };
+
   const toggleComments = (annotationId: number) => {
     setOpenComments(prev => {
       const next = { ...prev, [annotationId]: !prev[annotationId] };
@@ -234,20 +401,18 @@ const Feed: React.FC = () => {
     if (fetchingComments[annotationId]) return;
 
     setFetchingComments(prev => ({ ...prev, [annotationId]: true }));
-    const currentOffset = commentOffsets[annotationId] !== undefined ? commentOffsets[annotationId] : (annotations.find(a => a.id === annotationId)?.comments?.length || 0);
+    const currentAnnotation = events.find(event => event.annotation?.id === annotationId)?.annotation;
+    const currentOffset = commentOffsets[annotationId] !== undefined ? commentOffsets[annotationId] : (currentAnnotation?.comments?.length || 0);
 
     try {
       const response = await api.get(`/annotations/${annotationId}/comments?limit=10&offset=${currentOffset}`);
       const newComments = response.data.comments || [];
 
-      setAnnotations(prev => prev.map(ann => {
-        if (ann.id === annotationId) {
+      updateAnnotationEvent(annotationId, ann => {
           const existingIds = new Set((ann.comments || []).map(c => c.id));
           const filteredNew = newComments.filter((c: Comment) => !existingIds.has(c.id));
           return { ...ann, comments: [...(ann.comments || []), ...filteredNew] };
-        }
-        return ann;
-      }));
+      });
 
       setCommentOffsets(prev => ({ ...prev, [annotationId]: currentOffset + newComments.length }));
     } catch {
@@ -261,17 +426,13 @@ const Feed: React.FC = () => {
     if (!text?.trim()) return;
     try {
       const response = await api.post(`/annotations/${annotationId}/comments`, { text });
-      setAnnotations(prev => prev.map(ann => {
-        if (ann.id === annotationId) {
-          return {
-            ...ann,
-            comments: [...(ann.comments || []), response.data],
-            commentCount: (ann.commentCount || 0) + 1
-          };
-        }
-        return ann;
+      const currentAnnotation = events.find(event => event.annotation?.id === annotationId)?.annotation;
+      updateAnnotationEvent(annotationId, ann => ({
+        ...ann,
+        comments: [...(ann.comments || []), response.data],
+        commentCount: (ann.commentCount || 0) + 1
       }));
-      setCommentOffsets(prev => ({ ...prev, [annotationId]: (prev[annotationId] || (annotations.find(a => a.id === annotationId)?.comments?.length || 0)) + 1 }));
+      setCommentOffsets(prev => ({ ...prev, [annotationId]: (prev[annotationId] || (currentAnnotation?.comments?.length || 0)) + 1 }));
     } catch {
       toast.error('Failed to post comment');
     }
@@ -280,7 +441,7 @@ const Feed: React.FC = () => {
   const deleteAnnotation = async (id: number) => {
     try {
       await api.delete(`/annotations/${id}`);
-      setAnnotations(prev => prev.filter(a => a.id !== id));
+      setEvents(prev => prev.filter(event => event.annotation?.id !== id));
       toast.success('Annotation deleted');
     } catch {
       toast.error('Failed to delete annotation');
@@ -290,7 +451,7 @@ const Feed: React.FC = () => {
   const editAnnotation = async (id: number, text: string, linkPreviewImageMode: 'default' | 'show' | 'hide') => {
     try {
       const response = await api.put(`/annotations/${id}`, { text, linkPreviewImageMode });
-      setAnnotations(prev => prev.map(a => a.id === id ? response.data : a));
+      updateAnnotationEvent(id, () => response.data);
       toast.success('Annotation updated');
     } catch {
       toast.error('Failed to update annotation');
@@ -300,15 +461,10 @@ const Feed: React.FC = () => {
   const deleteComment = async (annotationId: number, commentId: number) => {
     try {
       await api.delete(`/annotations/${annotationId}/comments/${commentId}`);
-      setAnnotations(prev => prev.map(a => {
-        if (a.id === annotationId) {
-          return {
-            ...a,
-            comments: (a.comments || []).filter(c => c.id !== commentId),
-            commentCount: Math.max(0, (a.commentCount || 0) - 1),
-          };
-        }
-        return a;
+      updateAnnotationEvent(annotationId, a => ({
+        ...a,
+        comments: (a.comments || []).filter(c => c.id !== commentId),
+        commentCount: Math.max(0, (a.commentCount || 0) - 1),
       }));
     } catch {
       toast.error('Failed to delete comment');
@@ -318,14 +474,9 @@ const Feed: React.FC = () => {
   const editComment = async (annotationId: number, commentId: number, text: string) => {
     try {
       await api.put(`/annotations/${annotationId}/comments/${commentId}`, { text });
-      setAnnotations(prev => prev.map(a => {
-        if (a.id === annotationId) {
-          return {
-            ...a,
-            comments: (a.comments || []).map(c => c.id === commentId ? { ...c, text } : c),
-          };
-        }
-        return a;
+      updateAnnotationEvent(annotationId, a => ({
+        ...a,
+        comments: (a.comments || []).map(c => c.id === commentId ? { ...c, text } : c),
       }));
     } catch {
       toast.error('Failed to update comment');
@@ -346,8 +497,8 @@ const Feed: React.FC = () => {
 
       setFeedError(false);
       const total = response.data.total || 0;
-      setAnnotations(prev => {
-        const next = isInitial ? (response.data.annotations || []) : [...prev, ...(response.data.annotations || [])];
+      setEvents(prev => {
+        const next = isInitial ? (response.data.events || []) : [...prev, ...(response.data.events || [])];
         setHasMore(next.length < total);
         return next;
       });
@@ -368,7 +519,7 @@ const Feed: React.FC = () => {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setAnnotations([]);
+    setEvents([]);
     setPage(0);
     setHasMore(true);
     fetchFeed(0, true, controller.signal);
@@ -414,12 +565,12 @@ const Feed: React.FC = () => {
   // Lazy-load people-to-follow suggestions only when the Following feed
   // turns out empty (Mine should never need them).
   useEffect(() => {
-    if (loading || feedError || annotations.length > 0 || suggestions.length > 0) return;
+    if (loading || feedError || events.length > 0 || suggestions.length > 0) return;
     if (tab !== 'following') return;
     api.get('/discover')
       .then(r => setSuggestions((r.data?.peopleToFollow || []).slice(0, 6)))
       .catch(() => { /* non-blocking */ });
-  }, [loading, feedError, annotations.length, suggestions.length, tab]);
+  }, [loading, feedError, events.length, suggestions.length, tab]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -546,14 +697,14 @@ const Feed: React.FC = () => {
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-dim)' }}>
             <p style={{ fontSize: '14px', marginBottom: '16px' }}>Failed to load feed</p>
             <button
-              onClick={() => { setFeedError(false); setAnnotations([]); setPage(0); setHasMore(true); fetchFeed(0, true); }}
+              onClick={() => { setFeedError(false); setEvents([]); setPage(0); setHasMore(true); fetchFeed(0, true); }}
               className="theme-pill"
               style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 600, borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Try again
             </button>
           </div>
-        ) : annotations.length === 0 ? (
+        ) : events.length === 0 ? (
           tab === 'mine' ? (
             <div style={{ padding: '40px 0', color: 'var(--text-soft)' }}>
               <p style={{ fontSize: 14, marginBottom: 6, color: 'var(--text-muted)' }}>You haven't annotated anything yet</p>
@@ -584,31 +735,45 @@ const Feed: React.FC = () => {
           )
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {annotations.map((annotation) => (
-              <AnnotationCard
-                key={annotation.id}
-                annotation={annotation}
-                openComments={openComments}
-                toggleComments={toggleComments}
-                renderAvatar={renderAvatar as (u: AnnotationUser, s: number) => React.ReactNode}
-                renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
-                handleComment={(id, text) => {
-                  submitComment(id, text);
-                }}
-                fetchMoreComments={fetchMoreComments}
-                fetchingComments={fetchingComments}
-                currentUser={user as AnnotationUser | null}
-                onDeleteAnnotation={deleteAnnotation}
-                onEditAnnotation={editAnnotation}
-                onDeleteComment={deleteComment}
-                onEditComment={editComment}
-              />
-            ))}
+            {events.map((event) => {
+              if (event.type === 'annotation_created' && event.annotation) {
+                return (
+                  <AnnotationCard
+                    key={event.id}
+                    annotation={event.annotation}
+                    openComments={openComments}
+                    toggleComments={toggleComments}
+                    renderAvatar={renderAvatar as (u: AnnotationUser, s: number) => React.ReactNode}
+                    renderAnnotationAction={renderAnnotationAction as (a: Annotation) => React.ReactNode}
+                    handleComment={(id, text) => {
+                      submitComment(id, text);
+                    }}
+                    fetchMoreComments={fetchMoreComments}
+                    fetchingComments={fetchingComments}
+                    currentUser={user as AnnotationUser | null}
+                    onDeleteAnnotation={deleteAnnotation}
+                    onEditAnnotation={editAnnotation}
+                    onDeleteComment={deleteComment}
+                    onEditComment={editComment}
+                  />
+                );
+              }
+              if (event.type === 'bookmark_created') {
+                return <BookmarkFeedCard key={event.id} event={event} />;
+              }
+              if (event.type === 'document_uploaded') {
+                return <DocumentFeedCard key={event.id} event={event} />;
+              }
+              if (event.type === 'follow_created') {
+                return <FollowFeedCard key={event.id} event={event} />;
+              }
+              return null;
+            })}
 
             {/* Pagination Footer */}
             <div ref={observerTarget} style={{ padding: '40px 0', display: 'flex', flexDirection: 'column' }}>
               {fetchingMore && <FeedSkeleton />}
-              {!hasMore && annotations.length > 0 && (
+              {!hasMore && events.length > 0 && (
                 <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center' }}>You've reached the end of the feed</p>
               )}
             </div>

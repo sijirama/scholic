@@ -124,6 +124,7 @@ func main() {
 		api.GET("/users/:username/following", middleware.OptionalAuthMiddleware(), endpoints.GetFollowing)
 		api.GET("/users/:username/recently-read", middleware.OptionalAuthMiddleware(), endpoints.GetRecentlyRead)
 		api.GET("/users/:username/friends-reading", middleware.OptionalAuthMiddleware(), endpoints.GetFriendsReading)
+		api.GET("/users/:username/bookmarks", middleware.OptionalAuthMiddleware(), endpoints.GetUserBookmarks)
 		api.POST("/users/:username/follow", middleware.AuthMiddleware(), endpoints.ToggleFollow)
 
 		// ── Search ──
@@ -138,6 +139,16 @@ func main() {
 
 		// ── Blocklist (extension fetches this; public, no auth) ──
 		api.GET("/blocklist", endpoints.GetBlocklist)
+
+		// ── Bookmarks ──
+		bookmarksProtected := api.Group("/bookmarks")
+		bookmarksProtected.Use(middleware.AuthMiddleware())
+		{
+			bookmarksProtected.GET("/by-url", endpoints.GetBookmarkByURL)
+			bookmarksProtected.POST("", endpoints.CreateBookmark)
+			bookmarksProtected.PATCH("/by-url", endpoints.UpdateBookmarkByURL)
+			bookmarksProtected.DELETE("/by-url", endpoints.DeleteBookmarkByURL)
+		}
 
 		// ── Notifications ──
 		notificationsProtected := api.Group("/notifications")

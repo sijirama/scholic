@@ -323,6 +323,14 @@ async function handleMessage(message: any): Promise<any> {
       return toggleReaction(message.data.annotationId, message.data.emoji);
     case 'CLEAR_REACTION':
       return clearReaction(message.data.annotationId);
+    case 'FETCH_BOOKMARK':
+      return fetchBookmark(message.data.url);
+    case 'CREATE_BOOKMARK':
+      return createBookmark(message.data.url, message.data.title, message.data.isPrivate);
+    case 'UPDATE_BOOKMARK':
+      return updateBookmark(message.data.url, message.data.isPrivate);
+    case 'DELETE_BOOKMARK':
+      return deleteBookmark(message.data.url);
     case 'FETCH_ME':
       return apiRequest('/auth/me');
     case 'SEARCH_USERS':
@@ -354,6 +362,30 @@ async function toggleReaction(annotationId: string | number, emoji: string): Pro
  */
 async function clearReaction(annotationId: string | number): Promise<any> {
   return apiRequest(`/annotations/${annotationId}/reactions`, {
+    method: 'DELETE',
+  });
+}
+
+async function fetchBookmark(url: string): Promise<any> {
+  return apiRequest(`/bookmarks/by-url?url=${encodeURIComponent(url)}`);
+}
+
+async function createBookmark(url: string, title?: string, isPrivate = true): Promise<any> {
+  return apiRequest('/bookmarks', {
+    method: 'POST',
+    body: JSON.stringify({ url, title, isPrivate }),
+  });
+}
+
+async function updateBookmark(url: string, isPrivate: boolean): Promise<any> {
+  return apiRequest(`/bookmarks/by-url?url=${encodeURIComponent(url)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isPrivate }),
+  });
+}
+
+async function deleteBookmark(url: string): Promise<any> {
+  return apiRequest(`/bookmarks/by-url?url=${encodeURIComponent(url)}`, {
     method: 'DELETE',
   });
 }

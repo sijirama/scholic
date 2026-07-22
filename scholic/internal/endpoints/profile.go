@@ -10,6 +10,7 @@ import (
 
 	"scholic/internal/database"
 	"scholic/internal/discover"
+	feedlog "scholic/internal/feed"
 	"scholic/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -763,6 +764,17 @@ func ToggleFollow(c *gin.Context) {
 	}
 	if following {
 		createNotification(targetUser.ID, followerID.(uint), NotificationFollow, nil, nil)
+		feedlog.CreateEventAsync(feedlog.EventInput{
+			ActorID:    followerID.(uint),
+			Type:       models.FeedEventFollowCreated,
+			TargetType: models.FeedTargetUser,
+			TargetID:   targetUser.ID,
+			IsPrivate:  false,
+		})
+	} else {
+		if err := feedlog.DeleteActorEvent(c.Request.Context(), followerID.(uint), models.FeedEventFollowCreated, models.FeedTargetUser, targetUser.ID); err != nil {
+			log.Printf("[Feed] failed to delete follow event for follower=%d target=%d: %v", followerID.(uint), targetUser.ID, err)
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"following": following})
 }
