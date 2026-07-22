@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	defaultDocumentModel   = "gemini-2.5-flash-lite"
-	defaultHTTPTimeout     = 90 * time.Second
-	documentSamplePages    = 5
-	documentSampleMaxRunes = 40000
+	defaultDocumentModel     = "gemini-2.5-flash-lite"
+	defaultHTTPTimeout       = 90 * time.Second
+	documentSampleFrontPages = 3
+	documentSampleBackPages  = 2
+	documentSampleMaxRunes   = 12000
 )
 
 type DocumentMetadata struct {
@@ -86,7 +87,7 @@ Rules:
 - Use detected page count for pageCount.
 - If unsure, use null for publishedYear and empty strings/arrays where appropriate.
 - Do not wrap the JSON in markdown.
-`, documentSamplePages, documentSamplePages, fileName, pageCount))
+`, documentSampleFrontPages, documentSampleBackPages, fileName, pageCount))
 
 	model := GetGeminiClient().GenerativeModel(getDocumentModel())
 	response, err := model.GenerateContent(ctx,
@@ -139,7 +140,7 @@ func extractPDFTextSample(ctx context.Context, r io.Reader) (string, int, error)
 		return "", 0, err
 	}
 
-	firstEnd := min(documentSamplePages, pageCount)
+	firstEnd := min(documentSampleFrontPages, pageCount)
 	parts := []string{}
 	if firstEnd > 0 {
 		text, err := pdftotextPages(ctx, tmp.Name(), 1, firstEnd)
@@ -149,7 +150,7 @@ func extractPDFTextSample(ctx context.Context, r io.Reader) (string, int, error)
 		parts = append(parts, fmt.Sprintf("Pages 1-%d:\n%s", firstEnd, text))
 	}
 
-	lastStart := pageCount - documentSamplePages + 1
+	lastStart := pageCount - documentSampleBackPages + 1
 	if lastStart < 1 {
 		lastStart = 1
 	}
