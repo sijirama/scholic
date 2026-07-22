@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"sort"
 	"strconv"
@@ -17,8 +18,10 @@ import (
 )
 
 const (
-	defaultDocumentModel = "gemini-2.5-flash-lite"
-	defaultHTTPTimeout   = 90 * time.Second
+	defaultDocumentModel   = "gemini-2.5-flash-lite"
+	defaultHTTPTimeout     = 90 * time.Second
+	documentSamplePages    = 5
+	documentSampleMaxRunes = 40000
 )
 
 type DocumentMetadata struct {
@@ -49,13 +52,21 @@ func ExtractDocumentMetadata(ctx context.Context, pdfURL, fileName string) (Docu
 	}
 	defer resp.Body.Close()
 
-	pdfBytes, err := io.ReadAll(resp.Body)
+	sample, pageCount, err := extractPDFTextSample(ctx, resp.Body)
 	if err != nil {
-		return DocumentMetadata{}, fmt.Errorf("read pdf: %w", err)
+		return DocumentMetadata{}, fmt.Errorf("extract pdf sample: %w", err)
+	}
+	if strings.TrimSpace(sample) == "" {
+		return DocumentMetadata{}, fmt.Errorf("empty pdf text sample")
 	}
 
-	prompt := strings.TrimSpace(`
-Analyze this uploaded academic PDF and infer clean metadata.
+	prompt := strings.TrimSpace(fmt.Sprintf(`
+Analyze this bounded text sample from an uploaded academic PDF and infer clean metadata.
+The sample contains the first %d pages and, when available, the last %d pages. The full PDF was not sent.
+
+Filename: %s
+Detected page count: %d
+
 Return JSON only with this exact shape:
 {
   "title": string,
@@ -72,14 +83,15 @@ Rules:
 - Authors should be person names only.
 - Description should be 1-3 concise sentences.
 - Tags should be 3-8 short topical tags.
+- Use detected page count for pageCount.
 - If unsure, use null for publishedYear and empty strings/arrays where appropriate.
 - Do not wrap the JSON in markdown.
-`)
+`, documentSamplePages, documentSamplePages, fileName, pageCount))
 
 	model := GetGeminiClient().GenerativeModel(getDocumentModel())
 	response, err := model.GenerateContent(ctx,
-		genai.Blob{MIMEType: "application/pdf", Data: pdfBytes},
 		genai.Text(prompt),
+		genai.Text(sample),
 	)
 	if err != nil {
 		return DocumentMetadata{}, fmt.Errorf("gemini document metadata: %w", err)
@@ -97,11 +109,91 @@ Rules:
 	}
 	meta.normalize()
 	meta.MetadataSource = "ai"
+	if meta.PageCount == 0 {
+		meta.PageCount = pageCount
+	}
 	if meta.Title == "" {
 		fallback := fallbackMetadata(fileName)
 		meta.Title = fallback.Title
 	}
 	return meta, nil
+}
+
+func extractPDFTextSample(ctx context.Context, r io.Reader) (string, int, error) {
+	tmp, err := os.CreateTemp("", "scholic-document-*.pdf")
+	if err != nil {
+		return "", 0, err
+	}
+	defer os.Remove(tmp.Name())
+	defer tmp.Close()
+
+	if _, err := io.Copy(tmp, r); err != nil {
+		return "", 0, err
+	}
+	if err := tmp.Close(); err != nil {
+		return "", 0, err
+	}
+
+	pageCount, err := pdfPageCount(ctx, tmp.Name())
+	if err != nil {
+		return "", 0, err
+	}
+
+	firstEnd := min(documentSamplePages, pageCount)
+	parts := []string{}
+	if firstEnd > 0 {
+		text, err := pdftotextPages(ctx, tmp.Name(), 1, firstEnd)
+		if err != nil {
+			return "", pageCount, err
+		}
+		parts = append(parts, fmt.Sprintf("Pages 1-%d:\n%s", firstEnd, text))
+	}
+
+	lastStart := pageCount - documentSamplePages + 1
+	if lastStart < 1 {
+		lastStart = 1
+	}
+	if lastStart > firstEnd {
+		text, err := pdftotextPages(ctx, tmp.Name(), lastStart, pageCount)
+		if err != nil {
+			return "", pageCount, err
+		}
+		parts = append(parts, fmt.Sprintf("Pages %d-%d:\n%s", lastStart, pageCount, text))
+	}
+
+	return limitRunes(strings.Join(parts, "\n\n"), documentSampleMaxRunes), pageCount, nil
+}
+
+func pdfPageCount(ctx context.Context, path string) (int, error) {
+	out, err := exec.CommandContext(ctx, "pdfinfo", path).Output()
+	if err != nil {
+		return 0, fmt.Errorf("pdfinfo: %w", err)
+	}
+	match := regexp.MustCompile(`(?m)^Pages:\s+(\d+)\s*$`).FindSubmatch(out)
+	if len(match) != 2 {
+		return 0, fmt.Errorf("pdfinfo did not report page count")
+	}
+	pageCount, err := strconv.Atoi(string(match[1]))
+	if err != nil || pageCount <= 0 {
+		return 0, fmt.Errorf("invalid pdf page count")
+	}
+	return pageCount, nil
+}
+
+func pdftotextPages(ctx context.Context, path string, firstPage, lastPage int) (string, error) {
+	out, err := exec.CommandContext(ctx, "pdftotext", "-layout", "-f", strconv.Itoa(firstPage), "-l", strconv.Itoa(lastPage), path, "-").Output()
+	if err != nil {
+		return "", fmt.Errorf("pdftotext pages %d-%d: %w", firstPage, lastPage, err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func limitRunes(s string, limit int) string {
+	runes := []rune(s)
+	if len(runes) <= limit {
+		return s
+	}
+	return string(runes[:limit])
 }
 
 func GenerateEmbedding(ctx context.Context, text string) ([]float64, error) {
