@@ -137,6 +137,11 @@ chrome.action.onClicked.addListener(async (tab) => {
     if (tab.url.startsWith(viewerPrefix)) {
       const originalUrl = new URL(tab.url).searchParams.get('url');
       if (!originalUrl) return;
+      const pdfMark = await chrome.storage.session.get(`pdfTab:${tab.id}`);
+      if (pdfMark[`pdfTab:${tab.id}`] !== originalUrl) {
+        chrome.tabs.update(tab.id, { url: originalUrl });
+        return;
+      }
       const originalDomain = new URL(originalUrl).hostname;
       const stored = await chrome.storage.local.get('enabledDomains');
       const enabledDomains = stored.enabledDomains || {};
@@ -183,15 +188,11 @@ chrome.action.onClicked.addListener(async (tab) => {
         return;
       }
 
-      // Regular page path: notify the content script. If there's no listener
-      // (some non-content-script page that escaped manifest matches), fall
-      // back to assuming PDF and swapping anyway.
-      const sent = await chrome.tabs.sendMessage(tab.id, { type: 'SET_ENABLED', enabled: true })
-        .catch(() => null);
-      if (sent) return;
-
-      const viewerUrl = chrome.runtime.getURL(`viewer.html?url=${encodeURIComponent(tab.url)}`);
-      chrome.tabs.update(tab.id, { url: viewerUrl });
+      // Regular page path: notify the content script. If there's no listener,
+      // do not assume PDF. Only the response-header pdfTab mark above is allowed
+      // to route a tab into Scholic's PDF viewer.
+      await chrome.tabs.sendMessage(tab.id, { type: 'SET_ENABLED', enabled: true })
+        .catch(() => { /* tab may not have content script yet */ });
       return;
     }
 
