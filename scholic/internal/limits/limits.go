@@ -23,10 +23,11 @@ const (
 	MaxMentionsPerText = 10
 
 	// IPRequestsPerMinute is the per-IP token-bucket refill rate applied to
-	// every request. IPBurst is the bucket size — short spikes are allowed
-	// up to this many requests before sustained throttling kicks in.
-	IPRequestsPerMinute = 30
-	IPBurst             = 10
+	// every request. This is intentionally loose because normal page loads,
+	// feed sidebars, notification polling, and the browser extension can all
+	// issue several reads at once. User-visible writes are protected separately.
+	IPRequestsPerMinute = 300
+	IPBurst             = 100
 
 	// UserWritesPerMinute / UserWriteBurst throttle authenticated POST/PUT
 	// activity that creates user-visible content (annotations, comments).
