@@ -1054,6 +1054,7 @@ function handleUrlChange(): void {
   if (currentUrl === lastUrl) return;
   lastUrl = currentUrl;
   console.log(`[Scholic] URL changed → ${currentUrl}`);
+  sidebar.refreshForPageChange();
   // bootstrap() handles both blocked and unblocked transitions, including
   // re-fetching annotations and updating the icon.
   bootstrap();

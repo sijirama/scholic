@@ -534,6 +534,17 @@ export class Sidebar {
     return this.callbacks.getPageTitle?.() || document.title || '';
   }
 
+  refreshForPageChange(): void {
+    const url = this.getCurrentPageUrl();
+    this.bookmarkUrl = url;
+    this.isBookmarked = false;
+    this.bookmarkIsPrivate = true;
+    this.bookmarkLoading = this.isAuthenticated && !!url;
+    this.bookmarkMenuOpen = false;
+    this.renderHeader();
+    this.refreshBookmarkState(true);
+  }
+
   private async refreshBookmarkState(force = false): Promise<void> {
     if (!this.isAuthenticated) {
       this.bookmarkUrl = '';
@@ -549,6 +560,9 @@ export class Sidebar {
     if (!force && this.bookmarkUrl === url) return;
 
     this.bookmarkUrl = url;
+    this.isBookmarked = false;
+    this.bookmarkIsPrivate = true;
+    this.bookmarkMenuOpen = false;
     this.bookmarkLoading = true;
     this.renderBookmarkButton();
 
@@ -558,6 +572,7 @@ export class Sidebar {
         data: { url },
       });
       if (this.bookmarkUrl !== url) return;
+      if (response?.error) throw new Error(response.error);
       this.isBookmarked = !!response?.bookmarked;
       this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? true;
     } catch (err) {
@@ -587,7 +602,7 @@ export class Sidebar {
     this.bookmarkIsPrivate = isPrivate;
     this.bookmarkLoading = true;
     this.bookmarkMenuOpen = false;
-    this.renderBookmarkButton();
+    this.renderHeader();
 
     try {
       const response = await chrome.runtime.sendMessage({
@@ -595,6 +610,7 @@ export class Sidebar {
         data: { url, title: this.getCurrentPageTitle(), isPrivate },
       });
       if (this.bookmarkUrl !== url) return;
+      if (response?.error) throw new Error(response.error);
       this.isBookmarked = !!response?.bookmarked;
       this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? isPrivate;
     } catch (err) {
@@ -603,7 +619,7 @@ export class Sidebar {
     } finally {
       if (this.bookmarkUrl === url) {
         this.bookmarkLoading = false;
-        this.renderBookmarkButton();
+        this.renderHeader();
       }
     }
   }
@@ -618,7 +634,7 @@ export class Sidebar {
     this.bookmarkIsPrivate = isPrivate;
     this.bookmarkLoading = true;
     this.bookmarkMenuOpen = false;
-    this.renderBookmarkButton();
+    this.renderHeader();
 
     try {
       const response = await chrome.runtime.sendMessage({
@@ -626,6 +642,7 @@ export class Sidebar {
         data: { url, isPrivate },
       });
       if (this.bookmarkUrl !== url) return;
+      if (response?.error) throw new Error(response.error);
       this.isBookmarked = !!response?.bookmarked;
       this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? isPrivate;
     } catch (err) {
@@ -650,7 +667,7 @@ export class Sidebar {
     this.bookmarkIsPrivate = true;
     this.bookmarkLoading = true;
     this.bookmarkMenuOpen = false;
-    this.renderBookmarkButton();
+    this.renderHeader();
 
     try {
       const response = await chrome.runtime.sendMessage({
@@ -658,6 +675,7 @@ export class Sidebar {
         data: { url },
       });
       if (this.bookmarkUrl !== url) return;
+      if (response?.error) throw new Error(response.error);
       this.isBookmarked = !!response?.bookmarked;
     } catch (err) {
       console.error('[Scholic] Failed to remove bookmark:', err);
@@ -732,7 +750,7 @@ export class Sidebar {
       <div style="display: flex; align-items: center; gap: 12px;">
         ${this.isAuthenticated ? `
           <div class="bookmark-wrap">
-            <button class="bookmark-btn ${this.isBookmarked ? 'active' : ''}" title="${this.isBookmarked ? (this.bookmarkIsPrivate ? 'Private bookmark' : 'Public bookmark') : 'Bookmark page'}" aria-pressed="${this.isBookmarked}">
+            <button class="bookmark-btn ${this.isBookmarked ? 'active' : ''} ${this.bookmarkLoading ? 'loading' : ''}" title="${this.isBookmarked ? (this.bookmarkIsPrivate ? 'Private bookmark' : 'Public bookmark') : 'Bookmark page'}" aria-pressed="${this.isBookmarked}">
               ${ICONS.star}
             </button>
             ${this.bookmarkMenuOpen ? `
