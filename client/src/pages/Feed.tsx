@@ -10,6 +10,7 @@ import type { DiscoverAuthor } from '../components/discover/UserCard';
 import { Bookmark as BookmarkIcon, FileText, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUploadedDoc } from '../lib/uploadedDocs';
+import { getYouTubePreview } from '../lib/youtube';
 
 interface RecentSite {
   url: string;
@@ -218,6 +219,7 @@ const BookmarkFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
     try { displayDomain = new URL(bookmark.url).hostname.replace('www.', ''); } catch { displayDomain = bookmark.url; }
   }
   const title = bookmark.title || displayDomain || bookmark.url;
+  const youtubePreview = getYouTubePreview(bookmark.url);
 
   return (
     <div style={{ padding: '20px 0' }}>
@@ -234,9 +236,11 @@ const BookmarkFeedCard: React.FC<{ event: FeedEvent }> = ({ event }) => {
             href={bookmark.url}
             target="_blank"
             rel="noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-inset)', textDecoration: 'none', color: 'inherit' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: youtubePreview ? 8 : '13px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface-inset)', textDecoration: 'none', color: 'inherit' }}
           >
-            {bookmark.favicon ? (
+            {youtubePreview ? (
+              <img src={youtubePreview.thumbnailUrl} alt="" style={{ width: 108, aspectRatio: '16 / 9', borderRadius: 6, objectFit: 'cover', background: 'var(--surface-2)', flexShrink: 0 }} />
+            ) : bookmark.favicon ? (
               <img src={bookmark.favicon} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             ) : (
               <div style={{ width: 18, height: 18, borderRadius: 4, background: 'var(--color-yellow-soft)', color: 'var(--color-yellow-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

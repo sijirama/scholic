@@ -10,6 +10,7 @@ import FollowersModal from '../components/FollowersModal';
 import Avatar from '../components/Avatar';
 import DocumentUploadModal from '../components/DocumentUploadModal';
 import { useUploadedDoc } from '../lib/uploadedDocs';
+import { getYouTubePreview } from '../lib/youtube';
 import { toast } from 'sonner';
 
 function timeAgo(dateStr: string): string {
@@ -173,6 +174,7 @@ const BookmarkCard: React.FC<{ bookmark: BookmarkRecord }> = ({ bookmark }) => {
     try { displayDomain = new URL(bookmark.url).hostname.replace('www.', ''); } catch { displayDomain = bookmark.url; }
   }
   const displayTitle = bookmark.title || displayDomain || bookmark.url;
+  const youtubePreview = getYouTubePreview(bookmark.url);
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--surface-inset)' }}>
@@ -180,11 +182,13 @@ const BookmarkCard: React.FC<{ bookmark: BookmarkRecord }> = ({ bookmark }) => {
         href={bookmark.url}
         target="_blank"
         rel="noreferrer"
-        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: youtubePreview ? 8 : '12px 14px', textDecoration: 'none', color: 'inherit' }}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
       >
-        {bookmark.favicon ? (
+        {youtubePreview ? (
+          <img src={youtubePreview.thumbnailUrl} alt="" style={{ width: 96, aspectRatio: '16 / 9', borderRadius: 6, objectFit: 'cover', background: 'var(--surface-2)', flexShrink: 0 }} />
+        ) : bookmark.favicon ? (
           <img src={bookmark.favicon} alt="" style={{ width: 18, height: 18, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         ) : (
           <div style={{ width: 18, height: 18, borderRadius: 4, background: 'var(--color-yellow-soft)', color: 'var(--color-yellow-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
