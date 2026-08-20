@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import api from '../lib/api';
 import AnnotationCard from '../components/AnnotationCard';
 import type { Annotation, User as AnnotationUser, Comment } from '../components/AnnotationCard';
+import AddToCollectionModal from '../components/AddToCollectionModal';
 import Avatar from '../components/Avatar';
 import UserCard from '../components/discover/UserCard';
 import type { DiscoverAuthor } from '../components/discover/UserCard';
@@ -381,6 +382,7 @@ const Feed: React.FC = () => {
   const [recentSidebarLoading, setRecentSidebarLoading] = useState(false);
   const [friendsSidebar, setFriendsSidebar] = useState<FriendSite[]>([]);
   const [friendsSidebarLoading, setFriendsSidebarLoading] = useState(false);
+  const [addToCollectionTarget, setAddToCollectionTarget] = useState<{ type: 'annotation'; id: number } | null>(null);
 
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
@@ -449,16 +451,6 @@ const Feed: React.FC = () => {
       toast.success('Annotation deleted');
     } catch {
       toast.error('Failed to delete annotation');
-    }
-  };
-
-  const editAnnotation = async (id: number, text: string, linkPreviewImageMode: 'default' | 'show' | 'hide') => {
-    try {
-      const response = await api.put(`/annotations/${id}`, { text, linkPreviewImageMode });
-      updateAnnotationEvent(id, () => response.data);
-      toast.success('Annotation updated');
-    } catch {
-      toast.error('Failed to update annotation');
     }
   };
 
@@ -631,7 +623,7 @@ const Feed: React.FC = () => {
       <Navbar />
 
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 16, padding: '0 20px' }}>
-        {user && (recentSidebar.length > 0 || recentSidebarLoading) && (
+        {user && (
           <aside
             className="feed-recent-sidebar"
             style={{
@@ -643,7 +635,10 @@ const Feed: React.FC = () => {
               marginTop: SIDEBAR_TOP_OFFSET,
               maxHeight: 'calc(100vh - 48px)',
               overflowY: 'auto',
+              visibility: recentSidebar.length > 0 || recentSidebarLoading ? 'visible' : 'hidden',
+              pointerEvents: recentSidebar.length > 0 || recentSidebarLoading ? 'auto' : 'none',
             }}
+            aria-hidden={!(recentSidebar.length > 0 || recentSidebarLoading)}
           >
             {renderSidebarHeader('Continue reading', 'var(--accent)')}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -756,9 +751,9 @@ const Feed: React.FC = () => {
                     fetchingComments={fetchingComments}
                     currentUser={user as AnnotationUser | null}
                     onDeleteAnnotation={deleteAnnotation}
-                    onEditAnnotation={editAnnotation}
                     onDeleteComment={deleteComment}
                     onEditComment={editComment}
+                    onAddToCollection={user ? (annotation) => setAddToCollectionTarget({ type: 'annotation', id: annotation.id }) : undefined}
                   />
                 );
               }
@@ -785,7 +780,7 @@ const Feed: React.FC = () => {
         )}
         </div>
 
-        {user && (friendsSidebar.length > 0 || friendsSidebarLoading) && (
+        {user && (
           <aside
             className="feed-friends-sidebar"
             style={{
@@ -797,7 +792,10 @@ const Feed: React.FC = () => {
               marginTop: SIDEBAR_TOP_OFFSET,
               maxHeight: 'calc(100vh - 48px)',
               overflowY: 'auto',
+              visibility: friendsSidebar.length > 0 || friendsSidebarLoading ? 'visible' : 'hidden',
+              pointerEvents: friendsSidebar.length > 0 || friendsSidebarLoading ? 'auto' : 'none',
             }}
+            aria-hidden={!(friendsSidebar.length > 0 || friendsSidebarLoading)}
           >
             {renderSidebarHeader('Friends reading', 'var(--color-blue)')}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -812,6 +810,15 @@ const Feed: React.FC = () => {
           </aside>
         )}
       </div>
+
+      {addToCollectionTarget && (
+        <AddToCollectionModal
+          open={!!addToCollectionTarget}
+          targetType={addToCollectionTarget.type}
+          targetId={addToCollectionTarget.id}
+          onClose={() => setAddToCollectionTarget(null)}
+        />
+      )}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }

@@ -16,7 +16,7 @@
 import { describe, anchor } from './anchoring/index';
 import { highlightRange, removeHighlights, getHighlightsForAnnotation } from './highlighter';
 import { SelectionPopover } from './popover';
-import { Sidebar } from './sidebar';
+import { HIGHLIGHT_COLORS, Sidebar } from './sidebar';
 import type { AnnotationData } from './sidebar';
 import { HighlightPopup } from './highlight-popup';
 import { Snipper, Area } from './snipper';
@@ -43,6 +43,22 @@ const highlightMap = new Map<string, HTMLElement[]>();
 
 /** All annotations for the current page */
 let pageAnnotations: AnnotationData[] = [];
+
+interface HighlightData {
+  id?: string | number;
+  url: string;
+  quoteText: string;
+  selectors: AnnotationData['selectors'];
+  type?: 'text' | 'pdf';
+  pdfHash?: string;
+  pdfPage?: number;
+  highlightColor?: string;
+}
+
+/** Private quick highlights for the current user/page. */
+let pageHighlights: HighlightData[] = [];
+const quickHighlightMap = new Map<string, HTMLElement[]>();
+let highlightMenuHost: HTMLElement | null = null;
 
 /** Pending highlight elements from the current annotate/highlight action (before save) */
 let pendingHighlightElements: HTMLElement[] = [];
@@ -97,6 +113,165 @@ function applyHighlightColor(elements: HTMLElement[], hex: string): void {
     el.style.setProperty('--sb', String(b));
     el.style.setProperty('--sa', String(alpha));
   });
+}
+
+function hideHighlightMenu(): void {
+  highlightMenuHost?.remove();
+  highlightMenuHost = null;
+}
+
+function quickHighlightDomId(id: string | number): string {
+  return `quick-highlight-${id}`;
+}
+
+function showQuickHighlightMenu(highlightId: string, highlightEl: HTMLElement): void {
+  const highlight = pageHighlights.find((h) => String(h.id) === String(highlightId));
+  if (!highlight) return;
+  hideHighlightMenu();
+
+  const host = document.createElement('scholic-quick-highlight-menu');
+  host.style.cssText = 'position:absolute;z-index:2147483646;';
+  const shadow = host.attachShadow({ mode: 'closed' });
+  const currentColor = highlight.highlightColor || '#A8D5B5';
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .menu {
+      width: 252px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 12px;
+      background: #151515;
+      border: 1px solid rgba(255,255,255,0.11);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.42), 0 4px 14px rgba(0,0,0,0.28);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 7px;
+      box-sizing: border-box;
+    }
+    .swatches {
+      width: 164px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      padding: 3px;
+      scroll-snap-type: x proximity;
+    }
+    .scroll {
+      width: 24px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      color: #b8b8b8;
+      cursor: pointer;
+      padding: 0;
+      flex: 0 0 auto;
+    }
+    .scroll:hover { background: rgba(255,255,255,0.1); color: #f0f0f0; }
+    .swatches::-webkit-scrollbar { display: none; }
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      cursor: pointer;
+      padding: 0;
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.16);
+    }
+    .swatch.active {
+      outline: 2px solid #f4f4f4;
+      outline-offset: 2px;
+    }
+    .delete {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 999px;
+      background: rgba(232,71,122,0.12);
+      color: #ff8cab;
+      cursor: pointer;
+      padding: 0;
+      flex: 0 0 auto;
+    }
+    .delete:hover { background: rgba(232,71,122,0.18); }
+  `;
+  shadow.appendChild(style);
+
+  const menu = document.createElement('div');
+  menu.className = 'menu';
+  menu.innerHTML = `
+    <button class="scroll scroll-left" type="button" title="Previous colors" aria-label="Previous colors">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="swatches">
+      ${HIGHLIGHT_COLORS.map((color) => `
+        <button
+          class="swatch ${color.hex.toLowerCase() === currentColor.toLowerCase() ? 'active' : ''}"
+          style="background:${color.hex}"
+          title="${color.name}"
+          data-color="${color.hex}"
+        ></button>
+      `).join('')}
+    </div>
+    <button class="scroll scroll-right" type="button" title="More colors" aria-label="More colors">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+    <button class="delete" type="button" title="Delete highlight" aria-label="Delete highlight">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    </button>
+  `;
+  shadow.appendChild(menu);
+
+  const swatches = menu.querySelector<HTMLElement>('.swatches');
+  menu.querySelector<HTMLButtonElement>('.scroll-left')?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    swatches?.scrollBy({ left: -88, behavior: 'smooth' });
+  });
+  menu.querySelector<HTMLButtonElement>('.scroll-right')?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    swatches?.scrollBy({ left: 88, behavior: 'smooth' });
+  });
+
+  menu.querySelectorAll<HTMLButtonElement>('.swatch').forEach((button) => {
+    button.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      const color = button.dataset.color || '#A8D5B5';
+      await handleUpdateQuickHighlightColor(highlightId, color);
+      hideHighlightMenu();
+    });
+  });
+  menu.querySelector<HTMLButtonElement>('.delete')?.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    await handleDeleteQuickHighlight(highlightId);
+    hideHighlightMenu();
+  });
+
+  host.addEventListener('mousedown', (event) => event.stopPropagation());
+  document.body.appendChild(host);
+  highlightMenuHost = host;
+
+  const rect = highlightEl.getBoundingClientRect();
+  const width = 252;
+  let left = rect.left + window.scrollX + rect.width / 2 - width / 2;
+  left = Math.max(8 + window.scrollX, Math.min(left, window.scrollX + window.innerWidth - width - 8));
+  host.style.left = `${left}px`;
+  host.style.top = '-10000px';
+  const menuHeight = menu.offsetHeight;
+  host.style.top = rect.top < menuHeight + 16
+    ? `${rect.bottom + window.scrollY + 8}px`
+    : `${rect.top + window.scrollY - menuHeight - 8}px`;
 }
 
 // Initialize Components
@@ -413,6 +588,7 @@ function handleKeyDown(e: KeyboardEvent): void {
 
   if (e.key === 'Escape') {
     popover.hide();
+    hideHighlightMenu();
     // If a pending optimistic highlight is on the page, the user is mid-annotate.
     // Esc should clear it just like clicking Cancel. (When Esc fires inside the
     // sidebar form's textarea, the form's own handler intercepts it first.)
@@ -459,9 +635,11 @@ function handleMouseDown(e: MouseEvent): void {
   const target = e.target as HTMLElement;
   if (
     !target.closest('scholic-popover-host') &&
-    !target.closest('scholic-sidebar-host')
+    !target.closest('scholic-sidebar-host') &&
+    !target.closest('scholic-quick-highlight-menu')
   ) {
     popover.hide();
+    hideHighlightMenu();
   }
 }
 
@@ -521,10 +699,10 @@ function handleAnnotate(range: Range, quoteText: string): void {
 /**
  * Handle "Highlight" button click from the popover.
  *
- * Creates a private (personal) highlight — no note, no public annotation.
- * Saved to the backend so it persists across page reloads.
+ * Creates a private, page-only highlight. This intentionally does not create
+ * an annotation, feed event, profile item, comment thread, or collection entry.
  */
-function handleHighlight(range: Range, quoteText: string): void {
+async function handleHighlight(range: Range, quoteText: string): Promise<void> {
   // Generate selectors before any DOM modifications
   const selectors = describe(document.body, range);
 
@@ -541,14 +719,90 @@ function handleHighlight(range: Range, quoteText: string): void {
   // Clear the text selection
   window.getSelection()?.removeAllRanges();
 
-  // Save to backend as a private highlight
-  handleSaveAnnotation({
-    url: currentAnnotationUrl(),
-    quoteText,
-    text: '',
-    selectors,
-    isPrivate: true,
-  });
+  const tempElements = pendingHighlightElements;
+  pendingHighlightElements = [];
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'CREATE_HIGHLIGHT',
+      data: {
+        url: currentAnnotationUrl(),
+        quoteText,
+        selectors,
+        highlightColor: '#A8D5B5',
+        type: 'text',
+      },
+    });
+    if (response?.error) throw new Error(response.error);
+    const savedHighlight = response?.highlight as HighlightData | undefined;
+    if (!savedHighlight?.id) throw new Error('Highlight was not returned');
+
+    pageHighlights.unshift(savedHighlight);
+    const highlightId = String(savedHighlight.id);
+    applyHighlightColor(tempElements, savedHighlight.highlightColor || '#A8D5B5');
+    tempElements.forEach((el) => {
+      el.className = 'scholic-highlight scholic-private';
+      (el as any)._scholicHighlightId = highlightId;
+      delete (el as any)._scholicAnnotationId;
+      el.dataset.highlightId = highlightId;
+      el.dataset.annotationId = quickHighlightDomId(highlightId);
+      el.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        showQuickHighlightMenu(highlightId, el);
+      });
+    });
+    quickHighlightMap.set(highlightId, tempElements);
+  } catch (err) {
+    console.error('[Scholic] Failed to save highlight:', err);
+    removeHighlights(tempElements);
+  }
+}
+
+async function handleUpdateQuickHighlightColor(highlightId: string, color: string): Promise<void> {
+  const elements = quickHighlightMap.get(highlightId);
+  const highlight = pageHighlights.find((h) => String(h.id) === String(highlightId));
+  const previousColor = highlight?.highlightColor || '#A8D5B5';
+  if (elements) applyHighlightColor(elements, color);
+  if (highlight) highlight.highlightColor = color;
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'UPDATE_HIGHLIGHT',
+      data: { id: highlightId, highlightColor: color },
+    });
+    if (response?.error) throw new Error(response.error);
+    if (response?.highlight && highlight) {
+      highlight.highlightColor = response.highlight.highlightColor || color;
+      if (elements) applyHighlightColor(elements, highlight.highlightColor);
+    }
+  } catch (err) {
+    console.error('[Scholic] Failed to update highlight color:', err);
+    if (highlight) highlight.highlightColor = previousColor;
+    if (elements) applyHighlightColor(elements, previousColor);
+  }
+}
+
+async function handleDeleteQuickHighlight(highlightId: string): Promise<void> {
+  const backup = pageHighlights.find((h) => String(h.id) === String(highlightId));
+  const elements = quickHighlightMap.get(highlightId);
+  if (elements) removeHighlights(elements);
+  quickHighlightMap.delete(highlightId);
+  pageHighlights = pageHighlights.filter((h) => String(h.id) !== String(highlightId));
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'DELETE_HIGHLIGHT',
+      data: { id: highlightId },
+    });
+    if (response?.error) throw new Error(response.error);
+  } catch (err) {
+    console.error('[Scholic] Failed to delete highlight:', err);
+    if (backup) {
+      pageHighlights.unshift(backup);
+      await resolveAndRenderHighlights([backup]);
+    }
+  }
 }
 
 /**
@@ -864,8 +1118,14 @@ function clearStateAndHighlights(): void {
   for (const highlights of highlightMap.values()) {
     removeHighlights(highlights);
   }
+  for (const highlights of quickHighlightMap.values()) {
+    removeHighlights(highlights);
+  }
   highlightMap.clear();
+  quickHighlightMap.clear();
+  hideHighlightMenu();
   pageAnnotations = [];
+  pageHighlights = [];
   annotationsTotal = 0;
   annotationsOffset = 0;
   suppressSync = false;
@@ -906,15 +1166,35 @@ async function loadAnnotations(): Promise<void> {
 
       // Ensure initial highlights match the default tab
       await filterHighlights();
+      await loadQuickHighlights();
 
       updateBadgeCount();
     } else {
       // Still render empty list if no annotations found (to show 'No annotations' vs 'Sign in')
       await sidebar.renderAnnotationList([]);
+      await loadQuickHighlights();
       updateBadgeCount();
     }
   } catch (err) {
     console.error('[Scholic] Failed to load annotations:', err);
+  }
+}
+
+async function loadQuickHighlights(): Promise<void> {
+  try {
+    const auth = await chrome.storage.local.get('scholicToken');
+    if (!auth.scholicToken) return;
+    const response = await chrome.runtime.sendMessage({
+      type: 'FETCH_HIGHLIGHTS',
+      data: { url: currentAnnotationUrl(), limit: 200, offset: 0 },
+    });
+    if (response?.error) throw new Error(response.error);
+    if (response?.highlights && Array.isArray(response.highlights)) {
+      pageHighlights = response.highlights;
+      await resolveAndRenderHighlights(pageHighlights);
+    }
+  } catch (err) {
+    console.error('[Scholic] Failed to load quick highlights:', err);
   }
 }
 
@@ -988,6 +1268,40 @@ async function resolveAndRenderAnnotations(annotations: AnnotationData[]): Promi
       count++;
     } catch (err) {
       console.warn(`[Scholic] Failed to anchor ${annotationId}:`, err);
+    }
+  }
+
+  suppressSync = false;
+  return count;
+}
+
+async function resolveAndRenderHighlights(highlightsToRender: HighlightData[]): Promise<number> {
+  let count = 0;
+  suppressSync = true;
+
+  for (const highlight of highlightsToRender) {
+    if (!highlight.selectors || !highlight.id) continue;
+    const highlightId = String(highlight.id);
+
+    try {
+      const range = await anchor(document.body, highlight.selectors);
+      const elements = highlightRange(range, 'scholic-private', quickHighlightDomId(highlightId));
+      if (elements.length === 0) continue;
+
+      applyHighlightColor(elements, highlight.highlightColor || '#A8D5B5');
+      quickHighlightMap.set(highlightId, elements);
+      elements.forEach((el) => {
+        (el as any)._scholicHighlightId = highlightId;
+        el.dataset.highlightId = highlightId;
+        el.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          showQuickHighlightMenu(highlightId, el);
+        });
+      });
+      count++;
+    } catch (err) {
+      console.warn(`[Scholic] Failed to anchor quick highlight ${highlightId}:`, err);
     }
   }
 
