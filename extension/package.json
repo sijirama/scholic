@@ -1,6 +1,6 @@
 {
   "name": "scholic-extension",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Scholic — Social Annotation Browser Extension",
   "type": "commonjs",
   "scripts": {
