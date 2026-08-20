@@ -33,6 +33,7 @@ type CreateAnnotationRequest struct {
 	PDFPage              int    `json:"pdfPage"`        // Page number within the PDF
 	HighlightColor       string `json:"highlightColor"` // User-chosen pastel highlight color (hex)
 	LinkPreviewImageMode string `json:"linkPreviewImageMode"`
+	CollectionID         *uint  `json:"collectionId"`
 }
 
 // CreateAnnotation handles POST /api/annotations
@@ -64,6 +65,13 @@ func CreateAnnotation(c *gin.Context) {
 	if !isValidLinkPreviewImageMode(req.LinkPreviewImageMode) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid linkPreviewImageMode"})
 		return
+	}
+	if req.CollectionID != nil {
+		var collection models.Collection
+		if err := database.DB.Where("id = ? AND owner_id = ?", *req.CollectionID, userID.(uint)).First(&collection).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Collection not found"})
+			return
+		}
 	}
 	req.URL = canonicalAnnotationURL(req.URL)
 
@@ -151,6 +159,12 @@ func CreateAnnotation(c *gin.Context) {
 	if err := database.DB.Preload("User").First(&annotation, annotation.ID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Annotation created but failed to reload"})
 		return
+	}
+	if req.CollectionID != nil {
+		if err := AddAnnotationToCollection(c, annotation.UserID, *req.CollectionID, annotation.ID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Annotation created but failed to add to collection"})
+			return
+		}
 	}
 	created := []models.Annotation{annotation}
 	models.ResolveLinkPreviewImageVisibility(created)

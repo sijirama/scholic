@@ -9,8 +9,11 @@ import type { Annotation, User as BaseUser, Comment } from '../components/Annota
 import FollowersModal from '../components/FollowersModal';
 import Avatar from '../components/Avatar';
 import DocumentUploadModal from '../components/DocumentUploadModal';
-import { useUploadedDoc } from '../lib/uploadedDocs';
+import CollectionCard from '../components/CollectionCard';
+import CollectionModal from '../components/CollectionModal';
+import AddToCollectionModal from '../components/AddToCollectionModal';
 import { getYouTubePreview } from '../lib/youtube';
+import type { CollectionSummary } from '../lib/collections';
 import { toast } from 'sonner';
 
 function timeAgo(dateStr: string): string {
@@ -73,102 +76,7 @@ interface BookmarkRecord {
   isPrivate: boolean;
 }
 
-interface RecentlyReadCardProps {
-  site: {
-    url: string;
-    title: string;
-    favicon: string;
-    domain: string;
-    description: string;
-    image: string;
-    lastRead: string;
-  };
-  username: string;
-}
-
-const RecentlyReadCard: React.FC<RecentlyReadCardProps> = ({ site, username }) => {
-  const uploadedDoc = useUploadedDoc(site.url);
-  let displayDomain = site.domain;
-  if (!displayDomain) {
-    try { displayDomain = new URL(site.url).hostname.replace('www.', ''); } catch { displayDomain = site.url; }
-  }
-  const displayTitle = uploadedDoc?.title || site.title || displayDomain;
-  const displayDescription = uploadedDoc
-    ? (uploadedDoc.authors.length > 0 ? uploadedDoc.authors.join(', ') : '')
-    : site.description;
-  const sitePageUrl = `/page?url=${encodeURIComponent(site.url)}&author=${encodeURIComponent(username)}`;
-
-  return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--surface-inset)' }}>
-      <a
-        href={site.url}
-        target="_blank"
-        rel="noreferrer"
-        style={{ display: 'flex', alignItems: 'stretch', gap: '0', textDecoration: 'none', color: 'inherit' }}
-        className="transition-colors"
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-      >
-        <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-            {uploadedDoc ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', fontSize: 10, color: 'var(--accent)', fontWeight: 600 }}>
-                <FileText style={{ width: 9, height: 9 }} />
-                uploaded PDF
-              </span>
-            ) : site.favicon ? (
-              <img
-                src={site.favicon}
-                alt=""
-                style={{ width: '13px', height: '13px', borderRadius: '2px', objectFit: 'contain', flexShrink: 0 }}
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-              />
-            ) : (
-              <div style={{ width: '13px', height: '13px', borderRadius: '2px', background: 'var(--accent-soft)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: 'var(--accent)', fontWeight: 700 }}>
-                {displayDomain[0]?.toUpperCase() || '?'}
-              </div>
-            )}
-            <span style={{ fontSize: '11px', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {uploadedDoc ? `by @${uploadedDoc.user.username}` : displayDomain}
-            </span>
-            {site.lastRead && (
-              <>
-                <span style={{ fontSize: '11px', color: 'var(--text-faint)', flexShrink: 0 }}>·</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-dim)', flexShrink: 0 }} title={new Date(site.lastRead).toLocaleString()}>
-                  {timeAgo(site.lastRead)}
-                </span>
-              </>
-            )}
-          </div>
-          <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>
-            {displayTitle}
-          </div>
-          {displayDescription && (
-            <div style={{ fontSize: '11px', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {displayDescription}
-            </div>
-          )}
-        </div>
-
-        {site.image && !uploadedDoc && (
-          <div style={{ width: '72px', flexShrink: 0, background: `url(${site.image}) center/cover no-repeat`, borderLeft: '1px solid var(--border)' }} />
-        )}
-      </a>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '7px 14px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <a
-          href={sitePageUrl}
-          style={{ fontSize: '11px', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}
-          className="hover:underline"
-        >
-          see all notes →
-        </a>
-      </div>
-    </div>
-  );
-};
-
-const BookmarkCard: React.FC<{ bookmark: BookmarkRecord }> = ({ bookmark }) => {
+const BookmarkCard: React.FC<{ bookmark: BookmarkRecord; onAddToCollection?: (bookmark: BookmarkRecord) => void }> = ({ bookmark, onAddToCollection }) => {
   let displayDomain = bookmark.domain;
   if (!displayDomain) {
     try { displayDomain = new URL(bookmark.url).hostname.replace('www.', ''); } catch { displayDomain = bookmark.url; }
@@ -211,6 +119,16 @@ const BookmarkCard: React.FC<{ bookmark: BookmarkRecord }> = ({ bookmark }) => {
         </div>
         <span style={{ fontSize: 11, color: 'var(--text-faint)', flexShrink: 0 }}>{timeAgo(bookmark.createdAt)}</span>
       </a>
+      {onAddToCollection && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '7px 14px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+          <button
+            onClick={() => onAddToCollection(bookmark)}
+            style={{ border: 'none', background: 'none', color: 'var(--accent)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            add to collection →
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -251,23 +169,6 @@ const Profile: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState('Annotations');
 
-  // Recently Read state
-  interface RecentSite {
-    url: string;
-    title: string;
-    favicon: string;
-    domain: string;
-    description: string;
-    image: string;
-    lastRead: string;
-  }
-  const [recentlyRead, setRecentlyRead] = useState<RecentSite[]>([]);
-  const [recentlyReadLoading, setRecentlyReadLoading] = useState(false);
-  const [recentlyReadFetchingMore, setRecentlyReadFetchingMore] = useState(false);
-  const [recentlyReadHasMore, setRecentlyReadHasMore] = useState(false);
-  const [recentlyReadOffset, setRecentlyReadOffset] = useState(0);
-  const RECENTLY_READ_LIMIT = 20;
-
   // Pagination state
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -296,6 +197,14 @@ const Profile: React.FC = () => {
   const [bookmarksHasMore, setBookmarksHasMore] = useState(false);
   const [bookmarksOffset, setBookmarksOffset] = useState(0);
   const BOOKMARKS_LIMIT = 20;
+  const [collections, setCollections] = useState<CollectionSummary[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
+  const [collectionsFetchingMore, setCollectionsFetchingMore] = useState(false);
+  const [collectionsHasMore, setCollectionsHasMore] = useState(false);
+  const [collectionsOffset, setCollectionsOffset] = useState(0);
+  const COLLECTIONS_LIMIT = 20;
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
+  const [addToCollectionTarget, setAddToCollectionTarget] = useState<{ type: 'annotation' | 'bookmark'; id: number } | null>(null);
 
   const toggleFollow = async () => {
     if (!profileUser || followLoading) return;
@@ -326,16 +235,6 @@ const Profile: React.FC = () => {
       toast.success('Annotation deleted');
     } catch {
       toast.error('Failed to delete annotation');
-    }
-  };
-
-  const editAnnotation = async (id: number, text: string, linkPreviewImageMode: 'default' | 'show' | 'hide') => {
-    try {
-      const response = await api.put(`/annotations/${id}`, { text, linkPreviewImageMode });
-      setActivity(prev => prev.map(a => a.id === id ? response.data : a));
-      toast.success('Annotation updated');
-    } catch {
-      toast.error('Failed to update annotation');
     }
   };
 
@@ -412,16 +311,15 @@ const Profile: React.FC = () => {
     setActivity([]);
     setPage(0);
     setHasMore(true);
-    // Reset recently-read when navigating to a different profile
-    setRecentlyRead([]);
-    setRecentlyReadOffset(0);
-    setRecentlyReadHasMore(false);
     setDocuments([]);
     setDocumentsOffset(0);
     setDocumentsHasMore(false);
     setBookmarks([]);
     setBookmarksOffset(0);
     setBookmarksHasMore(false);
+    setCollections([]);
+    setCollectionsOffset(0);
+    setCollectionsHasMore(false);
     setActiveTab('Annotations');
     fetchProfile(0, true);
   }, [username, fetchProfile]);
@@ -443,22 +341,10 @@ const Profile: React.FC = () => {
   }, [hasMore, fetchingMore, loading, page, username, activeTab, fetchProfile]);
 
   const isOwnProfile = currentUser?.username === username;
-  const tabs = ['Annotations', 'Recently Read', 'Bookmarks', 'Uploaded'];
+  const tabs = ['Annotations', 'Bookmarks', 'Collections', 'Uploaded'];
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    // Lazy-fetch recently read on first switch to that tab
-    if (tab === 'Recently Read' && recentlyRead.length === 0 && !recentlyReadLoading) {
-      setRecentlyReadLoading(true);
-      api.get(`/users/${username}/recently-read?limit=${RECENTLY_READ_LIMIT}&offset=0`)
-        .then(res => {
-          setRecentlyRead(res.data.sites || []);
-          setRecentlyReadHasMore(res.data.hasMore ?? false);
-          setRecentlyReadOffset(res.data.sites?.length ?? 0);
-        })
-        .catch(() => toast.error('Failed to load recently read'))
-        .finally(() => setRecentlyReadLoading(false));
-    }
     if (tab === 'Uploaded' && documents.length === 0 && !documentsLoading) {
       setDocumentsLoading(true);
       api.get(`/users/${username}/documents?limit=${DOCUMENTS_LIMIT}&offset=0`)
@@ -483,20 +369,18 @@ const Profile: React.FC = () => {
         .catch(() => toast.error('Failed to load bookmarks'))
         .finally(() => setBookmarksLoading(false));
     }
-  };
-
-  const loadMoreRecentlyRead = () => {
-    if (recentlyReadFetchingMore || !recentlyReadHasMore) return;
-    setRecentlyReadFetchingMore(true);
-    api.get(`/users/${username}/recently-read?limit=${RECENTLY_READ_LIMIT}&offset=${recentlyReadOffset}`)
-      .then(res => {
-        const newSites = res.data.sites || [];
-        setRecentlyRead(prev => [...prev, ...newSites]);
-        setRecentlyReadHasMore(res.data.hasMore ?? false);
-        setRecentlyReadOffset(prev => prev + newSites.length);
-      })
-      .catch(() => toast.error('Failed to load more'))
-      .finally(() => setRecentlyReadFetchingMore(false));
+    if (tab === 'Collections' && collections.length === 0 && !collectionsLoading) {
+      setCollectionsLoading(true);
+      api.get(`/users/${username}/collections?limit=${COLLECTIONS_LIMIT}&offset=0`)
+        .then(res => {
+          const rows = res.data.collections || [];
+          setCollections(rows);
+          setCollectionsHasMore(res.data.hasMore ?? false);
+          setCollectionsOffset(rows.length);
+        })
+        .catch(() => toast.error('Failed to load collections'))
+        .finally(() => setCollectionsLoading(false));
+    }
   };
 
   const loadMoreDocuments = () => {
@@ -525,6 +409,20 @@ const Profile: React.FC = () => {
       })
       .catch(() => toast.error('Failed to load more bookmarks'))
       .finally(() => setBookmarksFetchingMore(false));
+  };
+
+  const loadMoreCollections = () => {
+    if (collectionsFetchingMore || !collectionsHasMore) return;
+    setCollectionsFetchingMore(true);
+    api.get(`/users/${username}/collections?limit=${COLLECTIONS_LIMIT}&offset=${collectionsOffset}`)
+      .then(res => {
+        const rows = res.data.collections || [];
+        setCollections(prev => [...prev, ...rows]);
+        setCollectionsHasMore(res.data.hasMore ?? false);
+        setCollectionsOffset(prev => prev + rows.length);
+      })
+      .catch(() => toast.error('Failed to load more collections'))
+      .finally(() => setCollectionsFetchingMore(false));
   };
 
 
@@ -773,6 +671,15 @@ const Profile: React.FC = () => {
               Add document
             </button>
           )}
+          {isOwnProfile && activeTab === 'Collections' && (
+            <button
+              onClick={() => setCollectionModalOpen(true)}
+              className="theme-pill"
+              style={{ marginBottom: 8, padding: '5px 11px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              New collection
+            </button>
+          )}
         </div>
 
         {/* Tab Content */}
@@ -804,9 +711,9 @@ const Profile: React.FC = () => {
                     fetchingComments={fetchingComments}
                     currentUser={currentUser as BaseUser | null}
                     onDeleteAnnotation={deleteAnnotation}
-                    onEditAnnotation={editAnnotation}
                     onDeleteComment={deleteComment}
                     onEditComment={editComment}
+                    onAddToCollection={currentUser ? (annotation) => setAddToCollectionTarget({ type: 'annotation', id: annotation.id }) : undefined}
                   />
                 ))}
 
@@ -817,76 +724,6 @@ const Profile: React.FC = () => {
                     <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center' }}>You've reached the end of the activity</p>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Recently Read tab */}
-        {activeTab === 'Recently Read' && (
-          <div>
-            {recentlyReadLoading ? (
-              /* Skeleton */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden', background: 'var(--surface-inset)', padding: '12px 14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <div style={{ width: '14px', height: '14px', borderRadius: '3px', background: 'var(--surface-3)', flexShrink: 0 }} className="pulse" />
-                      <div style={{ width: '80px', height: '11px', borderRadius: '3px', background: 'var(--surface-2)' }} className="pulse" />
-                    </div>
-                    <div style={{ width: '75%', height: '13px', borderRadius: '3px', background: 'var(--surface-3)', marginBottom: '6px' }} className="pulse" />
-                    <div style={{ width: '55%', height: '11px', borderRadius: '3px', background: 'var(--surface-2)' }} className="pulse" />
-                  </div>
-                ))}
-              </div>
-            ) : recentlyRead.length === 0 ? (
-              <div className="text-center" style={{ padding: '60px 0', color: 'var(--text-dim)' }}>
-                <p style={{ fontSize: '14px', marginBottom: '6px' }}>
-                  {isOwnProfile ? "You haven't annotated any pages yet" : 'No public annotations yet'}
-                </p>
-                {isOwnProfile && (
-                  <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Install the Scholic extension to start annotating the web</p>
-                )}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '11px',
-                    color: 'var(--text-dim)',
-                    padding: '0 2px 4px',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <span>Sorted by most recent visit</span>
-                </div>
-                {recentlyRead.map((site, idx) => (
-                  <RecentlyReadCard key={idx} site={site} username={username || ''} />
-                ))}
-
-                {/* Load more */}
-                {recentlyReadHasMore && (
-                  <div style={{ paddingTop: '16px', display: 'flex', justifyContent: 'center' }}>
-                    <button
-                      onClick={loadMoreRecentlyRead}
-                      disabled={recentlyReadFetchingMore}
-                      className="theme-pill"
-                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, borderRadius: '20px', cursor: recentlyReadFetchingMore ? 'not-allowed' : 'pointer', opacity: recentlyReadFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
-                    >
-                      {recentlyReadFetchingMore ? 'Loading...' : 'Load more'}
-                    </button>
-                  </div>
-                )}
-                {!recentlyReadHasMore && recentlyRead.length > 0 && (
-                  <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center', paddingTop: '20px' }}>You've reached the end</p>
-                )}
               </div>
             )}
           </div>
@@ -928,7 +765,11 @@ const Profile: React.FC = () => {
                   <span>{isOwnProfile ? 'Public and private saved pages' : 'Public saved pages'}</span>
                 </div>
                 {bookmarks.map((bookmark) => (
-                  <BookmarkCard key={bookmark.id} bookmark={bookmark} />
+                  <BookmarkCard
+                    key={bookmark.id}
+                    bookmark={bookmark}
+                    onAddToCollection={currentUser ? (row) => setAddToCollectionTarget({ type: 'bookmark', id: row.id }) : undefined}
+                  />
                 ))}
 
                 {bookmarksHasMore && (
@@ -945,6 +786,48 @@ const Profile: React.FC = () => {
                 )}
                 {!bookmarksHasMore && bookmarks.length > 0 && (
                   <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center', paddingTop: '20px' }}>You've reached the end</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'Collections' && (
+          <div>
+            {collectionsLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[1, 2, 3].map(i => (
+                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: '10px', background: 'var(--surface-inset)', padding: '13px 14px' }}>
+                    <div style={{ width: '55%', height: '14px', borderRadius: 3, background: 'var(--surface-3)', marginBottom: 8 }} className="pulse" />
+                    <div style={{ width: '75%', height: '12px', borderRadius: 3, background: 'var(--surface-2)' }} className="pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : collections.length === 0 ? (
+              <div className="text-center" style={{ padding: '60px 0', color: 'var(--text-dim)' }}>
+                <p style={{ fontSize: '14px', marginBottom: '6px' }}>
+                  {isOwnProfile ? "You haven't made any collections yet" : 'No public collections yet'}
+                </p>
+                {isOwnProfile && (
+                  <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Group annotations and bookmarks around a topic.</p>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {collections.map((collection) => (
+                  <CollectionCard key={collection.id} collection={collection} />
+                ))}
+                {collectionsHasMore && (
+                  <div style={{ paddingTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={loadMoreCollections}
+                      disabled={collectionsFetchingMore}
+                      className="theme-pill"
+                      style={{ padding: '8px 24px', fontSize: '13px', fontWeight: 500, borderRadius: '20px', cursor: collectionsFetchingMore ? 'not-allowed' : 'pointer', opacity: collectionsFetchingMore ? 0.6 : 1, fontFamily: 'inherit' }}
+                    >
+                      {collectionsFetchingMore ? 'Loading...' : 'Load more'}
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -1076,6 +959,23 @@ const Profile: React.FC = () => {
           setActiveTab('Uploaded');
         }}
       />
+      <CollectionModal
+        open={collectionModalOpen}
+        onClose={() => setCollectionModalOpen(false)}
+        onSaved={(collection) => {
+          setCollections(prev => [collection, ...prev]);
+          setCollectionsOffset(prev => prev + 1);
+          setActiveTab('Collections');
+        }}
+      />
+      {addToCollectionTarget && (
+        <AddToCollectionModal
+          open={!!addToCollectionTarget}
+          targetType={addToCollectionTarget.type}
+          targetId={addToCollectionTarget.id}
+          onClose={() => setAddToCollectionTarget(null)}
+        />
+      )}
     </div>
   );
 };

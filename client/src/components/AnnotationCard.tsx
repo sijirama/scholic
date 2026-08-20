@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle, Lock, Send, Trash2, Pencil, MoreHorizontal, FileText } from 'lucide-react';
+import { AlertTriangle, MessageCircle, Lock, Send, Trash2, Pencil, MoreHorizontal, FileText, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageLightbox from './ImageLightbox';
 import ReactionStrip from './ReactionStrip';
@@ -83,16 +83,17 @@ interface AnnotationCardProps {
   fetchingComments?: { [key: number]: boolean };
   currentUser?: User | null;
   onDeleteAnnotation?: (id: number) => void;
-  onEditAnnotation?: (id: number, text: string, linkPreviewImageMode: 'default' | 'show' | 'hide') => void;
   onDeleteComment?: (annotationId: number, commentId: number) => void;
   onEditComment?: (annotationId: number, commentId: number, text: string) => void;
+  onAddToCollection?: (annotation: Annotation) => void;
 }
 
 const DropdownMenu: React.FC<{
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onAddToCollection?: () => void;
   onClose: () => void;
-}> = ({ onEdit, onDelete, onClose }) => {
+}> = ({ onEdit, onDelete, onAddToCollection, onClose }) => {
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -118,59 +119,117 @@ const DropdownMenu: React.FC<{
         borderRadius: '8px',
         padding: '4px',
         zIndex: 50,
-        minWidth: '120px',
+        minWidth: '168px',
         boxShadow: 'var(--shadow-lg)',
       }}
     >
-      <button
-        onClick={(e) => { e.stopPropagation(); onEdit(); onClose(); }}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          width: '100%',
-          padding: '6px 10px',
-          background: 'none',
-          border: 'none',
-          color: 'var(--text-muted)',
-          fontSize: '12px',
-          cursor: 'pointer',
-          borderRadius: '6px',
-          fontFamily: 'inherit',
-          transition: 'background 0.15s',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
-      >
-        <Pencil style={{ width: 12, height: 12 }} />
-        Edit
-      </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete(); onClose(); }}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          width: '100%',
-          padding: '6px 10px',
-          background: 'none',
-          border: 'none',
-          color: 'var(--text-muted)',
-          fontSize: '12px',
-          cursor: 'pointer',
-          borderRadius: '6px',
-          fontFamily: 'inherit',
-          transition: 'all 0.15s',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-soft)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'none'; }}
-      >
-        <Trash2 style={{ width: 12, height: 12 }} />
-        Delete
-      </button>
+      {onAddToCollection && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onAddToCollection(); onClose(); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            width: '100%',
+            padding: '6px 10px',
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontSize: '12px',
+            cursor: 'pointer',
+            borderRadius: '6px',
+            fontFamily: 'inherit',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+        >
+          <Layers style={{ width: 12, height: 12 }} />
+          Add to collection
+        </button>
+      )}
+      {onEdit && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(); onClose(); }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            width: '100%',
+            padding: '6px 10px',
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontSize: '12px',
+            cursor: 'pointer',
+            borderRadius: '6px',
+            fontFamily: 'inherit',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+        >
+          <Pencil style={{ width: 12, height: 12 }} />
+          Edit
+        </button>
+      )}
+      {onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+            onDelete();
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            width: '100%',
+            padding: '6px 10px',
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontSize: '12px',
+            cursor: 'pointer',
+            borderRadius: '6px',
+            fontFamily: 'inherit',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-soft)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'none'; }}
+        >
+          <Trash2 style={{ width: 12, height: 12 }} />
+          Delete
+        </button>
+      )}
     </div>
   );
 };
+
+const DeleteConfirmModal: React.FC<{
+  title: string;
+  description: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}> = ({ title, description, onCancel, onConfirm }) => (
+  <div style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onCancel}>
+    <div style={{ width: '100%', maxWidth: 390, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: 'var(--shadow-lg)', padding: 18 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--danger-soft)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <AlertTriangle style={{ width: 17, height: 17 }} />
+        </div>
+        <div>
+          <h2 style={{ margin: '0 0 5px', fontSize: 15, fontWeight: 650, color: 'var(--text)' }}>{title}</h2>
+          <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: 'var(--text-dim)' }}>{description}</p>
+        </div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button onClick={onCancel} className="theme-pill" style={{ padding: '7px 13px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+        <button onClick={onConfirm} style={{ padding: '7px 13px', borderRadius: 8, border: 'none', background: 'var(--danger)', color: 'white', fontSize: 12, fontWeight: 650, cursor: 'pointer', fontFamily: 'inherit' }}>Delete</button>
+      </div>
+    </div>
+  </div>
+);
 
 const TruncatedText: React.FC<{ text: string }> = ({ text }) => {
   const [limit, setLimit] = React.useState(60);
@@ -222,16 +281,15 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   fetchingComments,
   currentUser,
   onDeleteAnnotation,
-  onEditAnnotation,
   onDeleteComment,
   onEditComment,
+  onAddToCollection,
 }) => {
   const [commentText, setCommentText] = React.useState('');
   const [lightboxSrc, setLightboxSrc] = React.useState<string | null>(null);
   const [annotationMenuOpen, setAnnotationMenuOpen] = React.useState(false);
-  const [editingAnnotation, setEditingAnnotation] = React.useState(false);
-  const [editAnnotationText, setEditAnnotationText] = React.useState('');
-  const [editLinkPreviewImageMode, setEditLinkPreviewImageMode] = React.useState<'default' | 'show' | 'hide'>('default');
+  const [deleteAnnotationOpen, setDeleteAnnotationOpen] = React.useState(false);
+  const [deleteCommentId, setDeleteCommentId] = React.useState<number | null>(null);
   const [commentMenuOpen, setCommentMenuOpen] = React.useState<number | null>(null);
   const [editingCommentId, setEditingCommentId] = React.useState<number | null>(null);
   const [editCommentText, setEditCommentText] = React.useState('');
@@ -261,6 +319,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
   const isAnnotationOwner = currentUser?.id === annotation.user?.id;
 
   return (
+    <>
     <div
       style={{
         padding: '20px 0',
@@ -302,7 +361,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Private</span>
               </div>
             )}
-            {isAnnotationOwner && (onEditAnnotation || onDeleteAnnotation) && (
+            {currentUser && (onAddToCollection || (isAnnotationOwner && onDeleteAnnotation)) && (
               <div style={{ marginLeft: 'auto', position: 'relative' }}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setAnnotationMenuOpen(prev => !prev); }}
@@ -324,12 +383,8 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                 </button>
                 {annotationMenuOpen && (
                   <DropdownMenu
-                    onEdit={() => {
-                      setEditingAnnotation(true);
-                      setEditAnnotationText(annotation.text || '');
-                      setEditLinkPreviewImageMode(annotation.linkPreviewImageMode || 'default');
-                    }}
-                    onDelete={() => onDeleteAnnotation?.(annotation.id)}
+                    onAddToCollection={onAddToCollection ? () => onAddToCollection(annotation) : undefined}
+                    onDelete={isAnnotationOwner ? () => setDeleteAnnotationOpen(true) : undefined}
                     onClose={() => setAnnotationMenuOpen(false)}
                   />
                 )}
@@ -385,89 +440,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
             </p>
           )}
 
-          {editingAnnotation ? (
-            <div style={{ marginBottom: '12px' }}>
-              <MentionTextarea
-                value={editAnnotationText}
-                onChange={setEditAnnotationText}
-                maxLength={5000}
-                rows={3}
-                textareaStyle={{
-                  width: '100%',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border-strong)',
-                  borderRadius: '8px',
-                  padding: '10px 12px',
-                  fontSize: '14px',
-                  color: 'var(--text)',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                  lineHeight: 1.65,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-border)'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)'; }}
-                autoFocus
-              />
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                {annotation.type !== 'image' && annotation.linkImage && (
-                  <select
-                    value={editLinkPreviewImageMode}
-                    onChange={(e) => setEditLinkPreviewImageMode(e.target.value as 'default' | 'show' | 'hide')}
-                    style={{
-                      padding: '4px 10px',
-                      fontSize: '12px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border-strong)',
-                      background: 'var(--surface)',
-                      color: 'var(--text-soft)',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    <option value="default">Preview image: Automatic</option>
-                    <option value="show">Preview image: Show</option>
-                    <option value="hide">Preview image: Hide</option>
-                  </select>
-                )}
-                <button
-                  onClick={() => {
-                    onEditAnnotation?.(annotation.id, editAnnotationText, editLinkPreviewImageMode);
-                    setEditingAnnotation(false);
-                  }}
-                  style={{
-                    padding: '4px 12px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    background: 'var(--accent)',
-                    color: 'var(--text-inverse)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditingAnnotation(false)}
-                  style={{
-                    padding: '4px 12px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    background: 'var(--surface-3)',
-                    color: 'var(--text-soft)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : annotation.text ? (
+          {annotation.text ? (
             <TruncatedText text={annotation.text} />
           ) : null}
 
@@ -695,7 +668,7 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
                                       setEditingCommentId(comment.id);
                                       setEditCommentText(comment.text);
                                     }}
-                                    onDelete={() => onDeleteComment?.(annotation.id, comment.id)}
+                                    onDelete={() => setDeleteCommentId(comment.id)}
                                     onClose={() => setCommentMenuOpen(null)}
                                   />
                                 )}
@@ -809,6 +782,30 @@ const AnnotationCard: React.FC<AnnotationCardProps> = ({
       </div>
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     </div>
+    {deleteAnnotationOpen && (
+      <DeleteConfirmModal
+        title="Delete annotation?"
+        description="This permanently deletes the annotation, comments, and reactions attached to it."
+        onCancel={() => setDeleteAnnotationOpen(false)}
+        onConfirm={() => {
+          setDeleteAnnotationOpen(false);
+          onDeleteAnnotation?.(annotation.id);
+        }}
+      />
+    )}
+    {deleteCommentId !== null && (
+      <DeleteConfirmModal
+        title="Delete comment?"
+        description="This permanently deletes the comment from this annotation."
+        onCancel={() => setDeleteCommentId(null)}
+        onConfirm={() => {
+          const commentId = deleteCommentId;
+          setDeleteCommentId(null);
+          onDeleteComment?.(annotation.id, commentId);
+        }}
+      />
+    )}
+    </>
   );
 };
 

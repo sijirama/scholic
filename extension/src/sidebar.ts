@@ -34,6 +34,7 @@ export interface AnnotationData {
   image?: string; // base64 data for creation
   highlightColor?: string; // user-chosen pastel hex color
   linkPreviewImageMode?: 'default' | 'show' | 'hide';
+  collectionId?: number;
   reactionCounts?: Record<string, number>;
   myReaction?: string;
   _isPending?: boolean; // optimistic: not yet saved to backend
@@ -47,10 +48,19 @@ interface MentionUser {
   profilePicture?: string;
 }
 
+interface CollectionOption {
+  id: number;
+  title: string;
+  isPrivate: boolean;
+  entryCount?: number;
+  hasTarget?: boolean;
+  targetEntryId?: number;
+}
+
 /** Curated reaction set — must match the web client's REACTION_EMOJIS list. */
 export const REACTION_EMOJIS = ['👍', '❤️', '🔥', '💡', '🤔', '😂', '📝', '💀', '👀', '🤯'];
 
-const HIGHLIGHT_COLORS = [
+export const HIGHLIGHT_COLORS = [
   // Pastels (light backgrounds)
   { name: 'Sage',     hex: '#A8D5B5' },
   { name: 'Butter',  hex: '#F5E4A0' },
@@ -125,6 +135,7 @@ const ICONS = {
   trash: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
   camera: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
   star: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  starFilled: `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
 };
 
 /**
@@ -158,6 +169,13 @@ export class Sidebar {
   private bookmarkIsPrivate: boolean = true;
   private bookmarkLoading: boolean = false;
   private bookmarkMenuOpen: boolean = false;
+  private collections: CollectionOption[] = [];
+  private collectionsLoading: boolean = false;
+  private collectionsHasMore: boolean = false;
+  private annotationCollectionMenuId: string | number | null = null;
+  private annotationCollectionIds: Record<string, boolean> = {};
+  private annotationCollectionSavingId: string | number | null = null;
+  private annotationDeleteConfirmId: string | number | null = null;
   /** Stored document click handler for cleanup */
   private menuCloseHandler: (() => void) | null = null;
 
@@ -503,6 +521,8 @@ export class Sidebar {
     this.isAuthenticated = !!token;
     if (!token) {
       this.userData = null;
+      this.collections = [];
+      this.collectionsHasMore = false;
       if (this.activeTab !== 'all') {
         this.activeTab = 'all';
       }
@@ -515,6 +535,7 @@ export class Sidebar {
       });
       if (response && !response.error) {
         this.userData = response;
+        this.fetchCollections();
         this.refreshBookmarkState(true);
         // Only re-render if we have cached annotations (avoid double render on initial load)
         if (this.lastAnnotations.length > 0) {
@@ -524,6 +545,45 @@ export class Sidebar {
     } catch (err) {
       console.error('[Scholic] Failed to fetch user data:', err);
     }
+  }
+
+  private async fetchCollections(targetType?: 'annotation' | 'bookmark', targetId?: number | string, offset = 0, append = false): Promise<void> {
+    if (!this.isAuthenticated || this.collectionsLoading) return;
+    this.collectionsLoading = true;
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'FETCH_COLLECTIONS',
+        data: {
+          ...(targetType && targetId ? { targetType, targetId: Number(targetId) } : {}),
+          offset,
+        },
+      });
+      if (response?.error) throw new Error(response.error);
+      const nextCollections = Array.isArray(response?.collections) ? response.collections : [];
+      if (append) {
+        const existingIds = new Set(this.collections.map((collection) => collection.id));
+        this.collections = [
+          ...this.collections,
+          ...nextCollections.filter((collection: CollectionOption) => !existingIds.has(collection.id)),
+        ];
+      } else {
+        this.collections = nextCollections;
+      }
+      this.collectionsHasMore = !!response?.hasMore;
+      if (targetType === 'annotation' && targetId) {
+        this.annotationCollectionIds[String(targetId)] = this.collections.some((collection) => collection.hasTarget);
+      }
+    } catch (err) {
+      console.error('[Scholic] Failed to fetch collections:', err);
+      if (!append) this.collections = [];
+      this.collectionsHasMore = false;
+    } finally {
+      this.collectionsLoading = false;
+    }
+  }
+
+  private collectionStorageKey(): string {
+    return `scholicCollection:${this.getCurrentPageUrl()}`;
   }
 
   private getCurrentPageUrl(): string {
@@ -574,7 +634,7 @@ export class Sidebar {
       if (this.bookmarkUrl !== url) return;
       if (response?.error) throw new Error(response.error);
       this.isBookmarked = !!response?.bookmarked;
-      this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? true;
+      this.bookmarkIsPrivate = this.getBookmarkIsPrivate(response?.bookmark, true);
     } catch (err) {
       console.error('[Scholic] Failed to fetch bookmark state:', err);
       if (this.bookmarkUrl === url) this.isBookmarked = false;
@@ -584,6 +644,15 @@ export class Sidebar {
         this.renderBookmarkButton();
       }
     }
+  }
+
+  private getBookmarkIsPrivate(bookmark: unknown, fallback: boolean): boolean {
+    if (!bookmark || typeof bookmark !== 'object') return fallback;
+    const record = bookmark as Record<string, unknown>;
+    if (typeof record.isPrivate === 'boolean') return record.isPrivate;
+    if (typeof record.is_private === 'boolean') return record.is_private;
+    if (typeof record.IsPrivate === 'boolean') return record.IsPrivate;
+    return fallback;
   }
 
   private toggleBookmarkMenu(): void {
@@ -612,7 +681,8 @@ export class Sidebar {
       if (this.bookmarkUrl !== url) return;
       if (response?.error) throw new Error(response.error);
       this.isBookmarked = !!response?.bookmarked;
-      this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? isPrivate;
+      this.bookmarkIsPrivate = this.getBookmarkIsPrivate(response?.bookmark, isPrivate);
+      await this.refreshBookmarkState(true);
     } catch (err) {
       console.error('[Scholic] Failed to update bookmark:', err);
       if (this.bookmarkUrl === url) this.isBookmarked = false;
@@ -644,7 +714,8 @@ export class Sidebar {
       if (this.bookmarkUrl !== url) return;
       if (response?.error) throw new Error(response.error);
       this.isBookmarked = !!response?.bookmarked;
-      this.bookmarkIsPrivate = response?.bookmark?.isPrivate ?? isPrivate;
+      this.bookmarkIsPrivate = this.getBookmarkIsPrivate(response?.bookmark, isPrivate);
+      await this.refreshBookmarkState(true);
     } catch (err) {
       console.error('[Scholic] Failed to update bookmark visibility:', err);
       if (this.bookmarkUrl === url) this.bookmarkIsPrivate = previous;
@@ -1233,13 +1304,13 @@ export class Sidebar {
 
       .quote-preview {
         background: rgba(110,183,129,0.08);
-        border-left: 3px solid #6EB781;
+        border: 1px solid rgba(110,183,129,0.18);
         padding: 10px 14px;
         font-size: 13px;
         color: #ccc;
         line-height: 1.5;
         margin-bottom: 12px;
-        border-radius: 0 6px 6px 0;
+        border-radius: 6px;
         max-height: 100px;
         overflow-y: auto;
       }
@@ -1264,7 +1335,7 @@ export class Sidebar {
       }
       .note-input::placeholder { color: #555; }
 
-      .preview-image-select {
+      .preview-image-select, .collection-select {
         width: 100%;
         background: #1a1a1a;
         border: 1px solid rgba(255,255,255,0.1);
@@ -1276,7 +1347,7 @@ export class Sidebar {
         margin-bottom: 12px;
         box-sizing: border-box;
       }
-      .preview-image-select:focus {
+      .preview-image-select:focus, .collection-select:focus {
         outline: none;
         border-color: #6EB781;
       }
@@ -1630,7 +1701,7 @@ export class Sidebar {
         color: #e8c547;
       }
 
-      .annotation-delete, .annotation-view {
+      .annotation-delete, .annotation-view, .annotation-collection {
         background: none;
         border: none;
         color: #444;
@@ -1649,10 +1720,161 @@ export class Sidebar {
         color: #6EB781;
         background: rgba(110,183,129,0.1);
       }
+      .annotation-collection:hover {
+        color: #6EB781;
+        background: rgba(110,183,129,0.1);
+      }
+      .annotation-collection.active {
+        color: #6EB781;
+      }
       .annotation-item-actions {
         display: flex;
         align-items: center;
         gap: 2px;
+        position: relative;
+      }
+      .annotation-collection-menu {
+        position: absolute;
+        right: 0;
+        top: 28px;
+        width: 220px;
+        max-height: 240px;
+        overflow-y: auto;
+        background: #151515;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 6px;
+        z-index: 50;
+        box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+      }
+      .annotation-collection-menu-empty {
+        padding: 9px 10px;
+        color: #777;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      .annotation-collection-menu-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 9px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: #d0d0d0;
+        font-size: 12px;
+        font-family: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .annotation-collection-menu-item:hover {
+        background: rgba(255,255,255,0.06);
+      }
+      .annotation-collection-menu-item.active {
+        background: rgba(110,183,129,0.12);
+        color: #e8f5ec;
+      }
+      .annotation-collection-menu-item span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .annotation-collection-menu-badge {
+        color: #6EB781;
+        font-size: 10px;
+        flex-shrink: 0;
+      }
+      .annotation-collection-menu-load-more {
+        width: 100%;
+        margin-top: 4px;
+        padding: 8px 9px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 6px;
+        background: rgba(255,255,255,0.03);
+        color: #9ed8ad;
+        font-size: 11px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .annotation-collection-menu-load-more:hover {
+        background: rgba(110,183,129,0.1);
+      }
+      .annotation-collection-menu-load-more:disabled {
+        cursor: default;
+        opacity: 0.55;
+      }
+      .annotation-delete-confirm-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: rgba(0,0,0,0.5);
+      }
+      .annotation-delete-confirm-card {
+        width: min(330px, 100%);
+        background: #151515;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 10px;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.45);
+        padding: 16px;
+      }
+      .annotation-delete-confirm-header {
+        display: flex;
+        gap: 11px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+      }
+      .annotation-delete-confirm-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(255,95,87,0.12);
+        color: #ff7d76;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .annotation-delete-confirm-title {
+        margin: 0 0 5px;
+        color: #f0f0f0;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      .annotation-delete-confirm-copy {
+        margin: 0;
+        color: #8b8b8b;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .annotation-delete-confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .annotation-delete-confirm-actions button {
+        padding: 7px 12px;
+        border-radius: 7px;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      .annotation-delete-confirm-cancel {
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.04);
+        color: #cfcfcf;
+      }
+      .annotation-delete-confirm-delete {
+        border: none;
+        background: #ff5f57;
+        color: #fff;
       }
 
       .annotation-comments {
@@ -1817,7 +2039,7 @@ export class Sidebar {
 
     let isPrivate = false;
     let selectedColor = HIGHLIGHT_COLORS[0].hex;
-    let linkPreviewImageMode: 'default' | 'show' | 'hide' = 'default';
+    let selectedCollectionId = 0;
 
     const form = document.createElement('div');
     form.className = 'annotation-form';
@@ -1851,12 +2073,13 @@ export class Sidebar {
       <div class="form-label">Your Note</div>
       <textarea class="note-input" placeholder="Add your thoughts..." maxlength="5000"></textarea>
       ${type === 'text' ? swatchesHtml : ''}
-      ${type === 'text' ? `
-        <div class="form-label">Preview Image</div>
-        <select class="preview-image-select">
-          <option value="default">Automatic${this.userData?.defaultLinkPreviewImageVisibility === false ? ' (currently hidden)' : ' (currently shown)'}</option>
-          <option value="show">Show</option>
-          <option value="hide">Hide</option>
+      ${this.isAuthenticated ? `
+        <div class="form-label">Collection</div>
+        <select class="collection-select">
+          <option value="0">No collection</option>
+          ${this.collections.map(collection => `
+            <option value="${collection.id}">${this.escapeHtml(collection.title)}${collection.isPrivate ? ' (private)' : ''}</option>
+          `).join('')}
         </select>
       ` : ''}
       <div class="privacy-toggle">
@@ -1913,15 +2136,20 @@ export class Sidebar {
       });
     });
 
-    const previewImageSelect = form.querySelector('.preview-image-select') as HTMLSelectElement | null;
-    previewImageSelect?.addEventListener('change', () => {
-      const value = previewImageSelect.value;
-      if (value === 'show' || value === 'hide') {
-        linkPreviewImageMode = value;
-        return;
-      }
-      linkPreviewImageMode = 'default';
-    });
+    const collectionSelect = form.querySelector('.collection-select') as HTMLSelectElement | null;
+    if (collectionSelect) {
+      chrome.storage.session.get(this.collectionStorageKey()).then((result) => {
+        const stored = Number(result[this.collectionStorageKey()] || 0);
+        if (stored && Array.from(collectionSelect.options).some(option => Number(option.value) === stored)) {
+          selectedCollectionId = stored;
+          collectionSelect.value = String(stored);
+        }
+      }).catch(() => {});
+      collectionSelect.addEventListener('change', () => {
+        selectedCollectionId = Number(collectionSelect.value || 0);
+        chrome.storage.session.set({ [this.collectionStorageKey()]: selectedCollectionId }).catch(() => {});
+      });
+    }
 
     const discard = () => {
       form.remove();
@@ -1955,12 +2183,53 @@ export class Sidebar {
         type: type,
         image: type === 'image' ? imageData : undefined,
         highlightColor: selectedColor,
-        linkPreviewImageMode,
+        linkPreviewImageMode: 'default',
+        collectionId: selectedCollectionId || undefined,
       } as any);
       form.remove();
       this.pendingQuoteText = '';
       this.pendingSelectors = [];
     });
+  }
+
+  private renderAnnotationDeleteConfirm(): void {
+    this.shadow.querySelector('.annotation-delete-confirm-overlay')?.remove();
+    if (!this.annotationDeleteConfirmId) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'annotation-delete-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="annotation-delete-confirm-card" role="dialog" aria-modal="true" aria-labelledby="scholic-delete-title">
+        <div class="annotation-delete-confirm-header">
+          <div class="annotation-delete-confirm-icon">${ICONS.trash}</div>
+          <div>
+            <h3 id="scholic-delete-title" class="annotation-delete-confirm-title">Delete annotation?</h3>
+            <p class="annotation-delete-confirm-copy">This permanently deletes the annotation and its conversation.</p>
+          </div>
+        </div>
+        <div class="annotation-delete-confirm-actions">
+          <button class="annotation-delete-confirm-cancel" type="button">Cancel</button>
+          <button class="annotation-delete-confirm-delete" type="button">Delete</button>
+        </div>
+      </div>
+    `;
+
+    const close = () => {
+      this.annotationDeleteConfirmId = null;
+      overlay.remove();
+    };
+
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close();
+    });
+    overlay.querySelector('.annotation-delete-confirm-cancel')?.addEventListener('click', close);
+    overlay.querySelector('.annotation-delete-confirm-delete')?.addEventListener('click', () => {
+      const id = this.annotationDeleteConfirmId;
+      close();
+      if (id) this.callbacks.onDelete(String(id));
+    });
+
+    this.panel.appendChild(overlay);
   }
 
   /**
@@ -2074,13 +2343,39 @@ export class Sidebar {
           const avatarHtml = annotation.user?.profilePicture
             ? `<img src="${this.escapeAttr(annotation.user.profilePicture)}" style="width:100%; height:100%; object-fit:cover;" />`
             : authorInitial;
+          const annotationIdKey = annotation.id ? String(annotation.id) : '';
+          const collectionMenuOpen = this.annotationCollectionMenuId != null && String(this.annotationCollectionMenuId) === annotationIdKey;
+          const collectionSaved = annotationIdKey ? !!this.annotationCollectionIds[annotationIdKey] : false;
+          const collectionSaving = this.annotationCollectionSavingId != null && String(this.annotationCollectionSavingId) === annotationIdKey;
 
           item.innerHTML = `
             <div class="annotation-item-header">
               ${privacyBadge}
               <div class="annotation-item-actions">
+                ${annotation.id && this.isAuthenticated ? `<button class="annotation-collection ${collectionSaved ? 'active' : ''}" data-id="${annotation.id}" title="${collectionSaved ? 'Added to collection' : 'Add to collection'}">${collectionSaved ? ICONS.starFilled : ICONS.star}</button>` : ''}
                 ${annotation.id ? `<a href="${CONFIG.WEB_URL}/annotation/${annotation.id}" target="_blank" class="annotation-view" title="View annotation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>` : ''}
                 ${annotation.id && String(annotation.userId) === String(myUserId) ? `<button class="annotation-delete" data-id="${annotation.id}" title="Delete annotation">${ICONS.trash}</button>` : ''}
+                ${collectionMenuOpen ? `
+                  <div class="annotation-collection-menu">
+                    ${(this.collectionsLoading && this.collections.length === 0) || collectionSaving ? `
+                      <div class="annotation-collection-menu-empty">${collectionSaving ? 'Adding...' : 'Loading collections...'}</div>
+                    ` : this.collections.length === 0 ? `
+                      <div class="annotation-collection-menu-empty">Create a collection from your profile first.</div>
+                    ` : `
+                      ${this.collections.map(collection => `
+                        <button class="annotation-collection-menu-item ${collection.hasTarget ? 'active' : ''}" data-collection-id="${collection.id}" data-entry-id="${collection.targetEntryId || ''}">
+                          <span>${this.escapeHtml(collection.title)}</span>
+                          <span class="annotation-collection-menu-badge">${collection.hasTarget ? 'added' : collection.isPrivate ? 'private' : ''}</span>
+                        </button>
+                      `).join('')}
+                      ${this.collectionsHasMore ? `
+                        <button class="annotation-collection-menu-load-more" data-target-id="${annotation.id}" ${this.collectionsLoading ? 'disabled' : ''}>
+                          ${this.collectionsLoading ? 'Loading...' : 'Load more'}
+                        </button>
+                      ` : ''}
+                    `}
+                  </div>
+                ` : ''}
               </div>
             </div>
             <div class="annotation-author-row">
@@ -2181,7 +2476,7 @@ export class Sidebar {
 
           // Click to focus the highlight in the page
           item.addEventListener('click', (e) => {
-            if ((e.target as HTMLElement).closest('.annotation-delete, .annotation-view, a')) {
+            if ((e.target as HTMLElement).closest('.annotation-delete, .annotation-view, .annotation-collection, a')) {
               return;
             }
             if (annotation.id) {
@@ -2208,9 +2503,63 @@ export class Sidebar {
           deleteBtn?.addEventListener('click', (e) => {
             e.stopPropagation();
             const id = (e.currentTarget as HTMLElement).dataset.id;
-            if (id && confirm('Delete this annotation? This cannot be undone.')) {
-              this.callbacks.onDelete(id);
+            if (!id) return;
+            this.annotationDeleteConfirmId = id;
+            this.renderAnnotationDeleteConfirm();
+          });
+
+          const collectionBtn = item.querySelector('.annotation-collection');
+          collectionBtn?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!annotation.id) return;
+            const nextId = this.annotationCollectionMenuId != null && String(this.annotationCollectionMenuId) === String(annotation.id) ? null : annotation.id;
+            this.annotationCollectionMenuId = nextId;
+            if (nextId) {
+              this.fetchCollections('annotation', annotation.id, 0, false).then(() => this.renderAnnotationList(this.lastAnnotations));
             }
+            this.renderAnnotationList(this.lastAnnotations);
+          });
+
+          const collectionLoadMoreBtn = item.querySelector<HTMLElement>('.annotation-collection-menu-load-more');
+          collectionLoadMoreBtn?.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!annotation.id || this.collectionsLoading || !this.collectionsHasMore) return;
+            await this.fetchCollections('annotation', annotation.id, this.collections.length, true);
+            this.renderAnnotationList(this.lastAnnotations);
+          });
+
+          item.querySelectorAll<HTMLElement>('.annotation-collection-menu-item').forEach((btn) => {
+            btn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              if (!annotation.id) return;
+              const collectionId = Number(btn.dataset.collectionId || 0);
+              if (!collectionId) return;
+              this.annotationCollectionSavingId = annotation.id;
+              this.renderAnnotationList(this.lastAnnotations);
+              try {
+                const entryId = Number(btn.dataset.entryId || 0);
+                if (entryId) {
+                  const response = await chrome.runtime.sendMessage({
+                    type: 'DELETE_COLLECTION_ENTRY',
+                    data: { collectionId, entryId },
+                  });
+                  if (response?.error) throw new Error(response.error);
+                } else {
+                  const response = await chrome.runtime.sendMessage({
+                    type: 'ADD_COLLECTION_ENTRY',
+                    data: { collectionId, targetType: 'annotation', targetId: Number(annotation.id) },
+                  });
+                  if (response?.error) throw new Error(response.error);
+                }
+                await this.fetchCollections('annotation', annotation.id, 0, false);
+                this.annotationCollectionMenuId = null;
+              } catch (err) {
+                console.error('[Scholic] Failed to add annotation to collection:', err);
+              } finally {
+                this.annotationCollectionSavingId = null;
+                this.renderAnnotationList(this.lastAnnotations);
+              }
+            });
           });
 
           // Reaction chip + picker handlers
@@ -2269,6 +2618,8 @@ export class Sidebar {
         });
         listContainer.appendChild(loadMoreBtn);
       }
+
+      this.renderAnnotationDeleteConfirm();
 
       // Automatically scroll to the top to see new/optimistic updates
       const contentLayer = this.panel.querySelector('.sidebar-content');

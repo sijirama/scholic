@@ -13,6 +13,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import DocumentPage from './pages/DocumentPage';
 import AnnotationPage from './pages/AnnotationPage';
+import CollectionPage from './pages/CollectionPage';
 import SitePage from './pages/SitePage';
 import SearchPage from './pages/Search';
 import Privacy from './pages/Privacy';
@@ -36,6 +37,7 @@ function AppShell() {
               <Route path="auth/extension-login" element={<ExtensionLogin />} />
               <Route path="u/:username" element={<Profile />} />
               <Route path="annotation/:id" element={<AnnotationPage />} />
+              <Route path="c/:id" element={<CollectionPage />} />
               <Route path="document/:id" element={<DocumentPage />} />
               <Route path="page" element={<SitePage />} />
               <Route path="search" element={<SearchPage />} />

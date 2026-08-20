@@ -125,6 +125,7 @@ func main() {
 		api.GET("/users/:username/recently-read", middleware.OptionalAuthMiddleware(), endpoints.GetRecentlyRead)
 		api.GET("/users/:username/friends-reading", middleware.OptionalAuthMiddleware(), endpoints.GetFriendsReading)
 		api.GET("/users/:username/bookmarks", middleware.OptionalAuthMiddleware(), endpoints.GetUserBookmarks)
+		api.GET("/users/:username/collections", middleware.OptionalAuthMiddleware(), endpoints.GetUserCollections)
 		api.POST("/users/:username/follow", middleware.AuthMiddleware(), endpoints.ToggleFollow)
 
 		// ── Search ──
@@ -150,6 +151,21 @@ func main() {
 			bookmarksProtected.DELETE("/by-url", endpoints.DeleteBookmarkByURL)
 		}
 
+		// ── Collections ──
+		api.GET("/collections/:id", middleware.OptionalAuthMiddleware(), endpoints.GetCollection)
+		collectionsProtected := api.Group("/collections")
+		collectionsProtected.Use(middleware.AuthMiddleware())
+		{
+			collectionsProtected.GET("", endpoints.GetMyCollections)
+			collectionsProtected.POST("", endpoints.CreateCollection)
+			collectionsProtected.PATCH("/:id", endpoints.UpdateCollection)
+			collectionsProtected.DELETE("/:id", endpoints.DeleteCollection)
+			collectionsProtected.POST("/:id/cover", endpoints.UploadCollectionCover)
+			collectionsProtected.DELETE("/:id/cover", endpoints.DeleteCollectionCover)
+			collectionsProtected.POST("/:id/entries", endpoints.AddCollectionEntry)
+			collectionsProtected.DELETE("/:id/entries/:entryId", endpoints.DeleteCollectionEntry)
+		}
+
 		// ── Notifications ──
 		notificationsProtected := api.Group("/notifications")
 		notificationsProtected.Use(middleware.AuthMiddleware())
@@ -173,6 +189,16 @@ func main() {
 		// GET uses optional auth (shows public + user's private annotations)
 		api.GET("/annotations", middleware.OptionalAuthMiddleware(), endpoints.GetAnnotations)
 		api.GET("/annotations/:id", middleware.OptionalAuthMiddleware(), endpoints.GetAnnotation)
+
+		// ── Private page highlights ──
+		highlightsProtected := api.Group("/highlights")
+		highlightsProtected.Use(middleware.AuthMiddleware())
+		{
+			highlightsProtected.GET("", endpoints.GetHighlights)
+			highlightsProtected.POST("", endpoints.CreateHighlight)
+			highlightsProtected.PATCH("/:id", endpoints.UpdateHighlight)
+			highlightsProtected.DELETE("/:id", endpoints.DeleteHighlight)
+		}
 
 		// POST, PUT, and DELETE require authentication
 		annotationsProtected := api.Group("/annotations")

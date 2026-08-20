@@ -316,6 +316,14 @@ async function handleMessage(message: any): Promise<any> {
       return createAnnotation(message.data);
     case 'FETCH_ANNOTATIONS':
       return fetchAnnotations(message.data.url, message.data.limit, message.data.offset);
+    case 'FETCH_HIGHLIGHTS':
+      return fetchHighlights(message.data.url, message.data.limit, message.data.offset);
+    case 'CREATE_HIGHLIGHT':
+      return createHighlight(message.data);
+    case 'UPDATE_HIGHLIGHT':
+      return updateHighlight(message.data.id, message.data.highlightColor);
+    case 'DELETE_HIGHLIGHT':
+      return deleteHighlight(message.data.id);
     case 'DELETE_ANNOTATION':
       return deleteAnnotation(message.data.id);
     case 'CREATE_COMMENT':
@@ -326,6 +334,12 @@ async function handleMessage(message: any): Promise<any> {
       return clearReaction(message.data.annotationId);
     case 'FETCH_BOOKMARK':
       return fetchBookmark(message.data.url);
+    case 'FETCH_COLLECTIONS':
+      return fetchCollections(message.data?.targetType, message.data?.targetId, message.data?.offset);
+    case 'ADD_COLLECTION_ENTRY':
+      return addCollectionEntry(message.data.collectionId, message.data.targetType, message.data.targetId);
+    case 'DELETE_COLLECTION_ENTRY':
+      return deleteCollectionEntry(message.data.collectionId, message.data.entryId);
     case 'CREATE_BOOKMARK':
       return createBookmark(message.data.url, message.data.title, message.data.isPrivate);
     case 'UPDATE_BOOKMARK':
@@ -387,6 +401,29 @@ async function updateBookmark(url: string, isPrivate: boolean): Promise<any> {
 
 async function deleteBookmark(url: string): Promise<any> {
   return apiRequest(`/bookmarks/by-url?url=${encodeURIComponent(url)}`, {
+    method: 'DELETE',
+  });
+}
+
+async function fetchCollections(targetType?: string, targetId?: number, offset = 0): Promise<any> {
+  const params = new URLSearchParams({ limit: '50' });
+  if (offset > 0) params.set('offset', String(offset));
+  if (targetType && targetId) {
+    params.set('targetType', targetType);
+    params.set('targetId', String(targetId));
+  }
+  return apiRequest(`/collections?${params.toString()}`);
+}
+
+async function addCollectionEntry(collectionId: number, targetType: string, targetId: number): Promise<any> {
+  return apiRequest(`/collections/${collectionId}/entries`, {
+    method: 'POST',
+    body: JSON.stringify({ targetType, targetId }),
+  });
+}
+
+async function deleteCollectionEntry(collectionId: number, entryId: number): Promise<any> {
+  return apiRequest(`/collections/${collectionId}/entries/${entryId}`, {
     method: 'DELETE',
   });
 }
@@ -462,6 +499,7 @@ async function createAnnotation(data: any): Promise<any> {
       pdfPage: data.pdfPage,
       highlightColor: data.highlightColor || '#A8D5B5',
       linkPreviewImageMode: data.linkPreviewImageMode || 'default',
+      collectionId: data.collectionId,
     }),
   });
 
@@ -496,6 +534,63 @@ async function fetchAnnotations(url: string, limit = 50, offset = 0): Promise<an
   }));
 
   return { annotations: parsed, total };
+}
+
+async function fetchHighlights(url: string, limit = 200, offset = 0): Promise<any> {
+  const result = await apiRequest(
+    `/highlights?url=${encodeURIComponent(url)}&limit=${limit}&offset=${offset}`,
+  );
+
+  const rawHighlights = result?.highlights || [];
+  const total = result?.total ?? rawHighlights.length;
+  const parsed = rawHighlights.map((h: any) => ({
+    ...h,
+    selectors: typeof h.selectors === 'string' ? JSON.parse(h.selectors) : h.selectors,
+  }));
+
+  return { highlights: parsed, total };
+}
+
+async function createHighlight(data: any): Promise<any> {
+  const highlight = await apiRequest('/highlights', {
+    method: 'POST',
+    body: JSON.stringify({
+      url: data.url,
+      quoteText: data.quoteText,
+      selectors: JSON.stringify(data.selectors || []),
+      type: data.type || 'text',
+      pdfHash: data.pdfHash,
+      pdfPage: data.pdfPage,
+      highlightColor: data.highlightColor || '#A8D5B5',
+    }),
+  });
+
+  return {
+    highlight: {
+      ...highlight,
+      selectors: typeof highlight.selectors === 'string' ? JSON.parse(highlight.selectors) : highlight.selectors,
+    },
+  };
+}
+
+async function updateHighlight(id: string | number, highlightColor: string): Promise<any> {
+  const highlight = await apiRequest(`/highlights/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ highlightColor }),
+  });
+
+  return {
+    highlight: {
+      ...highlight,
+      selectors: typeof highlight.selectors === 'string' ? JSON.parse(highlight.selectors) : highlight.selectors,
+    },
+  };
+}
+
+async function deleteHighlight(id: string | number): Promise<any> {
+  return apiRequest(`/highlights/${id}`, {
+    method: 'DELETE',
+  });
 }
 
 /**
