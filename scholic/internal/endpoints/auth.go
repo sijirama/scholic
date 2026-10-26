@@ -1,6 +1,9 @@
 package endpoints
 
 import (
+	"crypto/sha256"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth/gothic"
+	"gorm.io/gorm"
 )
 
 func AuthGoogle(c *gin.Context) {
@@ -50,9 +54,51 @@ func AuthGoogleCallback(c *gin.Context) {
 	result := database.DB.Where("google_id = ?", gothUser.UserID).First(&user)
 
 	if result.Error != nil {
+		if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			log.Printf("[Auth] Failed to look up Google user %s: %v", gothUser.UserID, result.Error)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to look up user"})
+			return
+		}
+
+		// Google can return the same verified email with a new provider ID.
+		// Link that account instead of attempting a duplicate email insert.
+		if gothUser.Email != "" {
+			emailResult := database.DB.Where("email = ?", gothUser.Email).First(&user)
+			if emailResult.Error == nil {
+				if user.GoogleID != "" && user.GoogleID != gothUser.UserID {
+					log.Printf("[Auth] Google ID mismatch for existing email %s", gothUser.Email)
+					c.JSON(http.StatusConflict, gin.H{"error": "An account already exists for this email"})
+					return
+				}
+				if err := database.DB.Model(&user).Update("google_id", gothUser.UserID).Error; err != nil {
+					log.Printf("[Auth] Failed to link Google account for user %d: %v", user.ID, err)
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to link account"})
+					return
+				}
+			} else if !errors.Is(emailResult.Error, gorm.ErrRecordNotFound) {
+				log.Printf("[Auth] Failed to look up email %s: %v", gothUser.Email, emailResult.Error)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to look up user"})
+				return
+			}
+		}
+
+		if user.ID != 0 {
+			// The email lookup found and linked an existing account.
+			goto authenticated
+		}
+
 		// Determine next member number
 		var userCount int64
-		database.DB.Model(&models.User{}).Count(&userCount)
+		if err := database.DB.Model(&models.User{}).Count(&userCount).Error; err != nil {
+			log.Printf("[Auth] Failed to count users: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+			return
+		}
+
+		// Username is collected during onboarding, but the database column is
+		// unique. Use a deterministic temporary value until the user chooses one.
+		googleHash := sha256.Sum256([]byte(gothUser.UserID))
+		pendingUsername := fmt.Sprintf("pending_%x", googleHash[:11])
 
 		// Create new user
 		user = models.User{
@@ -61,12 +107,18 @@ func AuthGoogleCallback(c *gin.Context) {
 			FirstName:      gothUser.FirstName,
 			LastName:       gothUser.LastName,
 			ProfilePicture: gothUser.AvatarURL,
+			Username:       pendingUsername,
 			Onboarded:      false,
 			MemberNumber:   uint(userCount + 1),
 		}
-		database.DB.Create(&user)
+		if err := database.DB.Create(&user).Error; err != nil {
+			log.Printf("[Auth] Failed to create Google user %s (%s): %v", gothUser.Email, gothUser.UserID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+			return
+		}
 	}
 
+authenticated:
 	// Generate JWT
 	token, err := jwt.GenerateToken(user.ID)
 	if err != nil {
