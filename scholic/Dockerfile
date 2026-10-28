@@ -18,7 +18,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o scholic_api ./cmd/api
 
 # ── Stage 2: Run ──────────────────────────────────────────────────────────────
-FROM alpine:3.20
+FROM alpine:3.22
 
 WORKDIR /app
 
